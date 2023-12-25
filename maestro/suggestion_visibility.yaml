@@ -1,0 +1,30 @@
+appId: org.mozilla.ios.Fennec
+---
+- tapOn: 
+   text: "Skip"
+   optional: true
+- tapOn:
+   text: "Skip"
+   optional: true
+- tapOn:
+   text: "Skip"
+   optional: true
+- tapOn: "Search or enter address"
+- inputText: "Wikipedia"
+- assertNotVisible: "Empty list"
+- tapOn:
+    id: "urlBar-cancel"
+- tapOn:
+    id: "TabToolbar.menuButton"
+- tapOn:
+    id: "menu-Settings"
+- tapOn:
+    id: "Search"
+- tapOn:
+    text: "1"
+    index: 0
+- tapOn: "Settings"
+- tapOn: "Done"
+- tapOn: "Search or enter address"
+- inputText: "Wikipedia"
+- assertVisible: "Empty list"
