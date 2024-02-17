@@ -17,7 +17,7 @@ appId: org.mozilla.ios.Fennec
 - tapOn:
     id: "TabToolbar.menuButton"
 - tapOn:
-    id: "menu-Settings"
+    id: "settingsLarge"
 - tapOn:
     id: "Search"
 - tapOn:
