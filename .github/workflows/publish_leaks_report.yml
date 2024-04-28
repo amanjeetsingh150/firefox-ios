@@ -16,5 +16,17 @@ jobs:
    
       - name: Check xcodebuild
         run: xcodebuild -version
+        
+      - name: List xcode runtimes
+        run: xcrun simctl list runtimes
+        
+      - name: Set permission to scripts
+        run: chmod +x .github/scripts/boot_simulator.sh
+        
+      - name: Boot Simulator
+        run: ./.github/scripts/boot_simulator.sh
+     
+      - name: Check Simulator Status
+        run: xcrun simctl list
 
      
