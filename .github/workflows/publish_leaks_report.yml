@@ -28,5 +28,17 @@ jobs:
      
       - name: Check Simulator Status
         run: xcrun simctl list
+      
+      - name: Install App
+        run: |
+          unzip -o ./.github/assets/Client.zip -d ./.github/assets/
+          xcrun simctl install booted ./.github/assets/Client.app
+
+      - name: Launch App
+        run: |
+          export SIMCTL_CHILD_MallocStackLogging=1 && xcrun simctl launch booted org.mozilla.ios.Fennec
+
+          
+      
 
      
