@@ -112,7 +112,7 @@ class RootViewController: UIViewController,
         _ = addressToolbarContainer.becomeFirstResponder()
     }
 
-    private func updateAddressToolbar(url: String?) {
+    private func updateAddressToolbar(url: URL?) {
         let model = model.addressToolbarContainerModel(url: url)
         addressToolbarContainer.configure(model, toolbarDelegate: self)
     }
@@ -195,7 +195,7 @@ class RootViewController: UIViewController,
     }
 
     func onURLChange(url: String) {
-        updateAddressToolbar(url: url)
+        updateAddressToolbar(url: URL(string: url))
     }
 
     func onFindInPage(selected: String) {
@@ -210,7 +210,7 @@ class RootViewController: UIViewController,
         findInPageBar?.totalResults = totalResults
     }
 
-    // MARK: - SearchBarDelegate
+    // MARK: - AddressToolbarDelegate
 
     func searchSuggestions(searchTerm: String) {
         guard !searchTerm.isEmpty else {
@@ -232,10 +232,23 @@ class RootViewController: UIViewController,
         browse(to: searchTerm)
     }
 
+    func shouldDisplayTextForURL(_ url: URL?) -> String? {
+        return nil
+    }
+
+    func addressToolbarDidBeginEditing(searchTerm: String, shouldShowSuggestions: Bool) {
+    }
+
+    func addressToolbarAccessibilityActions() -> [UIAccessibilityCustomAction]? {
+        return []
+    }
+
+    func configureContextualHint(_ addressToolbar: BrowserAddressToolbar, for button: UIButton) {
+    }
+
     // MARK: - SearchViewDelegate
 
     func tapOnSuggestion(term: String) {
-        updateAddressToolbar(url: term)
         browse(to: term)
     }
 
@@ -301,7 +314,6 @@ class RootViewController: UIViewController,
     }
 
     // MARK: - FindInPageBarDelegate
-
     func findInPage(_ findInPage: FindInPageBar, textChanged text: String) {
         browserVC.findInPage(text: text, function: .find)
     }
@@ -324,6 +336,6 @@ class RootViewController: UIViewController,
     // MARK: Themeable
     func applyTheme() {
         updateThemeApplicableSubviews(view, for: currentWindowUUID)
-        view.backgroundColor = themeManager.currentTheme(for: currentWindowUUID).colors.layer1
+        view.backgroundColor = themeManager.getCurrentTheme(for: currentWindowUUID).colors.layer1
     }
 }

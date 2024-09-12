@@ -79,7 +79,7 @@ class SponsoredTileTelemetryTests: XCTestCase {
         waitForExpectations(timeout: 5.0)
     }
 
-    // MARK: ContexId
+    // MARK: ContextId
     func testContextIdImpressionTopSite() {
         TelemetryContextualIdentifier.setupContextId()
         let contile = ContileProviderMock.defaultSuccessData[0]
@@ -107,7 +107,6 @@ class SponsoredTileTelemetryTests: XCTestCase {
 
     func clearTest() {
         Glean.shared.resetGlean(clearStores: true)
-        Glean.shared.enableTestingMode()
         TelemetryContextualIdentifier.clearUserDefaults()
     }
 }

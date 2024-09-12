@@ -4,7 +4,10 @@
 
 import UIKit
 import Storage
+
 @testable import Client
+
+import enum MozillaAppServices.VisitType
 
 class MockBrowserViewController: BrowserViewController {
     var switchToPrivacyModeCalled = false
@@ -40,7 +43,7 @@ class MockBrowserViewController: BrowserViewController {
     var presentSignInCount: Int = 0
 
     var qrCodeCount = 0
-    var closePrivateTabsCount = 0
+    var closePrivateTabsWidgetAction = 0
 
     var embedContentCalled = 0
     var frontEmbeddedContentCalled = 0
@@ -92,15 +95,15 @@ class MockBrowserViewController: BrowserViewController {
         openURLInNewTabURL = url
         openURLInNewTabIsPrivate = isPrivate
         openURLInNewTabCount += 1
-        return Tab(profile: MockProfile(), configuration: .init(), windowUUID: windowUUID)
+        return Tab(profile: MockProfile(), windowUUID: windowUUID)
     }
 
     override func handleQRCode() {
         qrCodeCount += 1
     }
 
-    override func handleClosePrivateTabs() {
-        closePrivateTabsCount += 1
+    override func closeAllPrivateTabs() {
+        closePrivateTabsWidgetAction += 1
     }
 
     override func presentSignInViewController(

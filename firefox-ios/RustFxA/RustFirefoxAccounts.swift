@@ -5,7 +5,14 @@
 import Common
 import UIKit
 import Shared
-import MozillaAppServices
+
+import class MozillaAppServices.FxAccountManager
+import class MozillaAppServices.FxAConfig
+import enum MozillaAppServices.DeviceCapability
+import enum MozillaAppServices.DeviceType
+import enum MozillaAppServices.OAuthScope
+import struct MozillaAppServices.DeviceConfig
+import struct MozillaAppServices.Profile
 
 let PendingAccountDisconnectedKey = "PendingAccountDisconnect"
 
@@ -14,6 +21,18 @@ final class Unknown: NSObject, NSCoding {
     func encode(with coder: NSCoder) {}
     init(coder aDecoder: NSCoder) {
         super.init()
+    }
+}
+
+// A convenience to allow other callers to pass in Nimbus/Flaggable features
+// to RustFirefoxAccounts
+public struct RustFxAFeatures: OptionSet {
+    public let rawValue: Int
+
+    public static let closeRemoteTabs = RustFxAFeatures(rawValue: 1 << 0)
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
     }
 }
 
@@ -65,6 +84,7 @@ open class RustFirefoxAccounts {
      */
     public static func startup(
         prefs: Prefs,
+        features: RustFxAFeatures = RustFxAFeatures(),
         logger: Logger = DefaultLogger.shared,
         completion: @escaping (FxAccountManager) -> Void
     ) {
@@ -78,7 +98,7 @@ open class RustFirefoxAccounts {
         if let accManager = RustFirefoxAccounts.shared.accountManager {
             completion(accManager)
         }
-        let manager = RustFirefoxAccounts.shared.createAccountManager()
+        let manager = RustFirefoxAccounts.shared.createAccountManager(features: features)
         manager.initialize { result in
             assert(Thread.isMainThread)
             if !Thread.isMainThread {
@@ -111,7 +131,7 @@ open class RustFirefoxAccounts {
         return RustFirefoxAccounts.prefs?.boolForKey(PrefsKeys.KeyEnableChinaSyncService) ?? AppInfo.isChinaEdition
     }
 
-    private func createAccountManager() -> FxAccountManager {
+    private func createAccountManager(features: RustFxAFeatures) -> FxAccountManager {
         let prefs = RustFirefoxAccounts.prefs
         if prefs == nil {
             logger.log("prefs is unexpectedly nil", level: .warning, category: .sync)
@@ -156,10 +176,15 @@ open class RustFirefoxAccounts {
         }
 
         let type = UIDevice.current.userInterfaceIdiom == .pad ? DeviceType.tablet : DeviceType.mobile
+
+        var capabilities: [DeviceCapability] = [.sendTab]
+        if features.contains(.closeRemoteTabs) {
+            capabilities.append(.closeTabs)
+        }
         let deviceConfig = DeviceConfig(
             name: DeviceInfo.defaultClientName(),
             deviceType: type,
-            capabilities: [.sendTab]
+            capabilities: capabilities
         )
         let accessGroupPrefix = Bundle.main.object(forInfoDictionaryKey: "MozDevelopmentTeam") as! String
         let accessGroupIdentifier = AppInfo.keychainAccessGroupWithPrefix(accessGroupPrefix)

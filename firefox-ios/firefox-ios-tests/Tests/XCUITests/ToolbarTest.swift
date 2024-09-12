@@ -23,7 +23,7 @@ class ToolbarTests: BaseTestCase {
         super.tearDown()
     }
 
-    // https://testrail.stage.mozaws.net/index.php?/cases/view/2344428
+    // https://mozilla.testrail.io/index.php?/cases/view/2344428
     /**
      * Tests landscape page navigation enablement with the URL bar with tab switching.
      */
@@ -74,7 +74,7 @@ class ToolbarTests: BaseTestCase {
         XCTAssertTrue(app.buttons[AccessibilityIdentifiers.Toolbar.forwardButton].isEnabled)
     }
 
-    // https://testrail.stage.mozaws.net/index.php?/cases/view/2344430
+    // https://mozilla.testrail.io/index.php?/cases/view/2344430
     func testClearURLTextUsingBackspace() {
         navigator.openURL(website1["url"]!)
         waitUntilPageLoad()
@@ -94,7 +94,7 @@ class ToolbarTests: BaseTestCase {
     // Check that after scrolling on a page, the URL bar is hidden. Tapping one on the status bar will reveal
     // the URL bar, tapping again on the status will scroll to the top
     // Skipping for iPad for now, not sure how to implement it there
-    // https://testrail.stage.mozaws.net/index.php?/cases/view/2344431
+    // https://mozilla.testrail.io/index.php?/cases/view/2344431
     func testRevealToolbarWhenTappingOnStatusbar() {
         if !iPad() {
             // Workaround when testing on iPhone. If the orientation is in landscape on iPhone the tests will fail.
@@ -125,4 +125,58 @@ class ToolbarTests: BaseTestCase {
             XCTAssertTrue(topElement.isHittable)
         }
    }
+
+    // https://mozilla.testrail.io/index.php?/cases/view/2306870
+    func testOpenNewTabButtonOnToolbar() throws {
+        if iPad() {
+            throw XCTSkip("iPhone only test")
+        } else {
+            // Launch Firefox iOS
+            // A magnifying glass icon is displayed. A "+" icon is displayed
+            validateAddNewTabButtonOnToolbar(isPrivate: false)
+            // Repeat steps on private mode
+            // validateAddNewTabButtonOnToolbar() does not work on iOS 15
+            if #available(iOS 16, *) {
+                navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+                navigator.performAction(Action.OpenNewTabFromTabTray)
+                app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
+                validateAddNewTabButtonOnToolbar(isPrivate: true)
+            }
+        }
+    }
+
+    private func validateAddNewTabButtonOnToolbar(isPrivate: Bool) {
+        if isPrivate {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.fireButton])
+        } else {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.searchButton])
+        }
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
+        restartInBackground()
+        if isPrivate {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.fireButton])
+        } else {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.searchButton])
+        }
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
+        // Swipe up to close the app does not work on iOS 15.
+        if #available(iOS 16, *) {
+            closeFromAppSwitcherAndRelaunch()
+            if isPrivate {
+                mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.fireButton])
+            } else {
+                mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.searchButton])
+            }
+            let addNewTabButton = app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton]
+            mozWaitForElementToExist(addNewTabButton)
+            addNewTabButton.tapOnApp()
+            if !app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].exists {
+                addNewTabButton.tap()
+            }
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton])
+            app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
+            XCTAssertEqual(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].value as! String, "2")
+        }
+    }
 }

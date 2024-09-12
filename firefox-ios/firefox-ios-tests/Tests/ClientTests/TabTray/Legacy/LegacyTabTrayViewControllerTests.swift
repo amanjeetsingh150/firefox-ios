@@ -23,7 +23,8 @@ final class LegacyTabTrayViewControllerTests: XCTestCase {
 
         DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile()
-        manager = TabManagerImplementation(profile: profile, uuid: .XCTestDefaultUUID)
+        manager = TabManagerImplementation(profile: profile,
+                                           uuid: ReservedWindowUUID(uuid: .XCTestDefaultUUID, isNew: false))
         urlBar = MockURLBarView()
         overlayManager = MockOverlayModeManager()
         overlayManager.setURLBar(urlBarView: urlBar)
@@ -49,28 +50,27 @@ final class LegacyTabTrayViewControllerTests: XCTestCase {
     }
 
     func testCountUpdatesAfterTabRemoval() throws {
-        throw XCTSkip("Skipping since fails in Bitrise fix in FXIOS-7487")
-//        let tabToRemove = manager.addTab()
-//        manager.addTab()
-//
-//        XCTAssertEqual(tabTray.viewModel.normalTabsCount, "2")
-//        XCTAssertEqual(tabTray.countLabel.text, "2")
-//
-//        gridTab.tabDisplayManager.performCloseAction(for: tabToRemove)
-//        // Wait for notification of .TabClosed when tab is removed
-//        let expectation = expectation(description: "notificationReceived")
-//        NotificationCenter.default.addObserver(
-//            forName: .UpdateLabelOnTabClosed,
-//            object: nil,
-//            queue: nil
-//        ) { notification in
-//            expectation.fulfill()
-//
-//            XCTAssertEqual(self.tabTray.viewModel.normalTabsCount, "1")
-//            XCTAssertEqual(self.tabTray.countLabel.text, "1")
-//        }
-//
-//        waitForExpectations(timeout: 3.0)
+        let tabToRemove = manager.addTab()
+        manager.addTab()
+
+        XCTAssertEqual(tabTray.viewModel.normalTabsCount, "2")
+        XCTAssertEqual(tabTray.countLabel.text, "2")
+
+        gridTab.tabDisplayManager.performCloseAction(for: tabToRemove)
+        // Wait for notification of .TabClosed when tab is removed
+        let expectation = expectation(description: "notificationReceived")
+        NotificationCenter.default.addObserver(
+            forName: .UpdateLabelOnTabClosed,
+            object: nil,
+            queue: nil
+        ) { notification in
+            expectation.fulfill()
+
+            XCTAssertEqual(self.tabTray.viewModel.normalTabsCount, "1")
+            XCTAssertEqual(self.tabTray.countLabel.text, "1")
+        }
+
+        waitForExpectations(timeout: 3.0)
     }
 
     func testTabTrayRevertToRegular_ForNoPrivateTabSelected() {

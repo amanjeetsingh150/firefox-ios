@@ -7,6 +7,9 @@ import Glean
 import Storage
 import Common
 
+import class MozillaAppServices.BookmarkFolderData
+import enum MozillaAppServices.BookmarkRoots
+
 final class AppStartupTelemetry {
     let profile: Profile
 
@@ -38,7 +41,8 @@ final class AppStartupTelemetry {
         let loginsViewModel = PasswordManagerViewModel(
             profile: profile,
             searchController: searchController,
-            theme: LightTheme()
+            theme: LightTheme(),
+            loginProvider: profile.logins
         )
         let dataSource = LoginDataSource(viewModel: loginsViewModel)
         loginsViewModel.loadLogins(loginDataSource: dataSource)

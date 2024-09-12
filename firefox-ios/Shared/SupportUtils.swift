@@ -18,6 +18,11 @@ public struct SupportUtils {
         return URL(string: "https://www.mozilla.org/en-US/firefox/ios/notes/")
     }
 
+    public static var URLForGetHelp: URL? {
+        // Returns the predefined URL associated to the menu's Get Help button action.
+        return URL(string: "https://support.mozilla.org/products/ios")
+    }
+
     public static var URLForPocketLearnMore: URL? {
         // Returns the predefined URL associated to homepage Pocket's Learn more action.
         return URL(string: "https://www.mozilla.org/firefox/pocket/?utm_source=ff_ios")
@@ -35,6 +40,23 @@ public struct SupportUtils {
             return nil
         }
         return URL(string: "https://support.mozilla.org/1/mobile/\(AppInfo.appVersion)/iOS/\(languageIdentifier)/\(escapedTopic)")
+    }
+
+    public static func URLForPrivacyNotice(source: String, campaign: String, content: String?) -> URL? {
+        let defaultURL = URL(string: "https://www.mozilla.org/privacy/firefox")
+
+        guard let languageIdentifier = Locale.preferredLanguages.first else {
+            return defaultURL
+        }
+
+        var privacyNoticeString =
+                    "https://www.mozilla.org/\(languageIdentifier)/privacy/firefox/?utm_medium=firefox-mobile&utm_source=\(source)&utm_campaign=\(campaign)"
+
+        if let content {
+            privacyNoticeString.append("&utm_content=\(content)")
+        }
+
+        return URL(string: privacyNoticeString) ?? defaultURL
     }
 
     public static func URLForReportSiteIssue(_ siteUrl: String?) -> URL? {

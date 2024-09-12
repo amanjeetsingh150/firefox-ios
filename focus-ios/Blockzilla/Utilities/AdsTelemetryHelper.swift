@@ -97,12 +97,12 @@ extension SearchProviderModel {
 
 class AdsTelemetryHelper {
     var getURL: (() -> URL?)!
-    var adsTelemetryUrlList: [String] = [String]() {
+    var adsTelemetryUrlList = [String]() {
         didSet {
             startingSearchUrlWithAds = getURL()
         }
     }
-    var adsTelemetryRedirectUrlList: [URL] = [URL]()
+    var adsTelemetryRedirectUrlList = [URL]()
     var startingSearchUrlWithAds: URL?
     var adsProviderName: String = ""
 
@@ -131,7 +131,7 @@ class AdsTelemetryHelper {
     }
 
     func trackClickedAds(with nextURL: URL?) {
-        if adsTelemetryUrlList.count > 0, let adUrl = nextURL?.absoluteString {
+        if !adsTelemetryUrlList.isEmpty, let adUrl = nextURL?.absoluteString {
             if adsTelemetryUrlList.contains(adUrl) {
                 if !adsProviderName.isEmpty {
                     trackAdsClickedOnPage(providerName: adsProviderName)

@@ -2,14 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
+import MozillaAppServices
+import Shared
+import Storage
+import XCTest
+import SiteImageView
+
 @testable import Client
 
-import Storage
-import Shared
-import XCTest
-
 class TopSitesHelperTests: XCTestCase {
+    private let faviconResource: SiteResource = .remoteURL(url: URL(string: "https://mozilla.org/favicon.ico")!)
     private var profile: MockProfile!
+
     private func deleteDatabases() {
         do {
             try profile.files.remove("TopSitesHelperTests.db")
@@ -161,7 +165,10 @@ class TopSitesHelperTests: XCTestCase {
         let expectation = expectation(description: "Expect top sites to be fetched")
         let subject = createSubject(
             mockPinnedSites: true,
-            pinnedSites: [PinnedSite(site: Site(url: "https://facebook.com", title: "Facebook"))]
+            pinnedSites: [PinnedSite(
+                site: Site(url: "https://facebook.com", title: "Facebook"),
+                faviconResource: faviconResource
+            )]
         )
 
         subject.getTopSites { sites in
@@ -181,8 +188,16 @@ class TopSitesHelperTests: XCTestCase {
 // MARK: - Tests data
 extension TopSitesHelperTests {
     var defaultPinnedSites: [PinnedSite] {
-        return [PinnedSite(site: Site(url: "https://apinnedsite.com/", title: "a pinned site title")),
-                PinnedSite(site: Site(url: "https://apinnedsite2.com/", title: "a pinned site title2"))]
+        return [
+            PinnedSite(
+                site: Site(url: "https://apinnedsite.com/", title: "a pinned site title"),
+                faviconResource: faviconResource
+            ),
+            PinnedSite(
+                site: Site(url: "https://apinnedsite2.com/", title: "a pinned site title2"),
+                faviconResource: faviconResource
+            )
+        ]
     }
 
     var defaultFrecencySites: [Site] {

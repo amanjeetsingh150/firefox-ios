@@ -2,9 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import Foundation
 import Common
+import Foundation
 import ToolbarKit
+import UIKit
 
 class RootViewControllerModel {
     // By default the state is set to reload. We save the state to avoid setting the toolbar
@@ -22,24 +23,27 @@ class RootViewControllerModel {
             iconName: "Back",
             isEnabled: canGoBack,
             a11yLabel: "Navigate Back",
+            a11yHint: nil,
             a11yId: "backButton",
-            onSelected: {
+            onSelected: { _ in
                 self.navigationToolbarDelegate?.backButtonTapped()
             })
         let forwardButton = ToolbarElement(
             iconName: "Forward",
             isEnabled: canGoForward,
             a11yLabel: "Navigate Forward",
+            a11yHint: nil,
             a11yId: "forwardButton",
-            onSelected: {
+            onSelected: { _ in
                 self.navigationToolbarDelegate?.forwardButtonTapped()
             })
         let reloadButton = ToolbarElement(
             iconName: isReloading ? StandardImageIdentifiers.Large.cross : StandardImageIdentifiers.Large.sync,
             isEnabled: isReloading,
             a11yLabel: isReloading ? "Stop loading website" : "Reload website",
+            a11yHint: nil,
             a11yId: isReloading ? "stopButton" : "reloadButton",
-            onSelected: {
+            onSelected: { _ in
                 if self.isReloading {
                     self.navigationToolbarDelegate?.stopButtonTapped()
                 } else {
@@ -50,8 +54,9 @@ class RootViewControllerModel {
             iconName: StandardImageIdentifiers.Large.appMenu,
             isEnabled: true,
             a11yLabel: "Open Menu",
+            a11yHint: nil,
             a11yId: "appMenuButton",
-            onSelected: {
+            onSelected: { _ in
                 self.navigationToolbarDelegate?.menuButtonTapped()
             })
         let actions = [backButton, forwardButton, reloadButton, menuButton]
@@ -70,11 +75,12 @@ class RootViewControllerModel {
     }
 
     // MARK: - Address toolbar
-    func addressToolbarContainerModel(url: String?) -> AddressToolbarContainerModel {
+    func addressToolbarContainerModel(url: URL?) -> AddressToolbarContainerModel {
         let pageActions = [ToolbarElement(
             iconName: StandardImageIdentifiers.Large.qrCode,
             isEnabled: true,
             a11yLabel: "Read QR Code",
+            a11yHint: nil,
             a11yId: "qrCodeButton",
             onSelected: nil)]
 
@@ -82,19 +88,27 @@ class RootViewControllerModel {
             iconName: StandardImageIdentifiers.Large.appMenu,
             isEnabled: true,
             a11yLabel: "Open Menu",
+            a11yHint: nil,
             a11yId: "appMenuButton",
-            onSelected: {
+            onSelected: { _ in
                 self.addressToolbarDelegate?.didTapMenu()
             })]
 
         let locationViewState = LocationViewState(
-                accessibilityIdentifier: "clearButton",
-                accessibilityHint: "Double tap to clear text",
-                accessibilityLabel: "Clean",
-                urlTextFieldPlaceholder: "Search or enter address",
-                searchEngineImageName: "bingSearchEngine",
-                url: url
-        )
+            searchEngineImageViewA11yId: "searchEngine",
+            searchEngineImageViewA11yLabel: "Search engine icon",
+            lockIconButtonA11yId: "lockButton",
+            lockIconButtonA11yLabel: "Tracking Protection",
+            urlTextFieldPlaceholder: "Search or enter address",
+            urlTextFieldA11yId: "urlTextField",
+            urlTextFieldA11yLabel: "Address Bar",
+            searchEngineImage: UIImage(named: "bingSearchEngine"),
+            lockIconImageName: StandardImageIdentifiers.Large.lock,
+            url: url,
+            searchTerm: nil,
+            isEditing: false,
+            isScrollingDuringEdit: false,
+            shouldSelectSearchTerm: false)
 
         // FXIOS-8947: Use scroll position
         return AddressToolbarContainerModel(

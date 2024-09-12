@@ -79,6 +79,16 @@ class SettingsCoordinator: BaseCoordinator,
 
     private func getSettingsViewController(settingsSection section: Route.SettingsSection) -> UIViewController? {
         switch section {
+        case .addresses:
+            let viewModel = AddressAutofillSettingsViewModel(
+                profile: profile,
+                windowUUID: windowUUID
+            )
+            let viewController = AddressAutofillSettingsViewController(
+                addressAutofillViewModel: viewModel,
+                windowUUID: windowUUID
+            )
+            return viewController
         case .newTab:
             let viewController = NewTabContentSettingsViewController(prefs: profile.prefs,
                                                                      windowUUID: windowUUID)
@@ -124,7 +134,7 @@ class SettingsCoordinator: BaseCoordinator,
                 let viewModel = WallpaperSettingsViewModel(
                     wallpaperManager: wallpaperManager,
                     tabManager: tabManager,
-                    theme: themeManager.currentTheme(for: windowUUID)
+                    theme: themeManager.getCurrentTheme(for: windowUUID)
                 )
                 let wallpaperVC = WallpaperSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
                 wallpaperVC.settingsDelegate = self
@@ -198,6 +208,11 @@ class SettingsCoordinator: BaseCoordinator,
         parentCoordinator?.openDebugTestTabs(count: count)
     }
 
+    func showDebugFeatureFlags() {
+        let featureFlagsViewController = FeatureFlagsDebugViewController(windowUUID: windowUUID)
+        router.push(featureFlagsViewController)
+    }
+
     func showPasswordManager(shouldShowOnboarding: Bool) {
         let passwordCoordinator = PasswordManagerCoordinator(
             router: router,
@@ -237,9 +252,14 @@ class SettingsCoordinator: BaseCoordinator,
     // MARK: PrivacySettingsDelegate
 
     func pressedAddressAutofill() {
-        let viewModel = AddressAutofillSettingsViewModel(profile: profile)
-        let viewController = AddressAutofillSettingsViewController(addressAutofillViewModel: viewModel,
-                                                                   windowUUID: windowUUID)
+        let viewModel = AddressAutofillSettingsViewModel(
+            profile: profile,
+            windowUUID: windowUUID
+        )
+        let viewController = AddressAutofillSettingsViewController(
+            addressAutofillViewModel: viewModel,
+            windowUUID: windowUUID
+        )
         router.push(viewController)
         TelemetryWrapper.recordEvent(
             category: .action,
@@ -328,9 +348,10 @@ class SettingsCoordinator: BaseCoordinator,
     }
 
     func pressedTheme() {
-        store.dispatch(ActiveScreensStateAction.showScreen(
-            ScreenActionContext(screen: .themeSettings, windowUUID: windowUUID)
-        ))
+        let action = ScreenAction(windowUUID: windowUUID,
+                                  actionType: ScreenActionType.showScreen,
+                                  screen: .themeSettings)
+        store.dispatch(action)
         router.push(ThemeSettingsController(windowUUID: windowUUID))
     }
 

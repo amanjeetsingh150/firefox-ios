@@ -3,9 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import WebKit
 import Storage
+import WebKit
+
 @testable import Client
+
+import struct MozillaAppServices.CreditCard
 
 class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegate {
     var showSettingsCalled = 0
@@ -26,6 +29,8 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
     var dismissFakespotModalCalled = 0
     var dismissFakespotSidebarCalled = 0
     var updateFakespotSidebarCalled = 0
+    var showMicrosurveyCalled = 0
+    var showMainMenuCalled = 0
 
     func show(settings: Client.Route.SettingsSection, onDismiss: (() -> Void)?) {
         showSettingsCalled += 1
@@ -45,7 +50,7 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
         showCreditCardAutofillCalled += 1
     }
 
-    func showSavedLoginAutofill(tabURL: URL, currentRequestId: String) {
+    func showSavedLoginAutofill(tabURL: URL, currentRequestId: String, field: FocusFieldType) {
         showLoginAutofillCalled += 1
     }
 
@@ -96,6 +101,10 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
         showFakespotFlowAsModalCalled += 1
     }
 
+    func showMainMenu() {
+        showMainMenuCalled += 1
+    }
+
     func showFakespotFlowAsSidebar(productURL: URL,
                                    sidebarContainer: Client.SidebarEnabledViewProtocol,
                                    parentViewController: UIViewController) {
@@ -115,5 +124,9 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
                                sidebarContainer: SidebarEnabledViewProtocol,
                                parentViewController: UIViewController) {
         updateFakespotSidebarCalled += 1
+    }
+
+    func showMicrosurvey(model: MicrosurveyModel) {
+        showMicrosurveyCalled += 1
     }
 }

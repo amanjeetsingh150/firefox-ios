@@ -119,6 +119,8 @@ class DownloadHelper: NSObject {
         var filenameItem: SingleActionViewModel
         var modelText = host
 
+        // This size reflects the (possibly compressed) download size of the file, not necessarily its true size.
+        // e.g. In the case of gzip content (FXIOS-9039)
         if let expectedSize = expectedSize {
             modelText = "\(expectedSize) — \(host)"
         }
@@ -134,7 +136,7 @@ class DownloadHelper: NSObject {
 
         filenameItem.customRender = { label, contentView in
             label.numberOfLines = 2
-            label.font = DefaultDynamicFontHelper.preferredFont(withTextStyle: .body, size: 16, weight: .semibold)
+            label.font = FXFontStyles.Bold.body.scaledFont()
             label.lineBreakMode = .byCharWrapping
         }
 

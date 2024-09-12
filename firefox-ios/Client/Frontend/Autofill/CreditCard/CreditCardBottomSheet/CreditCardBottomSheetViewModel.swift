@@ -7,6 +7,9 @@ import Common
 import Storage
 import Shared
 
+import enum MozillaAppServices.AutofillApiError
+import struct MozillaAppServices.CreditCard
+
 enum CreditCardBottomSheetState: String, Equatable, CaseIterable {
     case save
     case update
@@ -59,8 +62,7 @@ enum CreditCardBottomSheetState: String, Equatable, CaseIterable {
 
 class CreditCardBottomSheetViewModel {
     private var logger: Logger
-    let profile: Profile
-    let autofill: RustAutofill
+    let autofill: CreditCardProvider
     var creditCard: CreditCard? {
         didSet {
             didUpdateCreditCard?()
@@ -75,16 +77,15 @@ class CreditCardBottomSheetViewModel {
 
     var didUpdateCreditCard: (() -> Void)?
     var decryptedCreditCard: UnencryptedCreditCardFields?
-    var storedCreditCards: [CreditCard] = [CreditCard]()
+    var storedCreditCards = [CreditCard]()
     var state: CreditCardBottomSheetState
 
-    init(profile: Profile,
+    init(creditCardProvider: CreditCardProvider,
          creditCard: CreditCard?,
          decryptedCreditCard: UnencryptedCreditCardFields?,
          logger: Logger = DefaultLogger.shared,
          state: CreditCardBottomSheetState) {
-        self.profile = profile
-        self.autofill = profile.autofill
+        self.autofill = creditCardProvider
         self.state = state
         self.logger = logger
         creditCards = [CreditCard]()

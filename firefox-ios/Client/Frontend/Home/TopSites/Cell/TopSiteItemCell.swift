@@ -26,8 +26,6 @@ class TopSiteItemCell: UICollectionViewCell, ReusableCell {
         static let imageTopSpace: CGFloat = 12
         static let imageBottomSpace: CGFloat = 12
         static let imageLeadingTrailingSpace: CGFloat = 12
-        static let titleFontSize: CGFloat = 12
-        static let sponsorFontSize: CGFloat = 11
     }
 
     private var rootContainer: UIView = .build { view in
@@ -64,8 +62,7 @@ class TopSiteItemCell: UICollectionViewCell, ReusableCell {
 
     private lazy var titleLabel: UILabel = .build { titleLabel in
         titleLabel.textAlignment = .center
-        titleLabel.font = DefaultDynamicFontHelper.preferredFont(withTextStyle: .caption1,
-                                                                 size: UX.titleFontSize)
+        titleLabel.font = FXFontStyles.Regular.caption1.scaledFont()
         titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.preferredMaxLayoutWidth = UX.imageBackgroundSize.width + HomepageViewModel.UX.shadowRadius
         titleLabel.backgroundColor = .clear
@@ -74,8 +71,7 @@ class TopSiteItemCell: UICollectionViewCell, ReusableCell {
 
     private lazy var sponsoredLabel: UILabel = .build { sponsoredLabel in
         sponsoredLabel.textAlignment = .center
-        sponsoredLabel.font = DefaultDynamicFontHelper.preferredFont(withTextStyle: .caption2,
-                                                                     size: UX.sponsorFontSize)
+        sponsoredLabel.font = FXFontStyles.Regular.caption2.scaledFont()
         sponsoredLabel.adjustsFontForContentSizeCategory = true
         sponsoredLabel.preferredMaxLayoutWidth = UX.imageBackgroundSize.width + HomepageViewModel.UX.shadowRadius
     }
@@ -147,14 +143,27 @@ class TopSiteItemCell: UICollectionViewCell, ReusableCell {
         titleLabel.text = topSite.title
         accessibilityLabel = topSite.accessibilityLabel
 
-        let urlRequest = topSite.site.url
-        var imageURL: URL?
+        let siteURLString = topSite.site.url
+        var imageResource: SiteResource?
 
-        if let site = topSite.site as? SponsoredTile {
-            imageURL = URL(string: site.imageURL, invalidCharacters: false)
+        if let site = topSite.site as? SponsoredTile,
+           let url = URL(string: site.imageURL, invalidCharacters: false) {
+            imageResource = .remoteURL(url: url)
+        } else if let site = topSite.site as? PinnedSite {
+            imageResource = site.faviconResource
+        } else if let site = topSite.site as? SuggestedSite {
+            imageResource = site.faviconResource
+        } else if let siteURL = URL(string: siteURLString),
+                  let domainNoTLD = siteURL.baseDomain?.split(separator: ".").first,
+                  domainNoTLD == "google" {
+            // Exception for Google top sites, which all return blurry low quality favicons that on the home screen.
+            // Return our bundled G icon for all of the Google Suite.
+            // Parse example: "https://drive.google.com/drive/home" > "drive.google.com" > "google"
+            imageResource = GoogleTopSiteManager.Constants.faviconResource
         }
-        let viewModel = FaviconImageViewModel(siteURLString: urlRequest,
-                                              faviconURL: imageURL)
+
+        let viewModel = FaviconImageViewModel(siteURLString: siteURLString,
+                                              siteResource: imageResource)
         imageView.setFavicon(viewModel)
         self.textColor = textColor
 

@@ -7,6 +7,9 @@ import Shared
 import Storage
 import Common
 
+import struct MozillaAppServices.LoginEntry
+import struct MozillaAppServices.EncryptedLogin
+
 class Authenticator {
     fileprivate static let MaxAuthenticationAttempts = 3
 
@@ -55,22 +58,23 @@ class Authenticator {
             findMatchingCredentialsForChallenge(
                 challenge,
                 fromLoginsProvider: loginsHelper.logins
-            ) { credentials in
+            ) { result in
                 DispatchQueue.main.async {
-                    guard let credentials = credentials else {
+                    switch result {
+                    case .success(let credentials):
+                        self.promptForUsernamePassword(
+                            viewController,
+                            credentials: credentials,
+                            protectionSpace: challenge.protectionSpace,
+                            loginsHelper: loginsHelper,
+                            completionHandler: completionHandler
+                        )
+                    case .failure:
                         sendLoginsAutofillFailedTelemetry()
                         completionHandler(.failure(
                             LoginRecordError(description: "Unknown error when finding credentials")
                         ))
-                        return
                     }
-                    self.promptForUsernamePassword(
-                        viewController,
-                        credentials: credentials,
-                        protectionSpace: challenge.protectionSpace,
-                        loginsHelper: loginsHelper,
-                        completionHandler: completionHandler
-                    )
                 }
             }
             return
@@ -90,54 +94,35 @@ class Authenticator {
         _ challenge: URLAuthenticationChallenge,
         fromLoginsProvider loginsProvider: RustLogins,
         logger: Logger = DefaultLogger.shared,
-        completionHandler: @escaping (URLCredential?) -> Void
+        completionHandler: @escaping (Result<URLCredential?, Error>) -> Void
     ) {
         loginsProvider.getLoginsFor(protectionSpace: challenge.protectionSpace, withUsername: nil) { result in
             switch result {
             case .success(let logins):
                 guard logins.count >= 1 else {
-                    completionHandler(nil)
+                    completionHandler(.success(nil))
                     return
                 }
 
-                let logins = logins.compactMap {
-                    // HTTP Auth must have nil formSubmitUrl and a non-nil httpRealm.
-                    return $0.formSubmitUrl == nil && $0.httpRealm != nil ? $0 : nil
-                }
+                let logins = filterHttpAuthLogins(logins: logins)
                 var credentials: URLCredential?
 
                 // It is possible that we might have duplicate entries since we match against host and scheme://host.
                 // This is a side effect of https://bugzilla.mozilla.org/show_bug.cgi?id=1238103.
                 if logins.count > 1 {
-                    credentials = (logins.first(where: { login in
-                        (login.protectionSpace.`protocol` == challenge.protectionSpace.`protocol`)
-                        && !login.hasMalformedHostname
-                    }))?.credentials
-
-                    let malformedGUIDs: [GUID] = logins.compactMap { login in
-                        if login.hasMalformedHostname {
-                            return login.id
-                        }
-                        return nil
-                    }
-                    loginsProvider.deleteLogins(ids: malformedGUIDs) { _ in }
+                    credentials = handleDuplicatedEntries(logins: logins,
+                                                          challenge: challenge,
+                                                          loginsProvider: loginsProvider)
                 }
 
                 // Found a single entry but the schemes don't match. This is a result of a schemeless entry that we
                 // saved in a previous iteration of the app so we need to migrate it. We only care about the
                 // the username/password so we can rewrite the scheme to be correct.
                 else if logins.count == 1 && logins[0].protectionSpace.`protocol` != challenge.protectionSpace.`protocol` {
-                    let login = logins[0]
-                    credentials = login.credentials
-                    let new = LoginEntry(credentials: login.credentials, protectionSpace: challenge.protectionSpace)
-                    loginsProvider.updateLogin(id: login.id, login: new) { result in
-                        switch result {
-                        case .success:
-                            completionHandler(credentials)
-                        case .failure:
-                            completionHandler(nil)
-                        }
-                    }
+                    handleUnmatchedSchemes(logins: logins,
+                                           challenge: challenge,
+                                           loginsProvider: loginsProvider,
+                                           completionHandler: completionHandler)
                     return
                 }
 
@@ -145,15 +130,56 @@ class Authenticator {
                 else if logins.count == 1 {
                     credentials = logins[0].credentials
                 } else {
-                    logger.log("No logins found for Authenticator",
-                               level: .info,
-                               category: .webview)
+                    logger.log("No logins found for Authenticator", level: .info, category: .webview)
                 }
 
-                completionHandler(credentials)
+                completionHandler(.success(credentials))
 
-            case .failure:
-                completionHandler(nil)
+            case .failure(let error):
+                completionHandler(.failure(error))
+            }
+        }
+    }
+
+    private static func filterHttpAuthLogins(logins: [EncryptedLogin]) -> [EncryptedLogin] {
+        return logins.compactMap {
+            // HTTP Auth must have nil formSubmitUrl and a non-nil httpRealm.
+            return $0.formSubmitUrl == nil && $0.httpRealm != nil ? $0 : nil
+        }
+    }
+
+    private static func handleDuplicatedEntries(logins: [EncryptedLogin],
+                                                challenge: URLAuthenticationChallenge,
+                                                loginsProvider: RustLogins) -> URLCredential? {
+        let credentials = (logins.first(where: { login in
+            (login.protectionSpace.`protocol` == challenge.protectionSpace.`protocol`)
+            && !login.hasMalformedHostname
+        }))?.credentials
+
+        let malformedGUIDs: [GUID] = logins.compactMap { login in
+            if login.hasMalformedHostname {
+                return login.id
+            }
+            return nil
+        }
+        loginsProvider.deleteLogins(ids: malformedGUIDs) { _ in }
+
+        return credentials
+    }
+
+    private static func handleUnmatchedSchemes(logins: [EncryptedLogin],
+                                               challenge: URLAuthenticationChallenge,
+                                               loginsProvider: RustLogins,
+                                               completionHandler: @escaping (Result<URLCredential?, Error>) -> Void) {
+        let login = logins[0]
+        let credentials = login.credentials
+        let new = LoginEntry(credentials: login.credentials, protectionSpace: challenge.protectionSpace)
+        loginsProvider.updateLogin(id: login.id, login: new) { result in
+            switch result {
+            case .success:
+                completionHandler(.success(credentials))
+            case .failure(let error):
+                completionHandler(.failure(error))
             }
         }
     }
@@ -192,7 +218,7 @@ class Authenticator {
         let action = UIAlertAction(
             title: .AuthenticatorLogin,
             style: .default
-        ) { (action) -> Void in
+        ) { (action) in
             guard let user = alert.textFields?[0].text,
                   let pass = alert.textFields?[1].text
             else {
@@ -211,25 +237,25 @@ class Authenticator {
         alert.addAction(action, accessibilityIdentifier: "authenticationAlert.loginRequired")
 
         // Add a cancel button.
-        let cancel = UIAlertAction(title: .AuthenticatorCancel, style: .cancel) { (action) -> Void in
+        let cancel = UIAlertAction(title: .AuthenticatorCancel, style: .cancel) { (action) in
             completionHandler(.failure(LoginRecordError(description: "Save password cancelled")))
         }
         alert.addAction(cancel, accessibilityIdentifier: "authenticationAlert.cancel")
 
         // Add a username textfield.
-        alert.addTextField { (textfield) -> Void in
+        alert.addTextField { (textfield) in
             textfield.placeholder = .AuthenticatorUsernamePlaceholder
             textfield.text = credentials?.user
         }
 
         // Add a password textfield.
-        alert.addTextField { (textfield) -> Void in
+        alert.addTextField { (textfield) in
             textfield.placeholder = .AuthenticatorPasswordPlaceholder
             textfield.isSecureTextEntry = true
             textfield.text = credentials?.password
         }
 
-        viewController.present(alert, animated: true) { () -> Void in }
+        viewController.present(alert, animated: true) { () in }
     }
 
     // MARK: Telemetry

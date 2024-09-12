@@ -5,6 +5,9 @@
 import UIKit
 import Shared
 import Storage
+import Common
+
+import enum MozillaAppServices.VisitType
 
 protocol LibraryPanelDelegate: AnyObject {
     func libraryPanelDidRequestToOpenInNewTab(_ url: URL, isPrivate: Bool)
@@ -53,13 +56,13 @@ enum LibraryPanelType: Int, CaseIterable {
     var title: String {
         switch self {
         case .bookmarks:
-            return .AppMenu.AppMenuBookmarksTitleString
+            return .LegacyAppMenu.AppMenuBookmarksTitleString
         case .history:
-            return .AppMenu.AppMenuHistoryTitleString
+            return .LegacyAppMenu.AppMenuHistoryTitleString
         case .downloads:
-            return .AppMenu.AppMenuDownloadsTitleString
+            return .LegacyAppMenu.AppMenuDownloadsTitleString
         case .readingList:
-            return .AppMenu.AppMenuReadingListTitleString
+            return .LegacyAppMenu.AppMenuReadingListTitleString
         }
     }
 
@@ -81,7 +84,7 @@ class LibraryPanelHelper {
     }
 
     lazy var enabledPanels: [LibraryPanelDescriptor] = {
-        let bookmarksViewModel = BookmarksPanelViewModel(profile: profile)
+        let bookmarksViewModel = BookmarksPanelViewModel(profile: profile, bookmarksHandler: profile.places)
 
         return [
             LibraryPanelDescriptor(

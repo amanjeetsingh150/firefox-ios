@@ -14,7 +14,17 @@ import Shared
 import Storage
 import Sync
 import AuthenticationServices
-import MozillaAppServices
+
+import class MozillaAppServices.MZKeychainWrapper
+import enum MozillaAppServices.Level
+import enum MozillaAppServices.SyncReason
+import enum MozillaAppServices.VisitType
+import func MozillaAppServices.setLogger
+import func MozillaAppServices.setMaxLevel
+import struct MozillaAppServices.HistoryMigrationResult
+import struct MozillaAppServices.SyncParams
+import struct MozillaAppServices.SyncResult
+import struct MozillaAppServices.VisitObservation
 
 public protocol SyncManager {
     var isSyncing: Bool { get }
@@ -41,8 +51,9 @@ public protocol SyncManager {
 
 /// This exists to pass in external context: e.g., the UIApplication can
 /// expose notification functionality in this way.
-public protocol SendTabDelegate: AnyObject {
+public protocol FxACommandsDelegate: AnyObject {
     func openSendTabs(for urls: [URL])
+    func closeTabs(for urls: [URL])
 }
 
 class ProfileFileAccessor: FileAccessor {
@@ -82,7 +93,7 @@ protocol Profile: AnyObject {
     var files: FileAccessor { get }
     var pinnedSites: PinnedSites { get }
     var logins: RustLogins { get }
-    var firefoxSuggest: RustFirefoxSuggestActor? { get }
+    var firefoxSuggest: RustFirefoxSuggestProtocol? { get }
     var certStore: CertStore { get }
     var recentlyClosedTabs: ClosedTabsStore { get }
 
@@ -224,7 +235,7 @@ open class BrowserProfile: Profile {
     let readingListDB: BrowserDB
     var syncManager: SyncManager!
 
-    var sendTabDelegate: SendTabDelegate?
+    var fxaCommandsDelegate: FxACommandsDelegate?
 
     /**
      * N.B., BrowserProfile is used from our extensions, often via a pattern like
@@ -239,7 +250,7 @@ open class BrowserProfile: Profile {
      * However, if we provide it here, it's assumed that we're initializing it from the application.
      */
     init(localName: String,
-         sendTabDelegate: SendTabDelegate? = nil,
+         fxaCommandsDelegate: FxACommandsDelegate? = nil,
          creditCardAutofillEnabled: Bool = false,
          clear: Bool = false,
          logger: Logger = DefaultLogger.shared) {
@@ -250,7 +261,7 @@ open class BrowserProfile: Profile {
         self.files = ProfileFileAccessor(localName: localName)
         self.keychain = MZKeychainWrapper.sharedClientAppContainerKeychain
         self.logger = logger
-        self.sendTabDelegate = sendTabDelegate
+        self.fxaCommandsDelegate = fxaCommandsDelegate
 
         if clear {
             do {
@@ -306,24 +317,9 @@ open class BrowserProfile: Profile {
             object: nil
         )
 
-        if AppInfo.isChinaEdition {
-            // Set the default homepage.
-            prefs.setString(PrefsDefaults.ChineseHomePageURL, forKey: PrefsKeys.KeyDefaultHomePageURL)
-
-            if prefs.stringForKey(PrefsKeys.KeyNewTab) == nil {
-                prefs.setString(PrefsDefaults.ChineseHomePageURL, forKey: PrefsKeys.NewTabCustomUrlPrefKey)
-                prefs.setString(PrefsDefaults.ChineseNewTabDefault, forKey: PrefsKeys.KeyNewTab)
-            }
-
-            if prefs.stringForKey(PrefsKeys.HomePageTab) == nil {
-                prefs.setString(PrefsDefaults.ChineseHomePageURL, forKey: PrefsKeys.HomeButtonHomePageURL)
-                prefs.setString(PrefsDefaults.ChineseNewTabDefault, forKey: PrefsKeys.HomePageTab)
-            }
-        } else {
-            // Remove the default homepage. This does not change the user's preference,
-            // just the behaviour when there is no homepage.
-            prefs.removeObjectForKey(PrefsKeys.KeyDefaultHomePageURL)
-        }
+        // Remove the default homepage. This does not change the user's preference,
+        // just the behaviour when there is no homepage.
+        prefs.removeObjectForKey(PrefsKeys.KeyDefaultHomePageURL)
 
         // Create the "Downloads" folder in the documents directory.
         if let downloadsPath = try? FileManager.default.url(
@@ -608,14 +604,26 @@ open class BrowserProfile: Profile {
         if let accountManager = self.rustFxA.accountManager {
             accountManager.deviceConstellation()?.pollForCommands { commands in
                 guard let commands = try? commands.get() else { return }
-                let urls = commands.compactMap { command in
+
+                var receivedTabURLs: [URL] = []
+                var closedTabURLs: [URL] = []
+                for command in commands {
                     switch command {
                     case .tabReceived(_, let tabData):
-                        let url = tabData.entries.last?.url ?? ""
-                        return URL(string: url, invalidCharacters: false)
+                        if let urlString = tabData.entries.last?.url, let url = URL(string: urlString) {
+                            receivedTabURLs.append(url)
+                        }
+                    case .tabsClosed(sender: _, let closeTabPayload):
+                        closedTabURLs.append(contentsOf: closeTabPayload.urls.compactMap { URL(string: $0) })
                     }
                 }
-                self.sendTabDelegate?.openSendTabs(for: urls)
+                if !receivedTabURLs.isEmpty {
+                    self.fxaCommandsDelegate?.openSendTabs(for: receivedTabURLs)
+                }
+
+                if !closedTabURLs.isEmpty {
+                    self.fxaCommandsDelegate?.closeTabs(for: closedTabURLs)
+                }
             }
         }
     }
@@ -628,7 +636,7 @@ open class BrowserProfile: Profile {
         return RustLogins(databasePath: databasePath)
     }()
 
-    lazy var firefoxSuggest: RustFirefoxSuggestActor? = {
+    lazy var firefoxSuggest: RustFirefoxSuggestProtocol? = {
         do {
             let cacheFileURL = try FileManager.default.url(
                 for: .cachesDirectory,

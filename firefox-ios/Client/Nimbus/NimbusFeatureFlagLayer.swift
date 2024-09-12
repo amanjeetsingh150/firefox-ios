@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import MozillaAppServices
 
 final class NimbusFeatureFlagLayer {
     // MARK: - Public methods
@@ -14,8 +13,8 @@ final class NimbusFeatureFlagLayer {
         case .accountSettingsRedux:
             return checkAccountSettingsRedux(from: nimbus)
 
-        case .addressAutofill:
-            return checkAddressAutofill(from: nimbus)
+        case .addressAutofillEdit:
+            return checkAddressAutofillEditing(from: nimbus)
 
         case .bottomSearchBar,
                 .searchHighlights,
@@ -53,11 +52,20 @@ final class NimbusFeatureFlagLayer {
         case .loginAutofill:
             return checkNimbusForLoginAutofill(for: featureID, from: nimbus)
 
-        case .microSurvey:
-            return checkMicroSurveyFeature(from: nimbus)
+        case .menuRefactor:
+            return checkMenuRefactor(from: nimbus)
+
+        case .microsurvey:
+            return checkMicrosurveyFeature(from: nimbus)
+
+        case .nativeErrorPage:
+            return checkNativeErrorPageFeature(from: nimbus)
 
         case .nightMode:
             return checkNightModeFeature(from: nimbus)
+
+        case .passwordGenerator:
+            return checkPasswordGeneratorFeature(from: nimbus)
 
         case .preferSwitchToOpenTabOverDuplicate:
             return checkPreferSwitchToOpenTabOverDuplicate(from: nimbus)
@@ -65,16 +73,26 @@ final class NimbusFeatureFlagLayer {
         case .reduxSearchSettings:
             return checkReduxSearchSettingsFeature(from: nimbus)
 
+        case .closeRemoteTabs:
+            return checkCloseRemoteTabsFeature(from: nimbus)
+
         case .reportSiteIssue:
             return checkGeneralFeature(for: featureID, from: nimbus)
 
-        case .shareSheetChanges,
-                .shareToolbarChanges:
-            return checkNimbusForShareSheet(for: featureID, from: nimbus)
         case .splashScreen:
             return checkSplashScreenFeature(for: featureID, from: nimbus)
+
         case .tabTrayRefactor:
             return checkTabTrayRefactorFeature(from: nimbus)
+
+        case .toolbarRefactor:
+            return checkToolbarRefactorFeature(from: nimbus)
+
+        case .toolbarOneTapNewTab:
+            return checkToolbarOneTapNewTabFeature(from: nimbus)
+
+        case .trackingProtectionRefactor:
+            return checkTrackingProtectionRefactor(from: nimbus)
 
         case .zoomFeature:
             return checkZoomFeature(from: nimbus)
@@ -148,6 +166,21 @@ final class NimbusFeatureFlagLayer {
         return config.enabled
     }
 
+    private func checkToolbarRefactorFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.toolbarRefactorFeature.value()
+        return config.enabled
+    }
+
+    private func checkToolbarOneTapNewTabFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.toolbarRefactorFeature.value()
+        return config.oneTapNewTab
+    }
+
+    private func checkTrackingProtectionRefactor(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.trackingProtectionRefactor.value()
+        return config.enabled
+    }
+
     private func checkFeltPrivacyFeature(
         for featureID: NimbusFeatureFlagID,
         from nimbus: FxNimbus
@@ -181,18 +214,6 @@ final class NimbusFeatureFlagLayer {
             default: return false
             }
         }
-
-    public func checkNimbusForShareSheet(
-        for featureID: NimbusFeatureFlagID,
-        from nimbus: FxNimbus) -> Bool {
-            let config = nimbus.features.shareSheet.value()
-
-            switch featureID {
-            case .shareSheetChanges: return config.moveActions
-            case .shareToolbarChanges: return config.toolbarChanges
-            default: return false
-            }
-    }
 
     private func checkSplashScreenFeature(
         for featureID: NimbusFeatureFlagID,
@@ -229,6 +250,10 @@ final class NimbusFeatureFlagLayer {
         return config.productAds
     }
 
+    private func checkPasswordGeneratorFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.passwordGeneratorFeature.value().enabled
+    }
+
     private func checkProductBackInStockFakespotFeature(from nimbus: FxNimbus) -> Bool {
         let config = nimbus.features.shopping2023.value()
 
@@ -239,8 +264,8 @@ final class NimbusFeatureFlagLayer {
         return nimbus.features.homescreenFeature.value().preferSwitchToOpenTab
     }
 
-    private func checkAddressAutofill(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.addressAutofillFeature.value()
+    private func checkAddressAutofillEditing(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.addressAutofillEdit.value()
 
         return config.status
     }
@@ -262,8 +287,12 @@ final class NimbusFeatureFlagLayer {
         return config.enabled
     }
 
-    private func checkMicroSurveyFeature(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.microSurveyFeature.value()
+    private func checkMenuRefactor(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.menuRefactorFeature.value().enabled
+    }
+
+    private func checkMicrosurveyFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.microsurveyFeature.value()
 
         return config.enabled
     }
@@ -272,5 +301,14 @@ final class NimbusFeatureFlagLayer {
         let config = nimbus.features.nightModeFeature.value()
 
         return config.enabled
+    }
+
+    private func checkCloseRemoteTabsFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.remoteTabManagement.value()
+        return config.closeTabsEnabled
+    }
+
+    private func checkNativeErrorPageFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.nativeErrorPageFeature.value().enabled
     }
 }

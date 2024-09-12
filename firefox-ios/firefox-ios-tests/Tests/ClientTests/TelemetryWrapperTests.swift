@@ -13,14 +13,15 @@ class TelemetryWrapperTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        DependencyHelperMock().bootstrapDependencies()
         Glean.shared.resetGlean(clearStores: true)
         Experiments.events.clearEvents()
     }
 
     override func tearDown() {
-        super.tearDown()
-        Glean.shared.resetGlean(clearStores: true)
         Experiments.events.clearEvents()
+        DependencyHelperMock().reset()
+        super.tearDown()
     }
 
     // MARK: - Bookmarks
@@ -181,12 +182,12 @@ class TelemetryWrapperTests: XCTestCase {
     // MARK: - Firefox Home Page
 
     func test_recentlySavedBookmarkViewWithExtras_GleanIsCalled() {
-        let extras: [String: Any] = [TelemetryWrapper.EventObject.recentlySavedBookmarkImpressions.rawValue: "\([String]().count)"]
+        let extras: [String: Any] = [TelemetryWrapper.EventObject.bookmarkImpressions.rawValue: "\([String]().count)"]
         TelemetryWrapper.recordEvent(
             category: .action,
             method: .view,
             object: .firefoxHomepage,
-            value: .recentlySavedBookmarkItemView,
+            value: .bookmarkItemView,
             extras: extras
         )
 
@@ -198,32 +199,9 @@ class TelemetryWrapperTests: XCTestCase {
             category: .action,
             method: .view,
             object: .firefoxHomepage,
-            value: .recentlySavedBookmarkItemView
+            value: .bookmarkItemView
         )
         XCTAssertNil(GleanMetrics.FirefoxHomePage.recentlySavedBookmarkView.testGetValue())
-    }
-
-    func test_recentlySavedReadingListViewViewWithExtras_GleanIsCalled() {
-        let extras: [String: Any] = [TelemetryWrapper.EventObject.recentlySavedReadingItemImpressions.rawValue: "\([String]().count)"]
-        TelemetryWrapper.recordEvent(
-            category: .action,
-            method: .view,
-            object: .firefoxHomepage,
-            value: .recentlySavedReadingListView,
-            extras: extras
-        )
-
-        testEventMetricRecordingSuccess(metric: GleanMetrics.FirefoxHomePage.readingListView)
-    }
-
-    func test_recentlySavedReadingListViewWithoutExtras_GleanIsNotCalled() {
-        TelemetryWrapper.recordEvent(
-            category: .action,
-            method: .view,
-            object: .firefoxHomepage,
-            value: .recentlySavedReadingListView
-        )
-        XCTAssertNil(GleanMetrics.FirefoxHomePage.readingListView.testGetValue())
     }
 
     func test_firefoxHomePageAddView_GleanIsCalled() {
@@ -793,6 +771,7 @@ class TelemetryWrapperTests: XCTestCase {
 
     func test_backgroundWallpaperMetric_themedWallpaperIsSent() {
         let profile = MockProfile()
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
         TelemetryWrapper.shared.setup(profile: profile)
 
         let themedWallpaper = Wallpaper(id: "amethyst",
@@ -1469,7 +1448,7 @@ class TelemetryWrapperTests: XCTestCase {
         )
     }
 
-    func test_syncLogin_NimbusIsCalled() throws {
+    func test_syncLogin_NimbusIsCalled() {
         XCTAssertFalse(
             try Experiments.createJexlHelper()!.evalJexl(
                 expression: "'sync.login_completed_view'|eventSum('Days', 1, 0) > 0"

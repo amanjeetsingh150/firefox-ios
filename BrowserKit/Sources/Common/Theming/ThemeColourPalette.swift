@@ -27,6 +27,7 @@ public protocol ThemeColourPalette {
     var layerConfirmation: UIColor { get }
     var layerWarning: UIColor { get }
     var layerError: UIColor { get }
+    var layerSelectedText: UIColor { get }
     var layerSearch: UIColor { get }
     var layerGradientURL: Gradient { get }
 
@@ -45,6 +46,7 @@ public protocol ThemeColourPalette {
     // MARK: - Actions
     var actionPrimary: UIColor { get }
     var actionPrimaryHover: UIColor { get }
+    var actionPrimaryDisabled: UIColor { get }
     var actionSecondary: UIColor { get }
     var actionSecondaryHover: UIColor { get }
     var formSurfaceOff: UIColor { get }
@@ -67,6 +69,7 @@ public protocol ThemeColourPalette {
     var textOnDark: UIColor { get }
     var textOnLight: UIColor { get }
     var textInverted: UIColor { get }
+    var textInvertedDisabled: UIColor { get }
 
     // MARK: - Icons
     var iconPrimary: UIColor { get }
@@ -81,6 +84,7 @@ public protocol ThemeColourPalette {
     var iconAccentPink: UIColor { get }
     var iconAccentGreen: UIColor { get }
     var iconAccentYellow: UIColor { get }
+    var iconRatingNeutral: UIColor { get }
 
     // MARK: - Border
     var borderPrimary: UIColor { get }

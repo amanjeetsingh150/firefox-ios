@@ -10,6 +10,9 @@ import Storage
 import Redux
 import TabDataStore
 
+import enum MozillaAppServices.VisitType
+import struct MozillaAppServices.CreditCard
+
 class BrowserCoordinator: BaseCoordinator,
                           LaunchCoordinatorDelegate,
                           BrowserDelegate,
@@ -22,11 +25,13 @@ class BrowserCoordinator: BaseCoordinator,
                           TabManagerDelegate,
                           TabTrayCoordinatorDelegate,
                           PrivateHomepageDelegate,
-                          WindowEventCoordinator {
+                          WindowEventCoordinator,
+                          MainMenuCoordinatorDelegate {
     var browserViewController: BrowserViewController
     var webviewController: WebviewViewController?
     var homepageViewController: HomepageViewController?
     var privateViewController: PrivateHomepageViewController?
+    var errorViewController: NativeErrorPageViewController?
 
     private var profile: Profile
     private let tabManager: TabManager
@@ -37,6 +42,8 @@ class BrowserCoordinator: BaseCoordinator,
     private let applicationHelper: ApplicationHelper
     private var browserIsReady = false
     private var windowUUID: WindowUUID { return tabManager.windowUUID }
+
+    override var isDismissable: Bool { false }
 
     init(router: Router,
          screenshotService: ScreenshotService,
@@ -246,7 +253,7 @@ class BrowserCoordinator: BaseCoordinator,
         case let .action(routeAction):
             switch routeAction {
             case .closePrivateTabs:
-                handleClosePrivateTabs()
+                handleClosePrivateTabsWidgetAction()
             case .showQRCode:
                 handleQRCode()
             case .showIntroOnboarding:
@@ -276,8 +283,12 @@ class BrowserCoordinator: BaseCoordinator,
         browserViewController.handleQRCode()
     }
 
-    private func handleClosePrivateTabs() {
-        browserViewController.handleClosePrivateTabs()
+    private func handleClosePrivateTabsWidgetAction() {
+        // Our widget actions will arrive as a URL passed into the client iOS app.
+        // If multiple iPad windows are open the resulting action + route will be
+        // sent to one particular window, but for this action we want to close tabs
+        // for all open windows, so we route this message to the WindowManager.
+        windowManager.performMultiWindowAction(.closeAllPrivateTabs)
     }
 
     private func handle(homepanelSection section: Route.HomepanelSection) {
@@ -405,7 +416,7 @@ class BrowserCoordinator: BaseCoordinator,
         router.dismiss()
     }
 
-    func libraryPanel(didSelectURL url: URL, visitType: Storage.VisitType) {
+    func libraryPanel(didSelectURL url: URL, visitType: VisitType) {
         browserViewController.libraryPanel(didSelectURL: url, visitType: visitType)
         router.dismiss()
     }
@@ -428,6 +439,46 @@ class BrowserCoordinator: BaseCoordinator,
 
     func settingsOpenPage(settings: Route.SettingsSection) {
         handleSettings(with: settings)
+    }
+
+    // MARK: - MainMenuCoordinatorDelegate
+    func showMainMenu() {
+        guard let coordinator = makeMenuCoordinator() else { return }
+        coordinator.startModal()
+    }
+
+    func openURLInNewTab(_ url: URL?) {
+        if let url {
+            browserViewController.openURLInNewTab(url, isPrivate: self.tabManager.selectedTab?.isPrivate ?? false)
+        }
+    }
+
+    func openNewTab(inPrivateMode isPrivate: Bool) {
+        handle(homepanelSection: isPrivate ? .newPrivateTab : .newTab)
+    }
+
+    func showLibraryPanel(_ panel: Route.HomepanelSection) {
+        showLibrary(with: panel)
+    }
+
+    func showSettings(at destination: Route.SettingsSection) {
+        presentWithModalDismissIfNeeded {
+            self.handleSettings(with: destination, onDismiss: nil)
+        }
+    }
+
+    func showFindInPage() {
+        browserViewController.showFindInPage()
+    }
+
+    private func makeMenuCoordinator() -> MainMenuCoordinator? {
+        guard !childCoordinators.contains(where: { $0 is MainMenuCoordinator }) else { return nil }
+
+        let coordinator = MainMenuCoordinator(router: router, tabManager: tabManager)
+        coordinator.parentCoordinator = self
+        coordinator.navigationHandler = self
+        add(child: coordinator)
+        return coordinator
     }
 
     // MARK: - BrowserNavigationHandler
@@ -560,9 +611,9 @@ class BrowserCoordinator: BaseCoordinator,
     }
 
     @MainActor
-    func showSavedLoginAutofill(tabURL: URL, currentRequestId: String) {
+    func showSavedLoginAutofill(tabURL: URL, currentRequestId: String, field: FocusFieldType) {
         let bottomSheetCoordinator = makeCredentialAutofillCoordinator()
-        bottomSheetCoordinator.showSavedLoginAutofill(tabURL: tabURL, currentRequestId: currentRequestId)
+        bottomSheetCoordinator.showSavedLoginAutofill(tabURL: tabURL, currentRequestId: currentRequestId, field: field)
     }
 
     func showAddressAutofill(frame: WKFrameInfo?) {
@@ -608,6 +659,7 @@ class BrowserCoordinator: BaseCoordinator,
     }
 
     func showQRCode(delegate: QRCodeViewControllerDelegate, rootNavigationController: UINavigationController?) {
+        windowManager.postWindowEvent(event: .qrScannerOpened, windowUUID: windowUUID)
         var coordinator: QRCodeCoordinator
         if let qrCodeCoordinator = childCoordinators.first(where: { $0 is QRCodeCoordinator }) as? QRCodeCoordinator {
             coordinator = qrCodeCoordinator
@@ -667,6 +719,53 @@ class BrowserCoordinator: BaseCoordinator,
         present(backForwardListVC)
     }
 
+    // MARK: Microsurvey
+    func showMicrosurvey(model: MicrosurveyModel) {
+        guard !childCoordinators.contains(where: { $0 is MicrosurveyCoordinator }) else {
+            return
+        }
+
+        let navigationController = DismissableNavigationViewController()
+        navigationController.sheetPresentationController?.detents = [.medium(), .large()]
+        setiPadLayoutDetents(for: navigationController)
+        navigationController.sheetPresentationController?.prefersGrabberVisible = true
+        let coordinator = MicrosurveyCoordinator(
+            model: model,
+            router: DefaultRouter(
+                navigationController: navigationController
+            ),
+            tabManager: tabManager
+        )
+        coordinator.parentCoordinator = self
+        add(child: coordinator)
+        coordinator.start()
+
+        navigationController.onViewDismissed = { [weak self] in
+            // Remove coordinator when user drags down to dismiss modal
+            self?.didFinish(from: coordinator)
+        }
+
+        present(navigationController)
+    }
+
+    func showNativeErrorPage(overlayManager: OverlayModeManager) {
+        // TODO: FXIOS-9641 #21239 Integration with Redux - presenting view
+        let errorPageModel = ErrorPageModel(errorTitle: "", errorDecription: "", errorCode: "")
+        let errorpageController = NativeErrorPageViewController(model: errorPageModel,
+                                                                windowUUID: windowUUID,
+                                                                overlayManager: overlayManager)
+        guard browserViewController.embedContent(errorpageController) else {
+            logger.log("Unable to embed private homepage", level: .debug, category: .coordinator)
+            return
+        }
+        self.errorViewController = errorpageController
+    }
+
+    private func setiPadLayoutDetents(for controller: UIViewController) {
+        guard controller.shouldUseiPadSetup() else { return }
+        controller.sheetPresentationController?.selectedDetentIdentifier = .large
+    }
+
     private func present(_ viewController: UIViewController,
                          animated: Bool = true,
                          completion: (() -> Void)? = nil) {
@@ -708,10 +807,14 @@ class BrowserCoordinator: BaseCoordinator,
             // Notify theme manager
             themeManager.windowDidClose(uuid: uuid)
 
-            // TODO: Revisit for [FXIOS-8064]. Disabled temporarily to avoid potential KVO crash in WebKit. (FXIOS-8416)
             // Clean up views and ensure BVC for the window is freed
-            // browserViewController.contentContainer.subviews.forEach { $0.removeFromSuperview() }
-            // browserViewController.removeFromParent()
+            browserViewController.view.endEditing(true)
+            browserViewController.dismissUrlBar()
+            homepageViewController?.view.removeFromSuperview()
+            homepageViewController?.removeFromParent()
+            homepageViewController = nil
+            browserViewController.contentContainer.subviews.forEach { $0.removeFromSuperview() }
+            browserViewController.removeFromParent()
         case .libraryOpened:
             // Auto-close library panel if it was opened in another iPad window. [FXIOS-8095]
             guard uuid != windowUUID else { return }
@@ -723,6 +826,23 @@ class BrowserCoordinator: BaseCoordinator,
             guard uuid != windowUUID else { return }
             performIfCoordinatorRootVCIsPresented(SettingsCoordinator.self) {
                 didFinishSettings(from: $0)
+            }
+        case .syncMenuOpened:
+            guard uuid != windowUUID else { return }
+            let browserPresentedVC = router.navigationController.presentedViewController
+            if let navVCs = (browserPresentedVC as? UINavigationController)?.viewControllers,
+               navVCs.contains(where: {
+                   $0 is FirefoxAccountSignInViewController || $0 is SyncContentSettingsViewController
+               }) {
+                router.dismiss(animated: true, completion: nil)
+            }
+        case .qrScannerOpened:
+            guard uuid != windowUUID else { return }
+            let browserPresentedVC = router.navigationController.presentedViewController
+            let rootVC = (browserPresentedVC as? UINavigationController)?.viewControllers.first
+            if rootVC is QRCodeViewController {
+                router.dismiss(animated: true, completion: nil)
+                remove(child: childCoordinators.first(where: { $0 is QRCodeCoordinator }))
             }
         }
     }

@@ -3,9 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-
-import MozillaAppServices
+import Common
 import Shared
+
+import class MozillaAppServices.FeatureHolder
+import enum MozillaAppServices.NimbusError
+import protocol MozillaAppServices.NimbusMessagingHelperProtocol
 
 protocol GleanPlumbMessageManagerProtocol {
     /// Performs the bookkeeping and preparation of messages for their respective surfaces.
@@ -22,8 +25,10 @@ protocol GleanPlumbMessageManagerProtocol {
     func onMessageDisplayed(_ message: GleanPlumbMessage)
 
     /// Using the helper, this should get the message action string ready for use.
+    /// An optional UUID for the originating window can be provided to ensure any
+    /// resulting UI is displayed in the correct window.
     /// Surface calls.
-    func onMessagePressed(_ message: GleanPlumbMessage)
+    func onMessagePressed(_ message: GleanPlumbMessage, window: WindowUUID?, shouldExpire: Bool)
 
     /// Handles what to do with a message when a user has dismissed it.
     /// Surface calls.
@@ -186,23 +191,16 @@ class GleanPlumbMessageManager: GleanPlumbMessageManagerProtocol {
     }
 
     /// Handle when a user hits the CTA of the surface, and forward the bookkeeping to the store.
-    func onMessagePressed(_ message: GleanPlumbMessage) {
-        messagingStore.onMessagePressed(message)
-
-        guard let helper = createMessagingHelper.createNimbusMessagingHelper() else { return }
-
-        guard let (uuid, urlToOpen) = try? self.generateUuidAndFormatAction(for: message, with: helper) else {
-            self.onMalformedMessage(id: message.id, surface: message.surface)
-            return
-        }
-
-        // With our well-formed URL, we can handle the action here.
-        applicationHelper.open(urlToOpen)
+    func onMessagePressed(_ message: GleanPlumbMessage, window: WindowUUID?, shouldExpire: Bool = true) {
+        messagingStore.onMessagePressed(message, shouldExpire: shouldExpire)
 
         var extras = baseTelemetryExtras(using: message)
-        if let uuid = uuid {
-            extras[MessagingKey.actionUUID.rawValue] = uuid
+        if let action = message.action {
+            if let uuid = handleLinkAction(for: message, action: action, window: window) {
+                extras[MessagingKey.actionUUID.rawValue] = uuid
+            }
         }
+
         TelemetryWrapper.recordEvent(category: .action,
                                      method: .tap,
                                      object: .messaging,
@@ -210,13 +208,37 @@ class GleanPlumbMessageManager: GleanPlumbMessageManagerProtocol {
                                      extras: extras)
     }
 
-    private func generateUuidAndFormatAction(for message: GleanPlumbMessage,
+    private func handleLinkAction(
+        for message: GleanPlumbMessage,
+        action: String,
+        window: WindowUUID?
+    ) -> String? {
+        guard let helper = createMessagingHelper.createNimbusMessagingHelper() else { return nil }
+        guard let (uuid, urlToOpen) = try? self.generateUuidAndFormatAction(
+            for: action,
+            with: message.data.actionParams,
+            with: helper
+        ) else {
+            self.onMalformedMessage(id: message.id, surface: message.surface)
+            return nil
+        }
+
+        // With our well-formed URL, we can handle the action here.
+        if let specificWindow = window {
+            applicationHelper.open(urlToOpen, inWindow: specificWindow)
+        } else {
+            applicationHelper.open(urlToOpen)
+        }
+        return uuid
+    }
+
+    private func generateUuidAndFormatAction(for action: String,
+                                             with actionParams: [String: String],
                                              with helper: NimbusMessagingHelperProtocol) throws -> (String?, URL) {
         // Make substitutions where they're needed.
-        let actionTemplate = message.action
+        let actionTemplate = action
         var uuid = helper.getUuid(template: actionTemplate)
         let action = helper.stringFormat(template: actionTemplate, uuid: uuid)
-        let actionParams = message.data.actionParams
 
         let urlString: String = action.hasPrefix("://") ? deepLinkScheme + action : action
         guard var components = URLComponents(string: urlString) else {
@@ -316,16 +338,19 @@ class GleanPlumbMessageManager: GleanPlumbMessageManagerProtocol {
         message: MessageData,
         lookupTables: Messaging
     ) -> Result<GleanPlumbMessage, CreateMessageError> {
-        var action: String
+        var action: String?
         if !message.isControl {
             // Guard against a message with a blank `text` property.
             guard !message.text.isEmpty else { return .failure(.malformed) }
 
-            // The message action should be either from the lookup table OR a URL.
-            guard let safeAction = sanitizeAction(message.action, table: lookupTables.actions) else {
-                return .failure(.malformed)
+            // Message action can be null. If not null,
+            // the message action should be either from the lookup table OR a URL.
+            if let messageAction = message.action {
+                guard let safeAction = sanitizeAction(messageAction, table: lookupTables.actions) else {
+                    return .failure(.malformed)
+                }
+                action = safeAction
             }
-            action = safeAction
         } else {
             action = "CONTROL_ACTION"
         }

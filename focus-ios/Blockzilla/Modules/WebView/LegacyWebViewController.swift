@@ -55,9 +55,9 @@ class LegacyWebViewController: UIViewController, LegacyWebController {
     }
 
     private enum KVOConstants: String, CaseIterable {
-        case URL = "URL"
-        case canGoBack = "canGoBack"
-        case canGoForward = "canGoForward"
+        case URL
+        case canGoBack
+        case canGoForward
     }
 
     weak var delegate: LegacyWebControllerDelegate?
@@ -151,6 +151,7 @@ class LegacyWebViewController: UIViewController, LegacyWebController {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         configuration.allowsInlineMediaPlayback = true
+        configuration.ignoresViewportScaleLimits = true
 
         // For consistency we set our user agent similar to Firefox iOS.
         //
@@ -197,7 +198,8 @@ class LegacyWebViewController: UIViewController, LegacyWebController {
         KVOConstants.allCases.forEach { browserView.addObserver(self, forKeyPath: $0.rawValue, options: .new, context: nil) }
     }
 
-    @objc private func reloadBlockers(_ blockLists: [WKContentRuleList]) {
+    @objc
+    private func reloadBlockers(_ blockLists: [WKContentRuleList]) {
         DispatchQueue.main.async {
             self.browserView.configuration.userContentController.removeAllContentRuleLists()
             blockLists.forEach(self.browserView.configuration.userContentController.add)
@@ -216,7 +218,8 @@ class LegacyWebViewController: UIViewController, LegacyWebController {
         scrollView.refreshControl?.addTarget(self, action: #selector(reloadPage), for: .valueChanged)
     }
 
-    @objc private func reloadPage() {
+    @objc
+    private func reloadPage() {
         reload()
         DispatchQueue.main.async {
             self.scrollView.refreshControl?.endRefreshing()
@@ -439,17 +442,24 @@ extension LegacyWebViewController: WKNavigationDelegate {
         }
 
         switch navigationAction.navigationType {
-            case .backForward:
-                let navigatingBack = !webView.backForwardList.backList.contains(where: { $0 == currentBackForwardItem })
-                if navigatingBack {
-                    delegate?.webControllerDidNavigateBack(self)
-                } else {
-                    delegate?.webControllerDidNavigateForward(self)
-                }
-            case .reload:
-                delegate?.webControllerDidReload(self)
-            default:
-                break
+        case .backForward:
+            let navigatingBack = !webView.backForwardList.backList.contains(where: { $0 == currentBackForwardItem })
+            if navigatingBack {
+                delegate?.webControllerDidNavigateBack(self)
+            } else {
+                delegate?.webControllerDidNavigateForward(self)
+            }
+        case .reload:
+            delegate?.webControllerDidReload(self)
+        default:
+            break
+        }
+
+        // Prevent Focus from opening deeplinks from links
+        if let scheme = navigationAction.request.url?.scheme,
+           scheme.caseInsensitiveCompare(AppInfo.appScheme) == .orderedSame {
+            decisionHandler(.cancel, preferences)
+            return
         }
 
         currentBackForwardItem = webView.backForwardList.currentItem

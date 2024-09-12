@@ -31,7 +31,7 @@ class JumpBackInViewModel: FeatureFlaggable {
     var mostRecentSyncedTab: JumpBackInSyncedTab?
 
     // Raw data to calculate what we can show to the user
-    var recentTabs: [Tab] = [Tab]()
+    var recentTabs = [Tab]()
     var recentSyncedTab: JumpBackInSyncedTab?
 
     private var jumpBackInDataAdaptor: JumpBackInDataAdaptor
@@ -299,7 +299,7 @@ extension JumpBackInViewModel: HomepageViewModelProtocol {
             title: HomepageSectionType.jumpBackIn.title,
             titleA11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.SectionTitles.jumpBackIn,
             isButtonHidden: false,
-            buttonTitle: .RecentlySavedShowAllText,
+            buttonTitle: .BookmarksSavedShowAllText,
             buttonAction: headerButtonAction,
             buttonA11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.MoreButtons.jumpBackIn,
             textColor: textColor)
@@ -449,15 +449,22 @@ extension JumpBackInViewModel: HomepageSectionHandler {
 extension JumpBackInViewModel: JumpBackInDelegate {
     func didLoadNewData() {
         Task { @MainActor in
-            self.recentTabs = await self.jumpBackInDataAdaptor.getRecentTabData()
-            self.recentSyncedTab = await self.jumpBackInDataAdaptor.getSyncedTabData()
-            self.isSyncTabFeatureEnabled = await self.jumpBackInDataAdaptor.hasSyncedTabFeatureEnabled()
+            await self.updateJumpBackInData()
             logger.log("JumpBack didLoadNewData and section shouldShow \(self.shouldShow)",
                        level: .debug,
                        category: .homepage)
-            guard self.isEnabled else { return }
-
-            self.delegate?.reloadView()
+            reloadView()
         }
+    }
+
+    private func updateJumpBackInData() async {
+        self.recentTabs = await self.jumpBackInDataAdaptor.getRecentTabData()
+        self.recentSyncedTab = await self.jumpBackInDataAdaptor.getSyncedTabData()
+        self.isSyncTabFeatureEnabled = await self.jumpBackInDataAdaptor.hasSyncedTabFeatureEnabled()
+    }
+
+    private func reloadView() {
+        guard self.isEnabled else { return }
+        self.delegate?.reloadView()
     }
 }

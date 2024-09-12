@@ -7,6 +7,8 @@ import Shared
 import UIKit
 import Storage
 
+import enum MozillaAppServices.FrecencyThresholdOption
+
 /// A provider for frecency and pinned top sites, used for the home page and widgets
 protocol TopSitesProvider {
     /// Get top sites from frecency and pinned tiles
@@ -127,7 +129,7 @@ private extension TopSitesProviderImplementation {
         // Fetch the default sites
         let defaultSites = defaultTopSites(prefs)
         // Create PinnedSite objects. Used by the view layer to tell topsites apart
-        let pinnedSites: [Site] = pinnedSites.map({ PinnedSite(site: $0) })
+        let pinnedSites: [Site] = pinnedSites.map({ PinnedSite(site: $0, faviconResource: nil) })
         // Merge default topsites with a user's topsites.
         let mergedSites = sites.union(defaultSites, f: unionOnURL)
         // Filter out duplicates in merged sites, but do not remove duplicates within pinned sites

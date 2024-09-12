@@ -4,14 +4,13 @@
 
 import Foundation
 import Shared
-import MozillaAppServices
 import UIKit
 
 /// An enum describing the featureID of all features found in Nimbus.
 /// Please add new features alphabetically.
 enum NimbusFeatureFlagID: String, CaseIterable {
     case accountSettingsRedux
-    case addressAutofill
+    case addressAutofillEdit
     case bottomSearchBar
     case contextualHintForToolbar
     case creditCardAutofillStatus
@@ -26,17 +25,33 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case isToolbarCFREnabled
     case jumpBackIn
     case loginAutofill
-    case microSurvey
+    case menuRefactor
+    case microsurvey
+    case nativeErrorPage
     case nightMode
+    case passwordGenerator
     case preferSwitchToOpenTabOverDuplicate
     case reduxSearchSettings
+    case closeRemoteTabs
     case reportSiteIssue
     case searchHighlights
-    case shareSheetChanges
-    case shareToolbarChanges
     case splashScreen
     case tabTrayRefactor
+    case toolbarRefactor
+    case toolbarOneTapNewTab
+    case trackingProtectionRefactor
     case zoomFeature
+
+    var debugKey: String? {
+        switch self {
+        case .closeRemoteTabs,
+                .microsurvey,
+                .menuRefactor:
+            return rawValue + PrefsKeys.FeatureFlags.DebugSuffixKey
+        default:
+            return nil
+        }
+    }
 }
 
 /// This enum is a constraint for any feature flag options that have more than
@@ -64,29 +79,33 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
             return FlagKeys.InactiveTabs
         case .jumpBackIn:
             return FlagKeys.JumpBackInSection
-
         // Cases where users do not have the option to manipulate a setting.
         case .contextualHintForToolbar,
                 .accountSettingsRedux,
-                .addressAutofill,
+                .addressAutofillEdit,
                 .creditCardAutofillStatus,
+                .closeRemoteTabs,
                 .fakespotBackInStock,
                 .fakespotFeature,
                 .fakespotProductAds,
                 .isToolbarCFREnabled,
                 .loginAutofill,
-                .microSurvey,
+                .microsurvey,
+                .menuRefactor,
+                .nativeErrorPage,
                 .nightMode,
+                .passwordGenerator,
                 .preferSwitchToOpenTabOverDuplicate,
                 .reduxSearchSettings,
                 .reportSiteIssue,
                 .feltPrivacySimplifiedUI,
                 .feltPrivacyFeltDeletion,
                 .searchHighlights,
-                .shareSheetChanges,
-                .shareToolbarChanges,
                 .splashScreen,
                 .tabTrayRefactor,
+                .toolbarRefactor,
+                .toolbarOneTapNewTab,
+                .trackingProtectionRefactor,
                 .zoomFeature:
             return nil
         }
@@ -120,6 +139,17 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
         return option
     }
 
+    /// Returns whether or not the feature's state was changed by using our Feature Flags debug setting. 
+    /// If no preference exists, then the underlying Nimbus default is used. If a specific
+    /// setting is used, then we should check for the debug key used.
+    public func isDebugEnabled(using nimbusLayer: NimbusFeatureFlagLayer) -> Bool {
+        guard let optionsKey = featureID.debugKey,
+              let option = profile.prefs.boolForKey(optionsKey)
+        else { return isNimbusEnabled(using: nimbusLayer) }
+
+        return option
+    }
+
     /// Returns the feature option represented as a String. The `FeatureFlagManager` will
     /// convert it to the appropriate type.
     public func getUserPreference(using nimbusLayer: NimbusFeatureFlagLayer) -> String? {
@@ -144,6 +174,12 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
     /// feature cannot be turned on/off.
     public func setUserPreference(to state: Bool) {
         guard let key = featureKey else { return }
+
+        profile.prefs.setBool(state, forKey: key)
+    }
+
+    public func setDebugPreference(to state: Bool) {
+        guard let key = featureID.debugKey else { return }
 
         profile.prefs.setBool(state, forKey: key)
     }

@@ -9,7 +9,7 @@ import Common
 class TabsButton: UIButton, ThemeApplicable {
     struct UX {
         static let cornerRadius: CGFloat = 2
-        static let titleFont: UIFont = UIConstants.DefaultChromeSmallFontBold
+        static let titleFont: UIFont = FXFontStyles.Bold.caption2.systemFont()
         static let insideButtonSize: CGFloat = 24
 
         // Animation constants
@@ -68,7 +68,7 @@ class TabsButton: UIButton, ThemeApplicable {
     }
 
     private lazy var borderView: UIImageView = .build { imageView in
-        imageView.image = UIImage(named: ImageIdentifiers.navTabCounter)?.withRenderingMode(.alwaysTemplate)
+        imageView.image = UIImage(named: StandardImageIdentifiers.Large.tab)?.withRenderingMode(.alwaysTemplate)
     }
 
     // Used to temporarily store the cloned button so we can respond to layout changes during animation

@@ -2,10 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import XCTest
+import Common
+import MozillaAppServices
 import Shared
 import Storage
 import WebKit
+import XCTest
 
 @testable import Client
 
@@ -148,18 +150,18 @@ extension SponsoredContentFilterUtilityTests {
                     sponsoredTabsCount: Int) -> [Tab] {
         var tabs = [Tab]()
         (0..<normalTabsCount).forEach { index in
-            let tab = Tab(profile: profile, configuration: WKWebViewConfiguration(), windowUUID: windowUUID)
+            let tab = Tab(profile: profile, windowUUID: windowUUID)
             tab.url = URL(string: normalURL)
             tabs.append(tab)
         }
 
         (0..<emptyURLTabsCount).forEach { index in
-            let tab = Tab(profile: profile, configuration: WKWebViewConfiguration(), windowUUID: windowUUID)
+            let tab = Tab(profile: profile, windowUUID: windowUUID)
             tabs.append(tab)
         }
 
         (0..<sponsoredTabsCount).forEach { index in
-            let tab = Tab(profile: profile, configuration: WKWebViewConfiguration(), windowUUID: windowUUID)
+            let tab = Tab(profile: profile, windowUUID: windowUUID)
             tab.url = URL(string: SponsoredContentFilterUtilityTests.sponsoredStandardURL)
             tabs.append(tab)
         }

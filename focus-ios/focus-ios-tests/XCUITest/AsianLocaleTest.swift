@@ -20,6 +20,7 @@ class AsianLocaleTest: BaseTestCase {
         checkForHomeScreen()
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2599440
     func testSearchInLocale() {
         // Test Setup
         dismissURLBarFocused()

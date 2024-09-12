@@ -5,16 +5,28 @@
 import Common
 import UIKit
 
+public enum ToolbarButtonGesture {
+    case tap
+    case longPress
+}
+
 class ToolbarButton: UIButton, ThemeApplicable {
-    public struct UX {
-        public static let verticalInset: CGFloat = 8
-        public static let horizontalInset: CGFloat = 8
+    private struct UX {
+        static let verticalInset: CGFloat = 10
+        static let horizontalInset: CGFloat = 10
+        static let badgeIconSize = CGSize(width: 20, height: 20)
     }
 
-    var foregroundColorNormal: UIColor = .clear
-    var foregroundColorHighlighted: UIColor = .clear
-    var foregroundColorDisabled: UIColor = .clear
-    var backgroundColorNormal: UIColor = .clear
+    private(set) var foregroundColorNormal: UIColor = .clear
+    private(set) var foregroundColorHighlighted: UIColor = .clear
+    private(set) var foregroundColorDisabled: UIColor = .clear
+    private(set) var backgroundColorNormal: UIColor = .clear
+
+    private var badgeImageView: UIImageView?
+    private var maskImageView: UIImageView?
+
+    private var shouldDisplayAsHighlighted = false
+    private var onLongPress: ((UIButton) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -27,21 +39,24 @@ class ToolbarButton: UIButton, ThemeApplicable {
     }
 
     open func configure(element: ToolbarElement) {
-        guard var config = configuration else {
-            return
-        }
+        guard var config = configuration else { return }
+        removeAllGestureRecognizers()
+        configureLongPressGestureRecognizerIfNeeded(for: element)
+        configureCustomA11yActionIfNeeded(for: element)
+        shouldDisplayAsHighlighted = element.shouldDisplayAsHighlighted
 
-        let image = UIImage(named: element.iconName)?.withRenderingMode(.alwaysTemplate)
+        let image = imageConfiguredForRTL(for: element)
         let action = UIAction(title: element.a11yLabel,
                               image: image,
                               handler: { _ in
-            element.onSelected?()
+            element.onSelected?(self)
         })
 
         config.image = image
         isEnabled = element.isEnabled
         accessibilityIdentifier = element.a11yId
         accessibilityLabel = element.a11yLabel
+        accessibilityHint = element.a11yHint
         addAction(action, for: .touchUpInside)
 
         showsLargeContentViewer = true
@@ -49,6 +64,12 @@ class ToolbarButton: UIButton, ThemeApplicable {
         largeContentImage = image
 
         configuration = config
+        if let badgeName = element.badgeImageName {
+            addBadgeIcon(imageName: badgeName)
+            if let maskImageName = element.maskImageName {
+                addMaskIcon(maskImageName: maskImageName)
+            }
+        }
         layoutIfNeeded()
     }
 
@@ -57,29 +78,106 @@ class ToolbarButton: UIButton, ThemeApplicable {
     }
 
     override public func updateConfiguration() {
-        guard var updatedConfiguration = configuration else {
-            return
-        }
+        guard var updatedConfiguration = configuration else { return }
 
         switch state {
-        case [.highlighted]:
+        case .highlighted:
             updatedConfiguration.baseForegroundColor = foregroundColorHighlighted
-        case [.disabled]:
+        case .disabled:
             updatedConfiguration.baseForegroundColor = foregroundColorDisabled
         default:
-            updatedConfiguration.baseForegroundColor = foregroundColorNormal
+            updatedConfiguration.baseForegroundColor = shouldDisplayAsHighlighted ?
+                                                       foregroundColorHighlighted :
+                                                       foregroundColorNormal
         }
 
         updatedConfiguration.background.backgroundColor = backgroundColorNormal
         configuration = updatedConfiguration
     }
 
-    // MARK: ThemeApplicable
+    private func addBadgeIcon(imageName: String) {
+        badgeImageView = UIImageView(image: UIImage(named: imageName))
+        guard let badgeImageView, configuration?.image != nil else { return }
+        badgeImageView.translatesAutoresizingMaskIntoConstraints = false
+
+        imageView?.addSubview(badgeImageView)
+        applyBadgeConstraints(to: badgeImageView)
+    }
+
+    private func addMaskIcon(maskImageName: String) {
+        maskImageView = UIImageView(image: UIImage(named: maskImageName))
+        guard let maskImageView, let badgeImageView else { return }
+        maskImageView.translatesAutoresizingMaskIntoConstraints = false
+
+        maskImageView.addSubview(badgeImageView)
+        imageView?.addSubview(maskImageView)
+        applyBadgeConstraints(to: maskImageView)
+    }
+
+    private func applyBadgeConstraints(to imageView: UIImageView) {
+        NSLayoutConstraint.activate([
+            imageView.widthAnchor.constraint(equalToConstant: UX.badgeIconSize.width),
+            imageView.heightAnchor.constraint(equalToConstant: UX.badgeIconSize.height),
+            imageView.leadingAnchor.constraint(equalTo: centerXAnchor),
+            imageView.bottomAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    private func configureLongPressGestureRecognizerIfNeeded(for element: ToolbarElement) {
+        guard element.onLongPress != nil else { return }
+        onLongPress = element.onLongPress
+        let longPressRecognizer = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handleLongPress)
+        )
+        addGestureRecognizer(longPressRecognizer)
+    }
+
+    private func configureCustomA11yActionIfNeeded(for element: ToolbarElement) {
+        guard let a11yCustomActionName = element.a11yCustomActionName,
+              let a11yCustomAction = element.a11yCustomAction else { return }
+        let a11yAction = UIAccessibilityCustomAction(name: a11yCustomActionName) { _ in
+            a11yCustomAction()
+            return true
+        }
+        accessibilityCustomActions = [a11yAction]
+    }
+
+    private func imageConfiguredForRTL(for element: ToolbarElement) -> UIImage? {
+        let image = UIImage(named: element.iconName)?.withRenderingMode(.alwaysTemplate)
+        return element.isFlippedForRTL ? image?.imageFlippedForRightToLeftLayoutDirection() : image
+    }
+
+    private func removeAllGestureRecognizers() {
+        guard let gestureRecognizers else { return }
+            for recognizer in gestureRecognizers {
+                removeGestureRecognizer(recognizer)
+            }
+    }
+
+    // MARK: - Selectors
+    @objc
+    private func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            let generator = UIImpactFeedbackGenerator(style: .heavy)
+            generator.impactOccurred()
+            onLongPress?(self)
+        }
+    }
+
+    // MARK: - ThemeApplicable
     public func applyTheme(theme: Theme) {
-        foregroundColorNormal = theme.colors.iconPrimary
-        foregroundColorHighlighted = theme.colors.iconPrimary
-        foregroundColorDisabled = theme.colors.iconDisabled
+        let colors = theme.colors
+        foregroundColorNormal = colors.iconPrimary
+        foregroundColorHighlighted = colors.actionPrimary
+        foregroundColorDisabled = colors.iconDisabled
         backgroundColorNormal = .clear
+
+        badgeImageView?.layer.borderColor = colors.layer1.cgColor
+        badgeImageView?.backgroundColor = maskImageView == nil ? colors.layer1 : .clear
+        badgeImageView?.tintColor = maskImageView == nil ? .clear : colors.actionInfo
+        maskImageView?.tintColor = colors.layer1
+
         setNeedsUpdateConfiguration()
     }
 }

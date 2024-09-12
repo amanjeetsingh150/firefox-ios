@@ -39,6 +39,29 @@ import:
             triggers:
               ON_FOURTH_LAUNCH_THIS_YEAR: "'app_cycle.foreground'|eventSum('Years', 1, 0) > 3"
 
+        - channel: beta, developer
+          value:
+            messages:
+              # Serves as an example of how microsurveys may look like
+              homepage-microsurvey-message:
+                surface: microsurvey
+                style: MICROSURVEY
+                trigger-if-all:
+                  - SECOND_HOMEPAGE_VIEW
+                title: Microsurvey/Microsurvey.Prompt.TitleLabel.v127
+                text: "How satisfied are you with your Firefox homepage?" # Should not show this message if this is nil
+                button-label: Microsurvey/Microsurvey.Prompt.Button.v127
+                microsurveyConfig:
+                  utm-content: homepage
+                  icon: homeLarge
+                  options:
+                    - Microsurvey/Microsurvey.Survey.Options.VerySatisfied.v132
+                    - Microsurvey/Microsurvey.Survey.Options.Satisfied.v132
+                    - Microsurvey/Microsurvey.Survey.Options.Neutral.v132
+                    - Microsurvey/Microsurvey.Survey.Options.Dissatisfied.v132
+                    - Microsurvey/Microsurvey.Survey.Options.VeryDissatisfied.v132
+                    - Microsurvey/Microsurvey.Survey.Options.NotApplicable.v132
+
         - channel: developer
           value:
             messages:

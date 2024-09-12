@@ -177,7 +177,7 @@ class LegacyGridTabViewController: UIViewController,
     }
 
     private func currentTheme() -> Theme {
-        return themeManager.currentTheme(for: windowUUID)
+        return themeManager.getCurrentTheme(for: windowUUID)
     }
 
     private func setupView() {
@@ -398,8 +398,10 @@ class LegacyGridTabViewController: UIViewController,
 
     /// Handles close tab by clicking on close button or swipe gesture
     func closeTabAction(tab: Tab, cell: LegacyTabCell) {
-        tabManager.backupCloseTab = BackupCloseTab(tab: tab,
-                                                   restorePosition: tabManager.tabs.firstIndex(of: tab))
+        tabManager.backupCloseTab = BackupCloseTab(
+            tab: tab,
+            restorePosition: tabManager.tabs.firstIndex(of: tab),
+            isSelected: tabManager.selectedTab?.tabUUID == tab.tabUUID)
         tabDisplayManager.tabDisplayCompletionDelegate = self
         tabDisplayManager.performCloseAction(for: tab)
 
@@ -626,7 +628,7 @@ extension LegacyGridTabViewController: LegacyTabPeekDelegate {
     }
 
     func tabPeekDidCopyUrl() {
-        SimpleToast().showAlertWithText(.AppMenu.AppMenuCopyURLConfirmMessage,
+        SimpleToast().showAlertWithText(.LegacyAppMenu.AppMenuCopyURLConfirmMessage,
                                         bottomContainer: view,
                                         theme: currentTheme(),
                                         bottomConstraintPadding: -toolbarHeight)
@@ -699,7 +701,7 @@ extension LegacyGridTabViewController {
         guard !tabDisplayManager.isDragging else { return }
 
         let controller = AlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        controller.addAction(UIAlertAction(title: .AppMenu.AppMenuCloseAllTabsTitleString,
+        controller.addAction(UIAlertAction(title: .LegacyAppMenu.AppMenuCloseAllTabsTitleString,
                                            style: .default,
                                            handler: { _ in self.closeTabsTrayBackground() }),
                              accessibilityIdentifier: AccessibilityIdentifiers.TabTray.deleteCloseAllButton)
@@ -788,9 +790,9 @@ extension LegacyGridTabViewController: InactiveTabsCFRProtocol {
             withArrowDirection: .up,
             andDelegate: self,
             presentedUsing: { self.presentCFROnView() },
-            andActionForButton: {
-                self.dismissTabTray()
-                self.delegate?.tabTrayDidRequestTabsSettings()
+            andActionForButton: { [weak self] in
+                self?.dismissTabTray()
+                self?.delegate?.tabTrayDidRequestTabsSettings()
             }, andShouldStartTimerRightAway: false
         )
     }

@@ -117,15 +117,18 @@ class Tab: NSObject, ThemeApplicable {
         }
     }
 
-    var adsTelemetryUrlList: [String] = [String]() {
+    var adsTelemetryUrlList = [String]() {
         didSet {
             startingSearchUrlWithAds = url
         }
     }
-    var adsTelemetryRedirectUrlList: [URL] = [URL]()
+    var adsTelemetryRedirectUrlList = [URL]()
     var startingSearchUrlWithAds: URL?
     var adsProviderName: String = ""
     var hasHomeScreenshot = false
+    var shouldScrollToTop = false
+    var isFindInPageMode = false
+
     private var logger: Logger
 
     // To check if current URL is the starting page i.e. either blank page or internal page like topsites
@@ -191,6 +194,10 @@ class Tab: NSObject, ThemeApplicable {
     /// This property returns, ideally, the web page's title. Otherwise, based on the page being internal
     /// or not, it will resort to other displayable titles.
     var displayTitle: String {
+        if self.isFxHomeTab {
+            return .LegacyAppMenu.AppMenuOpenHomePageTitleString
+        }
+
         if let lastTitle = lastTitle, !lastTitle.isEmpty {
             return lastTitle
         }
@@ -198,14 +205,6 @@ class Tab: NSObject, ThemeApplicable {
         // First, check if the webView can give us a title.
         if let title = webView?.title, !title.isEmpty {
             return title
-        }
-
-        // If the webView doesn't give a title. check the URL to see if it's our Home URL, with no sessionData
-        // on this tab. When picking a display title. Tabs with sessionData are pending a restore so show their
-        // old title. To prevent flickering of the display title. If a tab is restoring make sure to use
-        // its lastTitle.
-        if let url = self.url, InternalURL(url)?.isAboutHomeURL ?? false {
-            return .AppMenu.AppMenuOpenHomePageTitleString
         }
 
         // Then, if it's not Home, and it's also not a complete and valid URL, display what was "entered" as the title.
@@ -228,7 +227,7 @@ class Tab: NSObject, ThemeApplicable {
         var backUpName: String = "" // In case display title is empty
 
         if let baseDomain = baseDomain {
-            backUpName = baseDomain.contains("local") ? .AppMenu.AppMenuOpenHomePageTitleString : baseDomain
+            backUpName = baseDomain.contains("local") ? .LegacyAppMenu.AppMenuOpenHomePageTitleString : baseDomain
         } else if let url = url, let about = InternalURL(url)?.aboutComponent {
             backUpName = about
         }
@@ -237,10 +236,16 @@ class Tab: NSObject, ThemeApplicable {
     }
 
     var canGoBack: Bool {
+        // FXIOS-9785 This could result in the back button never being enabled for restored tabs
+        assert(webView != nil, "We should not be trying to enable or disable the back button before the webView is set")
+
         return webView?.canGoBack ?? false
     }
 
     var canGoForward: Bool {
+        // FXIOS-9785 This could result in the forward button never being enabled for restored tabs
+        assert(webView != nil, "We should not be trying to enable or disable the forward button before the webView is set")
+
         return webView?.canGoForward ?? false
     }
 
@@ -253,9 +258,13 @@ class Tab: NSObject, ThemeApplicable {
     private let faviconHelper: SiteImageHandler
     var faviconURL: String? {
         didSet {
+            guard let url = url,
+                  let faviconURLString = faviconURL,
+                  let faviconUrl = URL(string: faviconURLString, invalidCharacters: false)
+            else { return }
             faviconHelper.cacheFaviconURL(
                 siteURL: url,
-                faviconURL: URL(string: faviconURL ?? "", invalidCharacters: false)
+                faviconURL: faviconUrl
             )
         }
     }
@@ -386,23 +395,21 @@ class Tab: NSObject, ThemeApplicable {
     // If this tab has been opened from another, its parent will point to the tab from which it was opened
     weak var parent: Tab?
 
-    fileprivate var contentScriptManager = TabContentScriptManager()
+    private var contentScriptManager = TabContentScriptManager()
 
-    fileprivate let configuration: WKWebViewConfiguration
+    private var configuration: WKWebViewConfiguration?
 
     /// Any time a tab tries to make requests to display a Javascript Alert and we are not the active
     /// tab instance, queue it for later until we become foregrounded.
-    fileprivate var alertQueue = [JSAlertInfo]()
+    private var alertQueue = [JSAlertInfo]()
 
     var profile: Profile
 
     init(profile: Profile,
-         configuration: WKWebViewConfiguration,
          isPrivate: Bool = false,
          windowUUID: WindowUUID,
          faviconHelper: SiteImageHandler = DefaultSiteImageHandler.factory(),
          logger: Logger = DefaultLogger.shared) {
-        self.configuration = configuration
         self.nightMode = false
         self.windowUUID = windowUUID
         self.noImageMode = false
@@ -412,7 +419,9 @@ class Tab: NSObject, ThemeApplicable {
         self.logger = logger
         super.init()
         self.isPrivate = isPrivate
-        self.firstCreatedTime = Date().toTimestamp()
+        let tabCreatedTime = Date().toTimestamp()
+        self.lastExecutedTime = tabCreatedTime
+        self.firstCreatedTime = tabCreatedTime
         debugTabCount += 1
 
         TelemetryWrapper.recordEvent(
@@ -453,7 +462,8 @@ class Tab: NSObject, ThemeApplicable {
         }
     }
 
-    func createWebview(with restoreSessionData: Data? = nil) {
+    func createWebview(with restoreSessionData: Data? = nil, configuration: WKWebViewConfiguration) {
+        self.configuration = configuration
         if webView == nil {
             configuration.userContentController = WKUserContentController()
             configuration.allowsInlineMediaPlayback = true
@@ -725,7 +735,7 @@ class Tab: NSObject, ThemeApplicable {
     func hideContent(_ animated: Bool = false) {
         webView?.isUserInteractionEnabled = false
         if animated {
-            UIView.animate(withDuration: 0.25, animations: { () -> Void in
+            UIView.animate(withDuration: 0.25, animations: { () in
                 self.webView?.alpha = 0.0
             })
         } else {
@@ -736,7 +746,7 @@ class Tab: NSObject, ThemeApplicable {
     func showContent(_ animated: Bool = false) {
         webView?.isUserInteractionEnabled = true
         if animated {
-            UIView.animate(withDuration: 0.25, animations: { () -> Void in
+            UIView.animate(withDuration: 0.25, animations: { () in
                 self.webView?.alpha = 1.0
             })
         } else {
@@ -769,6 +779,16 @@ class Tab: NSObject, ThemeApplicable {
 
     func expireSnackbars(withClass snackbarClass: String) {
         bars.reversed().filter({ $0.snackbarClassIdentifier == snackbarClass }).forEach({ removeSnackbar($0) })
+    }
+
+    func setFindInPage(isBottomSearchBar: Bool, doesFindInPageBarExist: Bool) {
+        if #available(iOS 16, *) {
+            guard let webView = self.webView,
+                  let findInteraction = webView.findInteraction else { return }
+            isFindInPageMode = findInteraction.isFindNavigatorVisible && isBottomSearchBar
+        } else {
+            isFindInPageMode = doesFindInPageBarExist && isBottomSearchBar
+        }
     }
 
     func setScreenshot(_ screenshot: UIImage?) {
@@ -920,7 +940,6 @@ private class TabContentScriptManager: NSObject, WKScriptMessageHandler {
         }
     }
 
-    @objc
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         for helper in helpers.values {
             if let scriptMessageHandlerNames = helper.scriptMessageHandlerNames(),
