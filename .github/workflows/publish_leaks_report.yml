@@ -7,12 +7,23 @@ jobs:
   publish:
     runs-on: macos-14
 
+    env:
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 240000
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Select Xcode
         run: sudo xcode-select -switch /Applications/Xcode_15.0.1.app && /usr/bin/xcodebuild -version
+      
+      - name: Install Maestro
+        run: |
+          curl -Ls --retry 3 --retry-all-errors "https://get.maestro.mobile.dev" | bash
+          echo "${HOME}/.maestro/bin" >> $GITHUB_PATH
+      
+      - name: Print Maestro version
+        run: maestro --version
    
       - name: Check xcodebuild
         run: xcodebuild -version
@@ -36,9 +47,35 @@ jobs:
 
       - name: Launch App
         run: |
-          export SIMCTL_CHILD_MallocStackLogging=1 && xcrun simctl launch booted org.mozilla.ios.Fennec
+          export SIMCTL_CHILD_MallocStackLogging=1
+          OUTPUT=$(xcrun simctl launch booted org.mozilla.ios.Fennec)
+          PID=$(echo "$OUTPUT" | awk '{print $2}')
+          echo "PID: $PID"
+          echo "PID=$PID" >> $GITHUB_ENV
 
-          
+      - name: Run test
+        run: maestro test ./.github/scripts/suggestion_flow.yaml
+
+      - name: Execute leaks command
+	run: leaks ${{ env.PID }}
+
+      - name: Upload maestro debug logs 
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: maestro_logs
+          path: ~/.maestro/tests/
+          retention-days: 3
+          include-hidden-files: true
       
+      - name: Capture ps output
+        if: failure()
+        run: |
+          ps aux > ~/ps_output.txt
 
-     
+      - name: Upload ps output logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with: 
+          name: ps-output
+          path: ~/ps_output.txt
