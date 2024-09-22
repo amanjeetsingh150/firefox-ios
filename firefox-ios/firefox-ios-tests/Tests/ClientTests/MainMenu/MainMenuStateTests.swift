@@ -14,13 +14,12 @@ final class MainMenuStateTests: XCTestCase {
     }
 
     override func tearDown() {
-        super.tearDown()
         DependencyHelperMock().reset()
+        super.tearDown()
     }
 
     func testInitialization() {
         let initialState = createSubject()
-        let reducer = mainMenuReducer()
 
         XCTAssertFalse(initialState.shouldDismiss)
         XCTAssertEqual(initialState.menuElements, [])
@@ -63,7 +62,8 @@ final class MainMenuStateTests: XCTestCase {
                 initialState,
                 MainMenuAction(
                     windowUUID: .XCTestDefaultUUID,
-                    actionType: MainMenuActionType.show(destination)
+                    actionType: MainMenuActionType.show,
+                    navigationDestination: destination
                 )
             )
 

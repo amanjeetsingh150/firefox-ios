@@ -37,7 +37,7 @@ final class ToolbarAction: Action {
          canGoBack: Bool? = nil,
          canGoForward: Bool? = nil,
          readerModeState: ReaderModeState? = nil,
-         addressBorderPosition: AddressToolbarBorderPosition? = nil,
+         addressBorderPosition: AddressToolbarBorderPosition = .none,
          displayNavBorder: Bool? = nil,
          lockIconImageName: String? = nil,
          isEditing: Bool? = nil,
@@ -86,6 +86,8 @@ enum ToolbarActionType: ActionType {
     case traitCollectionDidChange
     case websiteLoadingStateDidChange
     case searchEngineDidChange
+    case navigationButtonDoubleTapped
+    case navigationHintFinishedPresenting
 }
 
 class ToolbarMiddlewareAction: Action {

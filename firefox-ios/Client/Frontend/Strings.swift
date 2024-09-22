@@ -231,6 +231,11 @@ extension String {
                 tableName: "ToolbarLocation",
                 value: "Move the toolbar to the top if that’s more your style.",
                 comment: "Contextual hints are little popups that appear for the users informing them of new features. This one indicates a user can navigate to the Settings page to move the search bar to the top.")
+            public static let NavigationButtonsBody = MZLocalizedString(
+                key: "ContextualHints.Toolbar.Navigation.Description.v132",
+                tableName: "ToolbarLocation",
+                value: "Tap and hold the arrows to jump between pages in this tab’s history.",
+                comment: "Contextual hints are little popups that appear for the users informing them of new features. This one indicates a user can press and hold either the back or forward web navigation buttons to quickly navigate their back/forward history")
         }
 
         public struct Shopping {
@@ -356,6 +361,12 @@ extension String {
                     key: "Addresses.Toast.AddressUpdatedConfirmation.v129",
                     tableName: "EditAddress",
                     value: "Address Information Updated",
+                    comment: "Toast message confirming that an address has been successfully updated."
+                )
+                 public static let AddressUpdatedConfirmationV2 = MZLocalizedString(
+                    key: "Addresses.Toast.AddressUpdatedConfirmation.v132.v2",
+                    tableName: "EditAddress",
+                    value: "Address Saved",
                     comment: "Toast message confirming that an address has been successfully updated."
                 )
                 public static let RemoveAddressTitle = MZLocalizedString(
@@ -4498,6 +4509,12 @@ extension String {
                 value: "Fingerprinters: %@",
                 comment: "Text to let users know how many fingerprinters were blocked on the current website. The placeholder will show the number of fingerprinters detected")
 
+            public static let analyticsTrackersBlockedLabel = MZLocalizedString(
+                key: "Menu.EnhancedTrackingProtection.Details.Trackers.Analytics.v132",
+                tableName: "EnhancedTrackingProtection",
+                value: "Tracking content: %@",
+                comment: "Text to let users know how many analytics trackers were blocked on the current website. The placeholder will show the number of such cookies detected")
+
             public static let connectionSecureLabel = MZLocalizedString(
                 key: "Menu.EnhancedTrackingProtection.Details.ConnectionSecure.v128",
                 tableName: "EnhancedTrackingProtection",
@@ -4635,6 +4652,12 @@ extension String {
                 tableName: "EnhancedTrackingProtection",
                 value: "DNS Name",
                 comment: "The title for the certificate subject alt names DNS name inside the certificate screen.")
+
+            public static let closeButtonAccessibilityLabel = MZLocalizedString(
+                key: "Menu.EnhancedTrackingProtection.CloseButton.AccessibilityLabel.v132",
+                tableName: "EnhancedTrackingProtection",
+                value: "Close privacy and security menu",
+                comment: "The accessibility label for the close button in the Enhanced Tracking protection menu.")
         }
     }
 }
@@ -6891,6 +6914,57 @@ extension String {
             tableName: "PasswordAutofill",
             value: "You’ll sign into %@",
             comment: "This phrase is used as a subtitle in the header of password list screen, indicating to the user that they will be logging into a specific website (represented by %@) using a saved password. It's providing clarity on which website the saved credentials apply to.")
+    }
+}
+
+// MARK: - Password generator
+extension String {
+    public struct PasswordGenerator {
+        public static let Title = MZLocalizedString(
+            key: "PasswordGenerator.Title.v132",
+            tableName: "PasswordGenerator",
+            value: "Use a strong password?",
+            comment: "Title text displayed as part of a popup displayed when a user interacts with the password field in a signup form. A random password has been generated for the user -- clicking a button fills in the password of the signup form with this generated password.")
+        public static let Description = MZLocalizedString(
+            key: "PasswordGenerator.Description.v132",
+            tableName: "PasswordGenerator",
+            value: "Protect your account by using a strong, randomly generated password.",
+            comment: "Text displayed when a user interacts with the password field in a signup form, as part of a popup. This popup allows the user to generate a password that they have the option to use when signing up for an account.")
+        public static let UsePasswordButtonLabel = MZLocalizedString(
+            key: "PasswordGenerator.UsePasswordButtonLabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Use Password",
+            comment: "Label of a button that is part of a popup displayed when a user interacts with the password field in a signup form. A random password has been generated for the user and clicking this button fills in the password field of the signup form with this generated password.")
+        public static let A11yLabel = MZLocalizedString(
+            key: "PasswordGenerator.A11yLabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Password Generator",
+            comment: "Accessibility label describing a feature that generates a password when the password field of a signup form is interacted with.")
+        public static let CloseButtonA11yLabel = MZLocalizedString(
+            key: "PasswordGenerator.CloseButtonA11ylabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Close",
+            comment: "Accessibility label describing the close button for the popup related to a feature that generates a password when the password field of a signup form is interacted with.")
+        public static let RefreshPasswordButtonA11yLabel = MZLocalizedString(
+            key: "PasswordGenerator.RefreshPasswordButtonA11yLabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Generate a new strong password",
+            comment: "Accessibility label describing a refresh password button belonging to a popup that generates a password when the password field of a signup form is interacted with.")
+        public static let PasswordReadoutPrefaceA11y = MZLocalizedString(
+            key: "PasswordGenerator.PasswordReadoutPrefaceA11y.v132",
+            tableName: "PasswordGenerator",
+            value: "Generated password: %@",
+            comment: "Prefix to alert accessibility users that a generated password (represented by %@) will be read to them next.")
+        public static let CopyPasswordButtonLabel = MZLocalizedString(
+            key: "PasswordGenerator.CopyPasswordButtonLabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Copy",
+            comment: "When a user is in the process of creating an account, they have the option to generate a password. The user is capable of copying this password after long pressing the value of the password displayed to them. This string is the label of the copy button that appears after long pressing the password.")
+        public static let KeyboardAccessoryButtonLabel = MZLocalizedString(
+            key: "PasswordGenerator.KeyboardAccessoryButtonLabel.v132",
+            tableName: "PasswordGenerator",
+            value: "Use strong password",
+            comment: "When a user is in the process of creating an account, they have the option to generate a password. The popup displaying the generated password to the user is available by clicking a keyboard accessory button with this label.")
     }
 }
 

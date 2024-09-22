@@ -4,13 +4,22 @@
 
 import Foundation
 import UIKit
+import Common
 
-class MenuTableView: UIView, UITableViewDataSource, UITableViewDelegate {
-    private let tableView: UITableView
-    private var menuData: [MenuSection] = []
+public protocol MenuTableViewDataDelegate: AnyObject {
+    func reloadTableView(with data: [MenuSection])
+}
+
+class MenuTableView: UIView,
+                     UITableViewDelegate,
+                     UITableViewDataSource, ThemeApplicable {
+    private var tableView: UITableView
+    private var menuData: [MenuSection]
+    private var theme: Theme?
 
     override init(frame: CGRect) {
         tableView = UITableView(frame: .zero, style: .insetGrouped)
+        menuData = []
         super.init(frame: .zero)
         setupView()
     }
@@ -21,36 +30,31 @@ class MenuTableView: UIView, UITableViewDataSource, UITableViewDelegate {
 
     private func setupView() {
         setupTableView()
+        setupUI()
     }
 
-    private func setupTableView() {
-        backgroundColor = .clear
-        tableView.backgroundColor = .clear
+    private func setupUI() {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(tableView)
 
-        tableView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: self.topAnchor),
             tableView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: self.trailingAnchor)
         ])
+    }
 
+    private func setupTableView() {
+        tableView.delegate = self
+        tableView.dataSource = self
         tableView.register(
             MenuCell.self,
             forCellReuseIdentifier: MenuCell.cellIdentifier
         )
-
-        tableView.dataSource = self
-        tableView.delegate = self
     }
 
-    func updateDataSource(_ newDataSource: [MenuSection]) {
-        self.menuData = newDataSource
-        tableView.reloadData()
-    }
-
-    // MARK: - UITableViewDataSource Methods
+    // MARK: - UITableViewDataSource
     func numberOfSections(in tableView: UITableView) -> Int {
         return menuData.count
     }
@@ -72,7 +76,7 @@ class MenuTableView: UIView, UITableViewDataSource, UITableViewDelegate {
         ) as! MenuCell
 
         cell.configureCellWith(model: menuData[indexPath.section].options[indexPath.row])
-
+        if let theme { cell.applyTheme(theme: theme) }
         return cell
     }
 
@@ -81,11 +85,22 @@ class MenuTableView: UIView, UITableViewDataSource, UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        guard let action = menuData[indexPath.section].options[indexPath.row].action else {
-            tableView.deselectRow(at: indexPath, animated: true)
-            return
+        tableView.deselectRow(at: indexPath, animated: false)
+
+        if let action = menuData[indexPath.section].options[indexPath.row].action {
+            action()
         }
-        action()
-        tableView.deselectRow(at: indexPath, animated: true)
+    }
+
+    func reloadTableView(with data: [MenuSection]) {
+        menuData = data
+        tableView.reloadData()
+    }
+
+    // MARK: - Theme Applicable
+    func applyTheme(theme: Theme) {
+        self.theme = theme
+        backgroundColor = .clear
+        tableView.backgroundColor = .clear
     }
 }
