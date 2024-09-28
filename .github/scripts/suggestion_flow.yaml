@@ -12,6 +12,8 @@ appId: org.mozilla.ios.Fennec
 - tapOn:
    text: "Skip"
    optional: true
+- tapOn: "Save and Continue"
+- tapOn: "Save and Start Browsing"
 - tapOn: "Search or enter address"
 - inputText: "Wikipedia"
 - assertNotVisible: "Empty list"
