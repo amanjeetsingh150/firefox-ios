@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.1.7
 
       - name: Select Xcode
         run: sudo xcode-select -switch /Applications/Xcode_15.2.0.app && /usr/bin/xcodebuild -version
@@ -21,8 +21,6 @@ jobs:
         run: |
           curl -Ls --retry 3 --retry-all-errors "https://get.maestro.mobile.dev" | bash
           echo "${HOME}/.maestro/bin" >> $GITHUB_PATH
-          sudo DevToolsSecurity -enable
-
       
       - name: Print Maestro version
         run: maestro --version
@@ -41,11 +39,23 @@ jobs:
      
       - name: Check Simulator Status
         run: xcrun simctl list
+
+
+      - name: Build Fennec Client
+        run: |
+          ./checkout.sh
+          ./bootstrap.sh --force
+          xcodebuild \
+            build-for-testing \
+            -scheme Fennec \
+            -project ./firefox-ios/Client.xcodeproj \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath ./build \
+            ARCHS="x86_64"
       
       - name: Install App
         run: |
-          unzip -o ./.github/assets/Client.zip -d ./.github/assets/
-          xcrun simctl install booted ./.github/assets/Client.app
+          xcrun simctl install booted ./build/Build/Products/Fennec_Testing-iphonesimulator/Client.app
 
       - name: Launch App
         run: |
@@ -78,15 +88,11 @@ jobs:
           retention-days: 1
           include-hidden-files: true
 
-      - name: Capture ps output
-        if: failure()
-        run: |
-          ps aux > ~/ps_output.txt
-
-      - name: Upload ps output
+      - name: Upload App Build
         uses: actions/upload-artifact@v4
         if: failure()
-        with: 
-          name: ps_output
-          path: ~/ps_output.txt
+        with:
+          name: app_derived_data
+          path: ./build/Build/Products
           retention-days: 1
+          include-hidden-files: true
