@@ -43,6 +43,7 @@ class HomepageViewController:
     private var jumpBackInContextualHintViewController: ContextualHintViewController
     private var syncTabContextualHintViewController: ContextualHintViewController
     private var collectionView: UICollectionView! = nil
+    private var lastContentOffsetY: CGFloat = 0
     private var logger: Logger
     var windowUUID: WindowUUID { return tabManager.windowUUID }
     var currentWindowUUID: UUID? { return windowUUID }
@@ -377,9 +378,10 @@ class HomepageViewController:
         view.backgroundColor = theme.colors.layer1
     }
 
+    // called when the homepage is displayed to make sure it's scrolled to top
     func scrollToTop(animated: Bool = false) {
         collectionView?.setContentOffset(.zero, animated: animated)
-        scrollViewDidScroll(collectionView)
+        handleScroll(collectionView, isUserInteraction: false)
     }
 
     @objc
@@ -390,13 +392,18 @@ class HomepageViewController:
         */
         if currentTab?.lastKnownUrl?.absoluteString.hasPrefix("\(InternalURL.baseUrl)/\(AboutHomeHandler.path)") ?? false {
             overlayManager.cancelEditing(shouldCancelLoading: false)
-
-            let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEdit)
-            store.dispatch(action)
         }
     }
 
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        lastContentOffsetY = scrollView.contentOffset.y
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        handleScroll(scrollView, isUserInteraction: true)
+    }
+
+    private func handleScroll(_ scrollView: UIScrollView, isUserInteraction: Bool) {
         // We only handle status bar overlay alpha if there's a wallpaper applied on the homepage
         if WallpaperManager().currentWallpaper.type != .defaultWallpaper {
             let theme = themeManager.getCurrentTheme(for: windowUUID)
@@ -410,7 +417,8 @@ class HomepageViewController:
         // Only dispatch action when user is in edit mode to avoid having the toolbar re-displayed
         if featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly),
            let toolbarState,
-           toolbarState.addressToolbar.isEditing {
+           toolbarState.addressToolbar.isEditing,
+           isUserInteraction {
             // When the user scrolls the homepage we cancel edit mode
             // On a website we just dismiss the keyboard
             if toolbarState.addressToolbar.url == nil {
@@ -422,15 +430,11 @@ class HomepageViewController:
             }
         }
 
-        guard let toolbarState,
-              let borderPosition = toolbarState.addressToolbar.borderPosition
-        else { return }
-
-        // Only dispatch the action to update the toolbar border if needed, which is only if either
-        // a) we scroll down, and the toolbar border is not already at the bottom (so we show it), or
-        // b) we scroll up past the top of the scroll view, and the border is currently at the bottom (so we hide it)
-        if (scrollView.contentOffset.y > 0 && borderPosition != .bottom)
-           || (scrollView.contentOffset.y < 0 && borderPosition != .none) {
+        // this action controls the address toolbar's border position, and to prevent spamming redux with actions for every
+        // change in content offset, we keep track of lastContentOffsetY to know if the border needs to be updated
+        if (lastContentOffsetY > 0 && scrollView.contentOffset.y <= 0) ||
+            (lastContentOffsetY <= 0 && scrollView.contentOffset.y > 0) {
+            lastContentOffsetY = scrollView.contentOffset.y
             store.dispatch(
                 GeneralBrowserMiddlewareAction(
                     scrollOffset: scrollView.contentOffset,

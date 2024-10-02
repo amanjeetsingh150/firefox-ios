@@ -4,16 +4,13 @@
 
 import Common
 import UIKit
+import ComponentLibrary
 
 public final class MenuDetailView: UIView,
                                    MenuTableViewDataDelegate, ThemeApplicable {
-    private struct UX {
-        static let headerHeight: CGFloat = 70
-    }
-
     // MARK: - UI Elements
     private var tableView: MenuTableView = .build()
-    private var detailHeaderView: MenuSubmenuHeaderView = .build()
+    public var detailHeaderView: NavigationHeaderView = .build()
 
     // MARK: - Initializers
     override init(frame: CGRect) {
@@ -34,7 +31,6 @@ public final class MenuDetailView: UIView,
             detailHeaderView.topAnchor.constraint(equalTo: self.topAnchor),
             detailHeaderView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             detailHeaderView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-            detailHeaderView.heightAnchor.constraint(equalToConstant: UX.headerHeight),
 
             tableView.topAnchor.constraint(equalTo: detailHeaderView.bottomAnchor),
             tableView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
@@ -43,13 +39,27 @@ public final class MenuDetailView: UIView,
         ])
     }
 
+    public func setupAccessibilityIdentifiers(closeButtonA11yLabel: String,
+                                              closeButtonA11yId: String,
+                                              backButtonA11yLabel: String,
+                                              backButtonA11yId: String) {
+        detailHeaderView.setupAccessibility(closeButtonA11yLabel: closeButtonA11yLabel,
+                                            closeButtonA11yId: closeButtonA11yId,
+                                            backButtonA11yLabel: backButtonA11yLabel,
+                                            backButtonA11yId: backButtonA11yId)
+    }
+
+    public func adjustLayout() {
+        detailHeaderView.adjustLayout()
+    }
+
     // MARK: - Interface
     public func reloadTableView(with data: [MenuSection]) {
         tableView.reloadTableView(with: data)
     }
 
-    public func setupHeaderNavigation(from delegate: MainMenuDetailNavigationHandler) {
-        detailHeaderView.navigationDelegate = delegate
+    public func setViews(with title: String, and backButtonText: String) {
+        detailHeaderView.setViews(with: title, and: backButtonText)
     }
 
     // MARK: - Theme Applicable

@@ -4,12 +4,13 @@
 
 import Common
 import UIKit
+import ComponentLibrary
 
 public final class MenuMainView: UIView,
                                  MenuTableViewDataDelegate, ThemeApplicable {
     // MARK: - UI Elements
     private var tableView: MenuTableView = .build()
-    private var accountHeaderView: MenuAccountHeaderView = .build()
+    public var accountHeaderView: HeaderView = .build()
 
     // MARK: - Properties
 
@@ -32,13 +33,36 @@ public final class MenuMainView: UIView,
             accountHeaderView.topAnchor.constraint(equalTo: self.topAnchor),
             accountHeaderView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             accountHeaderView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-            accountHeaderView.heightAnchor.constraint(equalToConstant: 70),
 
             tableView.topAnchor.constraint(equalTo: accountHeaderView.bottomAnchor),
             tableView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: self.trailingAnchor)
         ])
+    }
+
+    public func setupDetails(subtitle: String, title: String, icon: UIImage?) {
+        accountHeaderView.setupDetails(subtitle: subtitle,
+                                       title: title,
+                                       icon: icon)
+    }
+
+    public func setupAccessibilityIdentifiers(closeButtonA11yLabel: String,
+                                              closeButtonA11yId: String,
+                                              mainButtonA11yLabel: String,
+                                              mainButtonA11yId: String,
+                                              menuA11yId: String,
+                                              menuA11yLabel: String) {
+        accountHeaderView.setupAccessibility(closeButtonA11yLabel: closeButtonA11yLabel,
+                                             closeButtonA11yId: closeButtonA11yId,
+                                             mainButtonA11yLabel: mainButtonA11yLabel,
+                                             mainButtonA11yId: mainButtonA11yId)
+        tableView.accessibilityIdentifier = menuA11yId
+        tableView.accessibilityLabel = menuA11yLabel
+    }
+
+    public func adjustLayout() {
+        accountHeaderView.adjustLayout()
     }
 
     // MARK: - Interface
@@ -51,5 +75,6 @@ public final class MenuMainView: UIView,
         backgroundColor = .clear
         tableView.applyTheme(theme: theme)
         accountHeaderView.applyTheme(theme: theme)
+        accountHeaderView.setIconTheme(with: theme)
     }
 }
