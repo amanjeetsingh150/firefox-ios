@@ -69,7 +69,7 @@ jobs:
         run: maestro test ./.github/scripts/suggestion_flow.yaml
 
       - name: Run leaks command
-        run: sudo leaks ${{ env.PID }} >> ~/leaks.txt
+        run: leaks ${{ env.PID }} --exclude "Nimbus.applyLocalExperiments(getString:)" --exclude "Nimbus.recordEvent(_:_:)" --exclude "NimbusEventStore.recordEvent(_:)" --exclude "Nimbus.fetchExperiments()" --exclude "static Experiments.updateGlobalUserParticipation()" --exclude "SQLiteDBStatement.bind(_:)" --exclude "UISoundNewDevice" >> ~/leaks.txt
 
       - name: Upload leaks output
         uses: actions/upload-artifact@v4
