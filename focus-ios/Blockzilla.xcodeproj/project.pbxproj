@@ -401,6 +401,7 @@
 		432B115F2921A29300F5CF37 /* en-US */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "en-US"; path = "en-US.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		432C0BA628FCB9EB00B0EA39 /* sv */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sv; path = sv.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		432C0BA728FCB9EB00B0EA39 /* sv */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sv; path = sv.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4333986E2CE2135700F34C28 /* ne-NP */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "ne-NP"; path = "ne-NP.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		433502A228FCB8D1008692E5 /* es-CL */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "es-CL"; path = "es-CL.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		4335703A29C7C0CB001F6347 /* tt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tt; path = tt.lproj/Localizable.strings; sourceTree = "<group>"; };
 		43357C6C28FCB9A000B59F06 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -450,6 +451,7 @@
 		4398B11A28FCB94A00CE2B19 /* ia */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ia; path = ia.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4399E9F228FCB89C00639DD1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		4399E9F328FCB89D00639DD1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		439E0AFA2CE211EE00115A1C /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
 		43A1DD5A28FCB9AB008632C6 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		43A6281D296B763500FDE9C5 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = ca.lproj/Localizable.strings; sourceTree = "<group>"; };
 		43A97CAB28FCB8AF0099042D /* el */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = el; path = el.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -2902,6 +2904,8 @@
 				43849FA72B1D3410006083D5 /* bg */,
 				43AECE282B1D342000D548A4 /* bs */,
 				4369C6E22C0493E800CA4991 /* hy-AM */,
+				439E0AFA2CE211EE00115A1C /* ar */,
+				4333986E2CE2135700F34C28 /* ne-NP */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
