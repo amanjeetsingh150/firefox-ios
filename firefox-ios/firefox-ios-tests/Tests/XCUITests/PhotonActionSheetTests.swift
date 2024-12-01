@@ -19,14 +19,19 @@ class PhotonActionSheetTests: BaseTestCase {
         navigator.performAction(Action.OpenNewTabFromTabTray)
 
         // Verify that the site is pinned to top
-        let cell = app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell].staticTexts["Example Domain"]
+        let itemCell = app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
+        let cell = itemCell.staticTexts["Example Domain"]
         mozWaitForElementToExist(cell)
 
         // Remove pin
         cell.press(forDuration: 2)
         app.tables.cells.otherElements[StandardImageIdentifiers.Large.pinSlash].tap()
-
         // Check that it has been unpinned
+        /* FIXME: Adding a workaround until https://github.com/mozilla-mobile/firefox-ios/issues/22323 is fixed
+         * We will wait for the pinned icon on the example.com tile to disappear (max 8 seconds polling)
+         */
+        waitForNoExistence(app.cells["Example Domain"].images[StandardImageIdentifiers.Small.pinBadgeFill], timeoutValue: 8)
+
         cell.press(forDuration: 2)
         mozWaitForElementToExist(app.tables.cells.otherElements[StandardImageIdentifiers.Large.pin])
     }
@@ -75,12 +80,20 @@ class PhotonActionSheetTests: BaseTestCase {
         app.otherElements[StandardImageIdentifiers.Large.share].tap()
 
         if #unavailable(iOS 16) {
-            mozWaitForElementToExist(app.otherElements["ActivityListView"].navigationBars["UIActivityContentView"])
-            mozWaitForElementToExist(app.buttons["Copy"])
+            waitForElementsToExist(
+                [
+                    app.otherElements["ActivityListView"].navigationBars["UIActivityContentView"],
+                    app.buttons["Copy"]
+                ]
+            )
         } else {
-            mozWaitForElementToExist(app.otherElements["ActivityListView"].otherElements["Example Domain"])
-            mozWaitForElementToExist(app.otherElements["ActivityListView"].otherElements["example.com"])
-            mozWaitForElementToExist(app.collectionViews.cells["Copy"])
+            waitForElementsToExist(
+                [
+                app.otherElements["ActivityListView"].otherElements["Example Domain"],
+                app.otherElements["ActivityListView"].otherElements["example.com"],
+                app.collectionViews.cells["Copy"]
+                ]
+            )
         }
         var fennecElement = app.collectionViews.scrollViews.cells.elementContainingText("Fennec")
         // This is not ideal but only way to get the element on iPhone 8
@@ -88,8 +101,7 @@ class PhotonActionSheetTests: BaseTestCase {
         if #unavailable(iOS 17) {
             fennecElement = app.collectionViews.scrollViews.cells.element(boundBy: 2)
         }
-        mozWaitForElementToExist(fennecElement)
-        fennecElement.tap()
+        fennecElement.waitAndTap()
         mozWaitForElementToExist(app.navigationBars["ShareTo.ShareView"])
     }
 
@@ -97,23 +109,27 @@ class PhotonActionSheetTests: BaseTestCase {
     // Smoketest
     func testSharePageWithShareSheetOptions() {
         openNewShareSheet()
-        mozWaitForElementToExist(app.staticTexts["Open in Firefox"])
-        mozWaitForElementToExist(app.staticTexts["Load in Background"])
-        mozWaitForElementToExist(app.staticTexts["Bookmark This Page"])
-        mozWaitForElementToExist(app.staticTexts["Add to Reading List"])
+        waitForElementsToExist(
+            [
+                app.staticTexts["Open in Firefox"],
+                app.staticTexts["Load in Background"],
+                app.staticTexts["Bookmark This Page"],
+                app.staticTexts["Add to Reading List"]
+            ]
+        )
         mozWaitForElementToExist(app.staticTexts["Send to Device"])
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323203
     func testShareSheetSendToDevice() {
         openNewShareSheet()
-        mozWaitForElementToExist(app.staticTexts["Send to Device"])
-        app.staticTexts["Send to Device"].tap()
-        mozWaitForElementToExist(
-            app.navigationBars.buttons[AccessibilityIdentifiers.ShareTo.HelpView.doneButton]
+        app.staticTexts["Send to Device"].waitAndTap()
+        waitForElementsToExist(
+            [
+                app.navigationBars.buttons[AccessibilityIdentifiers.ShareTo.HelpView.doneButton],
+                app.staticTexts["You are not signed in to your account."]
+            ]
         )
-
-        mozWaitForElementToExist(app.staticTexts["You are not signed in to your account."])
         app.navigationBars.buttons[AccessibilityIdentifiers.ShareTo.HelpView.doneButton].tap()
     }
 
@@ -122,7 +138,8 @@ class PhotonActionSheetTests: BaseTestCase {
         openNewShareSheet()
         app.buttons["Cancel"].tap()
         // User is back to the BrowserTab where the sharesheet was launched
-        mozWaitForElementToExist(app.textFields["url"])
-        mozWaitForValueContains(app.textFields["url"], value: "example.com/")
+        let url = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        mozWaitForElementToExist(url)
+        mozWaitForValueContains(url, value: "example.com")
     }
 }

@@ -66,7 +66,7 @@ enum TabUrlType: String {
 
 typealias TabUUID = String
 
-class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
+class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
     static let privateModeKey = "PrivateModeKey"
     private var _isPrivate = false
     private(set) var isPrivate: Bool {
@@ -341,6 +341,9 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
     // point to a tempfile containing the content so it can be shared to external applications.
     var temporaryDocument: TemporaryDocument?
 
+    /// Used to retain a reference to an AR 3D model preview until display ends
+    var quickLookPreviewHelper: OpenQLPreviewHelper?
+
     /// Returns true if this tab's URL is known, and it's longer than we want to store.
     var urlIsTooLong: Bool {
         guard let url = self.url else {
@@ -369,10 +372,6 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
             guard nightMode != oldValue else { return }
 
             webView?.evaluateJavascriptInDefaultContentWorld("window.__firefox__.NightMode.setEnabled(\(nightMode))")
-            // For WKWebView background color to take effect, isOpaque must be false,
-            // which is counter-intuitive. Default is true. The color is previously
-            // set to black in the WKWebView init.
-            webView?.isOpaque = !nightMode
 
             UserScriptManager.shared.injectUserScriptsIntoWebView(
                 webView,
@@ -423,6 +422,9 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
     /// tab instance, queue it for later until we become foregrounded.
     private var alertQueue = [JSAlertInfo]()
 
+    var onLoading: VoidReturnCallback?
+    private var webViewLoadingObserver: NSKeyValueObservation?
+
     var profile: Profile
 
     /// Returns true if this tab is considered inactive (has not been executed for more than a specific number of days).
@@ -431,12 +433,19 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
         let currentDate = Date()
         let inactiveDate: Date
 
-        // Debug for inactive tabs to easily test in code
-        if UserDefaults.standard.bool(forKey: PrefsKeys.FasterInactiveTabsOverride) {
-            inactiveDate = Calendar.current.date(byAdding: .second, value: -10, to: currentDate) ?? Date()
-        } else {
-            // FIXME Is there a reason we use noon of the current day instead of the exact time, when calculating -14 days?
+        // Check if we're debugging for inactive tabs to easily test in code
+        let rawValue = UserDefaults.standard.integer(forKey: PrefsKeys.FasterInactiveTabsOverride)
+        let option = FasterInactiveTabsOption(rawValue: rawValue) ?? .normal
+        switch option {
+        case .normal:
+            // Normal operation when no debug setting overrides the inactive tabs timeout
             inactiveDate = Calendar.current.date(byAdding: .day, value: -14, to: currentDate.noon) ?? Date()
+        case .tenSeconds:
+            inactiveDate = Calendar.current.date(byAdding: .second, value: -10, to: currentDate) ?? Date()
+        case .oneMinute:
+            inactiveDate = Calendar.current.date(byAdding: .minute, value: -1, to: currentDate) ?? Date()
+        case .twoMinutes:
+            inactiveDate = Calendar.current.date(byAdding: .minute, value: -2, to: currentDate) ?? Date()
         }
 
         // If the tabDate is older than our inactive date cutoff, return true
@@ -515,7 +524,6 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
             configuration.allowsInlineMediaPlayback = true
             let webView = TabWebView(frame: .zero, configuration: configuration, windowUUID: windowUUID)
             webView.configure(delegate: self, navigationDelegate: navigationDelegate)
-
             webView.accessibilityLabel = .WebViewAccessibilityLabel
             webView.allowsBackForwardNavigationGestures = true
             webView.allowsLinkPreview = true
@@ -524,9 +532,6 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
             if #available(iOS 16.4, *) {
                 webView.isInspectable = true
             }
-
-            // Night mode enables this by toggling WKWebView.isOpaque, otherwise this has no effect.
-            webView.backgroundColor = .black
 
             // Turning off masking allows the web content to flow outside of the scrollView's frame
             // which allows the content appear beneath the toolbars in the BrowserViewController
@@ -573,6 +578,9 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
             )
 
             tabDelegate?.tab(self, didCreateWebView: webView)
+            webViewLoadingObserver = webView.observe(\.isLoading) { [weak self] _, _ in
+                self?.onLoading?()
+            }
         }
     }
 
@@ -587,6 +595,7 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
     }
 
     deinit {
+        webViewLoadingObserver?.invalidate()
         webView?.removeObserver(self, forKeyPath: KVOConstants.URL.rawValue)
         webView?.removeObserver(self, forKeyPath: KVOConstants.title.rawValue)
         webView?.removeObserver(self, forKeyPath: KVOConstants.hasOnlySecureContent.rawValue)
@@ -903,6 +912,8 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable {
 
     func applyTheme(theme: Theme) {
         UITextField.appearance().keyboardAppearance = theme.type.keyboardAppearence(isPrivate: isPrivate)
+        webView?.applyTheme(theme: theme)
+        webView?.underPageBackgroundColor = nightMode ? .black : nil
     }
 
     // MARK: - Static Helpers
@@ -1136,6 +1147,17 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable {
         return super.hitTest(point, with: event)
     }
 
+    // swiftlint:disable unneeded_override
+#if compiler(>=6)
+    override func evaluateJavaScript(
+        _ javaScriptString: String,
+        completionHandler: (
+            @MainActor @Sendable (Any?, (any Error)?) -> Void
+        )? = nil
+    ) {
+        super.evaluateJavaScript(javaScriptString, completionHandler: completionHandler)
+    }
+#else
     /// Override evaluateJavascript - should not be called directly on TabWebViews any longer
     /// We should only be calling evaluateJavascriptInDefaultContentWorld in the future
     @available(*,
@@ -1144,6 +1166,8 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable {
     override func evaluateJavaScript(_ javaScriptString: String, completionHandler: ((Any?, Error?) -> Void)? = nil) {
         super.evaluateJavaScript(javaScriptString, completionHandler: completionHandler)
     }
+#endif
+    // swiftlint:enable unneeded_override
 
     // MARK: - ThemeApplicable
 

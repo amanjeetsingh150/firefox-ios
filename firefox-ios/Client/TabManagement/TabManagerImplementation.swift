@@ -214,7 +214,7 @@ class TabManagerImplementation: LegacyTabManager, Notifiable, WindowSimpleTabsPr
 
     /// Creates the webview so needs to live on the main thread
     @MainActor
-    private func generateEmptyTab() {
+    private func generateEmptyTab() async {
         let newTab = addTab()
         selectTab(newTab)
     }
@@ -504,7 +504,7 @@ class TabManagerImplementation: LegacyTabManager, Notifiable, WindowSimpleTabsPr
     }
 
     @MainActor
-    override func undoCloseInactiveTabs() {
+    override func undoCloseInactiveTabs() async {
         tabs.append(contentsOf: backupCloseTabs)
         storeChanges()
         backupCloseTabs = [Tab]()
@@ -514,6 +514,14 @@ class TabManagerImplementation: LegacyTabManager, Notifiable, WindowSimpleTabsPr
         super.clearAllTabsHistory()
         Task {
             await tabSessionStore.deleteUnusedTabSessionData(keeping: [])
+        }
+    }
+
+    @MainActor
+    func closeTab(by url: URL) async {
+        // Find the tab with the specified URL
+        if let tabToClose = tabs.first(where: { $0.url == url }) {
+            await self.removeTab(tabToClose.tabUUID)
         }
     }
 

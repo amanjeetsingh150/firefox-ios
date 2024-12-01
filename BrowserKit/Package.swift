@@ -34,6 +34,9 @@ let package = Package(
             name: "MenuKit",
             targets: ["MenuKit"]),
         .library(
+            name: "UnifiedSearchKit",
+            targets: ["UnifiedSearchKit"]),
+        .library(
             name: "ContentBlockingGenerator",
             targets: ["ContentBlockingGenerator"]),
         .executable(
@@ -89,7 +92,7 @@ let package = Package(
             name: "Common",
             dependencies: ["Dip",
                            "SwiftyBeaver",
-                           .product(name: "Sentry", package: "sentry-cocoa")],
+                           .product(name: "Sentry-Dynamic", package: "sentry-cocoa")],
             swiftSettings: [.unsafeFlags(["-enable-testing"])]),
         .testTarget(
             name: "CommonTests",
@@ -130,6 +133,10 @@ let package = Package(
         .testTarget(
             name: "MenuKitTests",
             dependencies: ["MenuKit"]),
+        .target(
+            name: "UnifiedSearchKit",
+            dependencies: ["Common", "ComponentLibrary", "MenuKit"],
+            swiftSettings: [.unsafeFlags(["-enable-testing"])]),
         .target(
             name: "ContentBlockingGenerator",
             swiftSettings: [.unsafeFlags(["-enable-testing"])]),

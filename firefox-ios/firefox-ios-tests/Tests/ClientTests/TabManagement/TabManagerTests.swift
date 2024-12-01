@@ -27,7 +27,7 @@ class TabManagerTests: XCTestCase {
         super.setUp()
 
         // Disable debug flag for faster inactive tabs and perform tests based on the real 14 day time to inactive
-        UserDefaults.standard.set(false, forKey: PrefsKeys.FasterInactiveTabsOverride)
+        UserDefaults.standard.set(nil, forKey: PrefsKeys.FasterInactiveTabsOverride)
 
         DependencyHelperMock().bootstrapDependencies()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: MockProfile())
@@ -161,7 +161,7 @@ class TabManagerTests: XCTestCase {
         }
 
         tab.setScreenshot(UIImage())
-        subject.removeScreenshot(tab: tab)
+        await subject.removeScreenshot(tab: tab)
         try await Task.sleep(nanoseconds: sleepTime)
         XCTAssertEqual(mockDiskImageStore.deleteImageForKeyCallCount, 1)
     }

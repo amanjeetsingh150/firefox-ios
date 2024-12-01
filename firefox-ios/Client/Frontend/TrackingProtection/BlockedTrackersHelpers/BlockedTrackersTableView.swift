@@ -48,12 +48,12 @@ class BlockedTrackersTableView: UITableView,
         var snapshot = NSDiffableDataSourceSnapshot<Int, BlockedTrackerItem>()
         snapshot.appendSections([0])
         snapshot.appendItems(items, toSection: 0)
-        diffableDataSource?.apply(snapshot, animatingDifferences: true)
+        diffableDataSource?.apply(snapshot, animatingDifferences: false)
     }
 
     // MARK: Themable
     func applyTheme(theme: Theme) {
-        backgroundColor = theme.colors.layer1
+        backgroundColor = theme.colors.layer3
         layer.borderColor = theme.colors.borderPrimary.cgColor
     }
 }

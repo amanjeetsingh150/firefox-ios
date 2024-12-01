@@ -11,6 +11,7 @@ import UIKit
 enum NimbusFeatureFlagID: String, CaseIterable {
     case accountSettingsRedux
     case addressAutofillEdit
+    case bookmarksRefactor
     case bottomSearchBar
     case contextualHintForToolbar
     case creditCardAutofillStatus
@@ -27,30 +28,45 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case jumpBackIn
     case loginAutofill
     case menuRefactor
+    case menuRefactorHint
     case microsurvey
     case nativeErrorPage
+    case noInternetConnectionErrorPage
     case nightMode
     case passwordGenerator
     case preferSwitchToOpenTabOverDuplicate
+    case pullToRefreshRefactor
     case reduxSearchSettings
     case closeRemoteTabs
     case reportSiteIssue
     case searchHighlights
+    case sentFromFirefox
     case splashScreen
-    case tabTrayRefactor
+    case unifiedAds
+    case unifiedSearch
     case toolbarRefactor
     case toolbarOneTapNewTab
     case toolbarNavigationHint
+    case tosFeature
     case trackingProtectionRefactor
     case zoomFeature
 
+    // Add flags here if you want to toggle them in the `FeatureFlagsDebugViewController`. Add in alphabetical order.
     var debugKey: String? {
         switch self {
-        case .closeRemoteTabs,
+        case    .bookmarksRefactor,
+                .closeRemoteTabs,
                 .homepageRebuild,
-                .microsurvey,
                 .menuRefactor,
-                .nativeErrorPage:
+                .microsurvey,
+                .nativeErrorPage,
+                .noInternetConnectionErrorPage,
+                .sentFromFirefox,
+                .toolbarRefactor,
+                .trackingProtectionRefactor,
+                .passwordGenerator,
+                .unifiedAds,
+                .unifiedSearch:
             return rawValue + PrefsKeys.FeatureFlags.DebugSuffixKey
         default:
             return nil
@@ -83,8 +99,11 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
             return FlagKeys.InactiveTabs
         case .jumpBackIn:
             return FlagKeys.JumpBackInSection
+        case .sentFromFirefox:
+            return FlagKeys.SentFromFirefox
         // Cases where users do not have the option to manipulate a setting.
         case .contextualHintForToolbar,
+                .bookmarksRefactor,
                 .accountSettingsRedux,
                 .addressAutofillEdit,
                 .creditCardAutofillStatus,
@@ -97,20 +116,25 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .loginAutofill,
                 .microsurvey,
                 .menuRefactor,
+                .menuRefactorHint,
                 .nativeErrorPage,
+                .noInternetConnectionErrorPage,
                 .nightMode,
                 .passwordGenerator,
                 .preferSwitchToOpenTabOverDuplicate,
+                .pullToRefreshRefactor,
                 .reduxSearchSettings,
                 .reportSiteIssue,
                 .feltPrivacySimplifiedUI,
                 .feltPrivacyFeltDeletion,
                 .searchHighlights,
                 .splashScreen,
-                .tabTrayRefactor,
+                .unifiedAds,
+                .unifiedSearch,
                 .toolbarRefactor,
                 .toolbarOneTapNewTab,
                 .toolbarNavigationHint,
+                .tosFeature,
                 .trackingProtectionRefactor,
                 .zoomFeature:
             return nil

@@ -32,10 +32,17 @@ final class MainMenuStateTests: XCTestCase {
         let reducer = mainMenuReducer()
 
         let expectedResult = MainMenuTabInfo(
+            tabID: "1234",
             url: URL(string: "https://mozilla.com"),
+            canonicalURL: URL(string: "https://mozilla.com"),
             isHomepage: true,
             isDefaultUserAgentDesktop: true,
-            hasChangedUserAgent: true
+            hasChangedUserAgent: true,
+            zoomLevel: 1.0,
+            readerModeIsAvailable: false,
+            isBookmarked: false,
+            isInReadingList: false,
+            isPinned: false
         )
 
         XCTAssertNil(initialState.currentTabInfo)
@@ -44,7 +51,8 @@ final class MainMenuStateTests: XCTestCase {
             initialState,
             MainMenuAction(
                 windowUUID: .XCTestDefaultUUID,
-                actionType: MainMenuActionType.updateCurrentTabInfo(expectedResult)
+                actionType: MainMenuActionType.updateCurrentTabInfo,
+                currentTabInfo: expectedResult
             )
         )
 
@@ -62,12 +70,16 @@ final class MainMenuStateTests: XCTestCase {
                 initialState,
                 MainMenuAction(
                     windowUUID: .XCTestDefaultUUID,
-                    actionType: MainMenuActionType.show,
-                    navigationDestination: destination
+                    actionType: MainMenuActionType.tapNavigateToDestination,
+                    navigationDestination: MenuNavigationDestination(destination)
                 )
             )
 
-            XCTAssertEqual(newState.navigationDestination, destination)
+            guard let currentDestination = newState.navigationDestination?.destination else {
+                return XCTFail("Execting to find a destination, but it was nil")
+            }
+
+            XCTAssertEqual(currentDestination, destination)
         }
     }
 
@@ -81,7 +93,7 @@ final class MainMenuStateTests: XCTestCase {
             initialState,
             MainMenuAction(
                 windowUUID: .XCTestDefaultUUID,
-                actionType: MainMenuActionType.toggleUserAgent
+                actionType: MainMenuActionType.tapToggleUserAgent
             )
         )
 
@@ -98,7 +110,7 @@ final class MainMenuStateTests: XCTestCase {
             initialState,
             MainMenuAction(
                 windowUUID: .XCTestDefaultUUID,
-                actionType: MainMenuActionType.closeMenu
+                actionType: MainMenuActionType.tapCloseMenu
             )
         )
 

@@ -13,13 +13,7 @@ final class MicrosurveyTests: BaseTestCase {
         super.setUp()
     }
 
-    func testShowMicrosurveyPromptFromHomepageTrigger() {
-        generateTriggerForMicrosurvey()
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton])
-        mozWaitForElementToExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo])
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton])
-    }
-
+    // https://mozilla.testrail.io/index.php?/cases/view/2776932
     func testURLBorderHiddenWhenMicrosurveyPromptShown() throws {
         guard !iPad() else {
             throw XCTSkip("Toolbar option not available for iPad")
@@ -37,21 +31,34 @@ final class MicrosurveyTests: BaseTestCase {
         XCTAssertFalse(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists)
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2776933
     func testCloseButtonDismissesMicrosurveyPrompt() {
         generateTriggerForMicrosurvey()
-        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].tap()
+        waitForElementsToExist(
+            [
+                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton],
+                app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo],
+                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton]
+            ]
+        )
+        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
         mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton])
         mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo])
         mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton])
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2776931
     func testShowMicrosurvey() {
         generateTriggerForMicrosurvey()
         let continueButton = app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton]
         continueButton.tap()
 
-        mozWaitForElementToExist(app.images[AccessibilityIdentifiers.Microsurvey.Survey.firefoxLogo])
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton])
+        waitForElementsToExist(
+            [
+                app.images[AccessibilityIdentifiers.Microsurvey.Survey.firefoxLogo],
+                app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton]
+            ]
+        )
         let tablesQuery = app.scrollViews.otherElements.tables
         let firstOption = tablesQuery.cells.firstMatch
         firstOption.tap()
@@ -65,13 +72,13 @@ final class MicrosurveyTests: BaseTestCase {
         mozWaitForValueContains(secondOption, value: "Unselected, 3 out of 6")
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2776934
     func testCloseButtonDismissesSurveyAndPrompt() {
         generateTriggerForMicrosurvey()
         let continueButton = app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton]
-        continueButton.tap()
+        continueButton.waitAndTap()
 
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton])
-        app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton].tap()
+        app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton].waitAndTap()
 
         mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Survey.firefoxLogo])
         mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Survey.closeButton])
@@ -85,19 +92,17 @@ final class MicrosurveyTests: BaseTestCase {
         app.buttons[AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton]
         let homepageToggleButtonIpad = app.buttons[AccessibilityIdentifiers.Browser.TopTabs.privateModeButton]
         if !iPad() {
-            mozWaitForElementToExist(homepageToggleButtonIphone)
-            homepageToggleButtonIphone.tap()
+            homepageToggleButtonIphone.waitAndTap()
             mozWaitForElementToExist(app.staticTexts[AccessibilityIdentifiers.PrivateMode.Homepage.link])
         } else {
-            mozWaitForElementToExist(homepageToggleButtonIpad)
-            homepageToggleButtonIpad.tap()
+            homepageToggleButtonIpad.waitAndTap()
             mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.Browser.TopTabs.collectionView])
         }
         if !iPad() {
-            homepageToggleButtonIphone.tap()
+            homepageToggleButtonIphone.waitAndTap()
             mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.FirefoxHomepage.collectionView])
         } else {
-            homepageToggleButtonIpad.tap()
+            homepageToggleButtonIpad.waitAndTap()
             mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.Browser.TopTabs.collectionView])
         }
     }

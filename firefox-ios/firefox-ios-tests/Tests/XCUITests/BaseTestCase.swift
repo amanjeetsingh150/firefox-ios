@@ -9,6 +9,7 @@ import XCTest
 let page1 = "http://localhost:\(serverPort)/test-fixture/find-in-page-test.html"
 let page2 = "http://localhost:\(serverPort)/test-fixture/test-example.html"
 let serverPort = ProcessInfo.processInfo.environment["WEBSERVER_PORT"] ?? "\(Int.random(in: 1025..<65000))"
+let urlBarAddress = XCUIApplication().textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
 
 func path(forTestPage page: String) -> String {
     return "http://localhost:\(serverPort)/test-fixture/\(page)"
@@ -151,13 +152,15 @@ class BaseTestCase: XCTestCase {
     // is up to 25x more performant than the above waitForExistence method
     func mozWaitForElementToExist(_ element: XCUIElement, timeout: TimeInterval? = TIMEOUT) {
         let startTime = Date()
-
-        while !element.exists {
-            if let timeout = timeout, Date().timeIntervalSince(startTime) > timeout {
-                XCTFail("Timed out waiting for element \(element) to exist")
-                break
+        guard element.exists else {
+            while !element.exists {
+                if let timeout = timeout, Date().timeIntervalSince(startTime) > timeout {
+                    XCTFail("Timed out waiting for element \(element) to exist in \(timeout) seconds")
+                    break
+                }
+                usleep(10000)
             }
-            usleep(10000)
+            return
         }
     }
 
@@ -232,7 +235,7 @@ class BaseTestCase: XCTestCase {
 
     func bookmark() {
         mozWaitForElementToExist(
-            app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection],
+            app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon],
             timeout: TIMEOUT
         )
         navigator.goto(BrowserTabMenu)
@@ -246,8 +249,7 @@ class BaseTestCase: XCTestCase {
 
     func unbookmark() {
         navigator.goto(BrowserTabMenu)
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.bookmarkSlash])
-        app.otherElements[StandardImageIdentifiers.Large.bookmarkSlash].tap()
+        app.otherElements[StandardImageIdentifiers.Large.bookmarkSlash].waitAndTap()
         navigator.nowAt(BrowserTab)
     }
 
@@ -268,8 +270,10 @@ class BaseTestCase: XCTestCase {
 
     func checkBookmarksUpdated() {
         waitForTabsButton()
-        let numberOfRecentlyVisitedBookmarks = app.scrollViews
+        let bookmarksCell = app.scrollViews
             .cells[AccessibilityIdentifiers.FirefoxHomepage.Bookmarks.itemCell]
+        scrollToElement(bookmarksCell)
+        let numberOfRecentlyVisitedBookmarks = bookmarksCell
             .otherElements
             .otherElements
             .otherElements
@@ -320,7 +324,7 @@ class BaseTestCase: XCTestCase {
     func loadWebPage(_ url: String, waitForLoadToFinish: Bool = true, file: String = #file, line: UInt = #line) {
         let app = XCUIApplication()
         UIPasteboard.general.string = url
-        app.textFields["url"].press(forDuration: 2.0)
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 2.0)
         app.tables["Context Menu"].cells[AccessibilityIdentifiers.Photon.pasteAndGoAction].firstMatch.tap()
 
         if waitForLoadToFinish {
@@ -361,8 +365,7 @@ class BaseTestCase: XCTestCase {
 
         let passcodeInput = springboard.otherElements.secureTextFields.firstMatch
         mozWaitForElementToExist(passcodeInput)
-        passcodeInput.tap()
-        passcodeInput.typeText("foo\n")
+        passcodeInput.tapAndTypeText("foo\n")
         mozWaitForElementToNotExist(passcodeInput)
     }
 
@@ -400,6 +403,49 @@ class BaseTestCase: XCTestCase {
             app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].tap()
         }
     }
+
+    func mozWaitElementHittable(element: XCUIElement, timeout: Double) {
+        let predicate = NSPredicate(format: "exists == true && hittable == true")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        XCTAssertEqual(result, .completed, "Element did not become hittable in time.")
+    }
+
+    func switchThemeToDarkOrLight(theme: String) {
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
+        navigator.nowAt(BrowserTab)
+        navigator.goto(SettingsScreen)
+        navigator.goto(DisplaySettings)
+        mozWaitForElementToExist(app.switches["SystemThemeSwitchValue"])
+        if (app.switches["SystemThemeSwitchValue"].value as? String) == "1" {
+            navigator.performAction(Action.SystemThemeSwitch)
+        }
+        mozWaitForElementToExist(app.cells.staticTexts["Dark"])
+        if theme == "Dark" {
+            app.cells.staticTexts["Dark"].tap()
+        } else {
+            app.cells.staticTexts["Light"].tap()
+        }
+        app.buttons["Settings"].tap()
+        navigator.nowAt(SettingsScreen)
+        app.buttons["Done"].waitAndTap()
+    }
+    func waitForElementsToExist(_ elements: [XCUIElement], timeout: TimeInterval = TIMEOUT, message: String? = nil) {
+        var elementsDict = [XCUIElement: String]()
+        for element in elements {
+            elementsDict[element] = "exists == true"
+        }
+        let expectations = elementsDict.map({
+                XCTNSPredicateExpectation(
+                    predicate: NSPredicate(
+                        format: $0.value
+                    ),
+                    object: $0.key
+                )
+            })
+        let result = XCTWaiter.wait(for: expectations, timeout: timeout)
+        if result == .timedOut { XCTFail(message ?? expectations.description) }
+    }
 }
 
 class IpadOnlyTestCase: BaseTestCase {
@@ -435,6 +481,15 @@ extension XCUIElement {
             tap()
         } else if force {
             coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    func tapIfExists(timeout: TimeInterval = 5.0) {
+        let existsPredicate = NSPredicate(format: "exists == true")
+        let expectation = XCTNSPredicateExpectation(predicate: existsPredicate, object: self)
+        let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        if result == .completed {
+            self.tap()
         }
     }
 
@@ -510,6 +565,36 @@ extension XCUIElement {
     func isVisible(app: XCUIApplication = XCUIApplication()) -> Bool {
         let visibleScreenFrame = getVisibleScreenFrame(app: app)
         return self.exists && isPartiallyIncluded(rectangleArea: visibleScreenFrame, rectangleToBeIncluded: self.frame)
+    }
+    /// Waits for the UI element and then taps if it exists.
+    func waitAndTap(timeout: TimeInterval? = TIMEOUT) {
+        BaseTestCase().mozWaitForElementToExist(self, timeout: timeout)
+        self.tap()
+    }
+    /// Waits for the UI element and then taps and types the provided text if it exists.
+    func tapAndTypeText(_ text: String, timeout: TimeInterval? = TIMEOUT) {
+        BaseTestCase().mozWaitForElementToExist(self, timeout: timeout)
+        self.tap()
+        self.typeText(text)
+    }
+
+    func tapWithRetry() {
+        waitAndTap()
+        var nrOfTaps = 5
+        while self.isHittable && nrOfTaps > 0 {
+            tap(force: true)
+            nrOfTaps -= 1
+        }
+        if self.isHittable {
+            XCTFail("\(self) was not tapped")
+        }
+    }
+
+    func typeTextWithDelay(_ text: String, delay: TimeInterval) {
+        for character in text {
+            self.typeText(String(character))
+            Thread.sleep(forTimeInterval: delay)
+        }
     }
 }
 

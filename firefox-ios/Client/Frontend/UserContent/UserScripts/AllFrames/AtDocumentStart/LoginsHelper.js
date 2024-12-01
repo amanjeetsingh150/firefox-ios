@@ -8,6 +8,8 @@
 import "Assets/CC_Script/Helpers.ios.mjs";
 import { Logic } from "Assets/CC_Script/LoginManager.shared.sys.mjs";
 import { PasswordGenerator } from "resource://gre/modules/PasswordGenerator.sys.mjs";
+import { LoginFormFactory } from "resource://gre/modules/shared/LoginFormFactory.sys.mjs";
+import { PasswordRulesParser } from "Assets/CC_Script/PasswordRulesParser.sys.mjs"
 
 // Ensure this module only gets included once. This is
 // required for user scripts injected into all frames.
@@ -45,7 +47,6 @@ window.__firefox__.includeOnce("LoginsHelper", function() {
     receiveMessage: function (msg) {
       switch (msg.name) {
         case "RemoteLogins:loginsFound": {
-          console.log("ooooo ---- here ?? ", this.activeField.form, this.activeField)
           this.loginsFound(this.activeField.form, msg.logins);
           break;
         }
@@ -453,26 +454,28 @@ window.__firefox__.includeOnce("LoginsHelper", function() {
     // The rules are provided by swift depending on the domain
     if(rules) {
       const domainRules = PasswordRulesParser.parsePasswordRules(
-        rules
+        rules["password-rules"] ?? ""
       );
-      mapOfRules = transformRulesToMap(domainRules);
+      mapOfRules = Logic.transformRulesToMap(domainRules);
     }
 
     const generatedPassword = PasswordGenerator.generatePassword({
       inputMaxLength: LoginManagerContent.activeField.maxLength,
-      rules: mapOfRules,
+        ...(mapOfRules && { rules: mapOfRules }),
     });
 
     return generatedPassword;
   };
 
-  const fillGeneratedPassword = (password) => {
-    LoginManagerContent.yieldFocusBackToField();
-    LoginManagerContent.activeField.setUserInput(password);
-    Logic.fillConfirmFieldWithGeneratedPassword(
-      LoginManagerContent.activeField
-    );
-  };
+  function fillGeneratedPassword(password) {
+    LoginManagerContent.fromFill = true
+    this.yieldFocusBackToField();
+    const passwordField = LoginManagerContent.activeField;
+    passwordField?.setUserInput(password);
+    const confirmationField = Logic.findConfirmationField(passwordField, LoginFormFactory);
+    confirmationField?.setUserInput(password);
+    LoginManagerContent.fromFill = false
+  }
 
   function yieldFocusBackToField() {
     LoginManagerContent.activeField?.blur();
@@ -496,9 +499,9 @@ window.__firefox__.includeOnce("LoginsHelper", function() {
     const formHasNewPassword =
       password && Logic.isProbablyANewPasswordField(password);
     const isPasswordField = field === password;
-
+    const isYieldingFocus = LoginManagerContent.activeField === field;
     LoginManagerContent.activeField = field;
-    if (formHasNewPassword && isPasswordField) {
+    if (formHasNewPassword && isPasswordField && !LoginManagerContent.fromFill) {
       webkit.messageHandlers.loginsManagerMessageHandler.postMessage({
         type: "generatePassword",
       });

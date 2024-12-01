@@ -1,9 +1,19 @@
 {
-  "rules": [
+  "collections": [
     {
       "name": "Password Rules",
-      "url": "https://firefox.settings.services.mozilla.com/v1/buckets/main/collections/password-rules/records",
-      "file": "./firefox-ios/Client/Assets/RemoteSettingsData/RemotePasswordRules.json"
+      "url": "https://firefox.settings.services.mozilla.com/v1",
+      "file": "./firefox-ios/Client/Assets/RemoteSettingsData/RemotePasswordRules.json",
+      "bucket_id": "main",
+      "collection_id": "password-rules"
+    },
+    {
+      "name": "Tracking Protection Lists",
+      "url": "https://remote-settings-dev.allizom.org/v1",
+      "bucket_id": "main-preview",
+      "collection_id": "tracking-protection-lists-ios",
+      "fetch_attachments": true,
+      "save_records": false
     }
   ]
 }

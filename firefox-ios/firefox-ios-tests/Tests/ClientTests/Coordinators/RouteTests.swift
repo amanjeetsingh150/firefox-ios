@@ -262,7 +262,7 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .searchQuery(query: "test search text"))
+        XCTAssertEqual(route, .searchQuery(query: "test search text", isPrivate: false))
     }
 
     func testWidgetSmallQuicklinkOpenCopiedWithUrl() {
@@ -344,7 +344,25 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .searchQuery(query: "google"))
+        XCTAssertEqual(route, .searchQuery(query: "google", isPrivate: false))
+    }
+
+    func testShareSheetRouteUrlOnly() {
+        let subject = createSubject()
+        let url = URL(string: "firefox://share-sheet?url=https://www.google.com")!
+
+        let route = subject.makeRoute(url: url)
+
+        XCTAssertEqual(route, .sharesheet(url: URL(string: "https://www.google.com")!, title: nil))
+    }
+
+    func testShareSheetRouteUrlAndTitle() {
+        let subject = createSubject()
+        let url = URL(string: "firefox://share-sheet?url=https://www.google.com&title=TEST TITLE")!
+
+        let route = subject.makeRoute(url: url)
+
+        XCTAssertEqual(route, .sharesheet(url: URL(string: "https://www.google.com")!, title: "TEST TITLE"))
     }
 
     // MARK: - AppAction

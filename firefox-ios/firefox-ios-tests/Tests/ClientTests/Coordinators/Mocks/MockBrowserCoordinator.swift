@@ -9,6 +9,7 @@ import WebKit
 @testable import Client
 
 import struct MozillaAppServices.CreditCard
+import enum MozillaAppServices.VisitType
 
 class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegate {
     var showSettingsCalled = 0
@@ -26,11 +27,15 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
     var showFakespotFlowAsModalCalled = 0
     var showFakespotFlowAsSidebarCalled = 0
     var showBackForwardListCalled = 0
+    var showSearchEngineSelectionCalled = 0
     var dismissFakespotModalCalled = 0
     var dismissFakespotSidebarCalled = 0
     var updateFakespotSidebarCalled = 0
     var showMicrosurveyCalled = 0
     var showMainMenuCalled = 0
+    var showPasswordGeneratorCalled = 0
+    var navigateFromHomePanelCalled = 0
+    var showContextMenuCalled = 0
 
     func show(settings: Client.Route.SettingsSection, onDismiss: (() -> Void)?) {
         showSettingsCalled += 1
@@ -111,6 +116,18 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
         showFakespotFlowAsSidebarCalled += 1
     }
 
+    func showSearchEngineSelection(forSourceView sourceView: UIView) {
+        showSearchEngineSelectionCalled += 1
+    }
+
+    func navigateFromHomePanel(to url: URL, visitType: VisitType, isGoogleTopSite: Bool) {
+        navigateFromHomePanelCalled += 1
+    }
+
+    func showContextMenu() {
+        showContextMenuCalled += 1
+    }
+
     func dismissFakespotModal(animated: Bool) {
         dismissFakespotModalCalled += 1
     }
@@ -128,5 +145,9 @@ class MockBrowserCoordinator: BrowserNavigationHandler, ParentCoordinatorDelegat
 
     func showMicrosurvey(model: MicrosurveyModel) {
         showMicrosurveyCalled += 1
+    }
+
+    func showPasswordGenerator(tab: Tab, frame: WKFrameInfo) {
+        showPasswordGeneratorCalled += 1
     }
 }

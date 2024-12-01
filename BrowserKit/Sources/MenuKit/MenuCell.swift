@@ -8,16 +8,21 @@ import UIKit
 
 public class MenuCell: UITableViewCell, ReusableCell, ThemeApplicable {
     private struct UX {
-        static let contentMargin: CGFloat = 10
+        static let contentMargin: CGFloat = 12
         static let iconSize: CGFloat = 24
-        static let iconMargin: CGFloat = 25
-        static let contentSpacing: CGFloat = 2
+        static let largeIconSize: CGFloat = 48
+        static let contentSpacing: CGFloat = 3
+        static let noDescriptionContentSpacing: CGFloat = 0
+    }
+
+    private var separatorInsetSize: CGFloat {
+        return UX.contentMargin * 2 + UX.iconSize
     }
 
     // MARK: - UI Elements
     private var titleLabel: UILabel = .build { label in
         label.font = FXFontStyles.Regular.body.scaledFont()
-        label.numberOfLines = 2
+        label.numberOfLines = 0
     }
 
     private var descriptionLabel: UILabel = .build { label in
@@ -29,7 +34,6 @@ public class MenuCell: UITableViewCell, ReusableCell, ThemeApplicable {
     private var contentStackView: UIStackView = .build { stackView in
         stackView.axis = .vertical
         stackView.distribution = .fillProportionally
-        stackView.spacing = UX.contentSpacing
     }
 
     private var accessoryArrowView: UIImageView = .build()
@@ -50,13 +54,16 @@ public class MenuCell: UITableViewCell, ReusableCell, ThemeApplicable {
         self.model = model
         self.titleLabel.text = model.title
         self.descriptionLabel.text = model.description
+        self.contentStackView.spacing = model.description != nil ? UX.contentSpacing : UX.noDescriptionContentSpacing
         self.icon.image = UIImage(named: model.iconName)?.withRenderingMode(.alwaysTemplate)
         self.accessoryArrowView.image =
         UIImage(named: StandardImageIdentifiers.Large.chevronRight)?.withRenderingMode(.alwaysTemplate)
         self.isAccessibilityElement = true
+        self.isUserInteractionEnabled = !model.isEnabled ? false : true
         self.accessibilityIdentifier = model.a11yId
         self.accessibilityLabel = model.a11yLabel
         self.accessibilityHint = model.a11yHint
+        self.separatorInset = UIEdgeInsets(top: 0, left: separatorInsetSize, bottom: 0, right: 0)
         setupView()
     }
 
@@ -67,10 +74,8 @@ public class MenuCell: UITableViewCell, ReusableCell, ThemeApplicable {
         contentStackView.addArrangedSubview(titleLabel)
         contentStackView.addArrangedSubview(descriptionLabel)
         NSLayoutConstraint.activate([
-            icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: UX.iconMargin),
+            icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: UX.contentMargin),
             icon.centerYAnchor.constraint(equalTo: centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: UX.iconSize),
-            icon.heightAnchor.constraint(equalToConstant: UX.iconSize),
 
             contentStackView.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: UX.contentMargin),
             contentStackView.topAnchor.constraint(equalTo: topAnchor, constant: UX.contentMargin),
@@ -83,6 +88,13 @@ public class MenuCell: UITableViewCell, ReusableCell, ThemeApplicable {
             accessoryArrowView.widthAnchor.constraint(equalToConstant: UX.iconSize),
             accessoryArrowView.heightAnchor.constraint(equalToConstant: UX.iconSize)
         ])
+        adjustLayout(isAccessibilityCategory: UIApplication.shared.preferredContentSizeCategory.isAccessibilityCategory)
+    }
+
+    private func adjustLayout(isAccessibilityCategory: Bool) {
+        let iconSize = isAccessibilityCategory ? UX.largeIconSize : UX.iconSize
+        icon.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: iconSize).isActive = true
     }
 
     func performAction() {

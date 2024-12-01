@@ -8,6 +8,11 @@ import Foundation
 /// When adding new identifiers, please respect alphabetical order.
 /// Sing the song if you must.
 public struct StandardImageIdentifiers {
+    // Icon size 8x8
+    public struct ExtraSmall {
+        public static let chevronDown = "chevronDownExtraSmall"
+    }
+
     // Icon size 16x16
     public struct Small {
         public static let externalLink = "externalLinkSmall"
@@ -85,12 +90,15 @@ public struct StandardImageIdentifiers {
         public static let login = "loginLarge"
         public static let logoFirefox = "logoFirefoxLarge"
         public static let nightMode = "nightModeLarge"
+        public static let nightModeFill = "nightModeFillLarge"
         public static let notificationDot = "notificationDotLarge"
         public static let notificationDotFill = "notificationDotFillLarge"
         public static let packaging = "packagingLarge"
         public static let pageZoom = "pageZoomLarge"
+        public static let pageZoomFill = "pageZoomFillLarge"
         public static let pin = "pinLarge"
         public static let pinSlash = "pinSlashLarge"
+        public static let pinSlashFill = "pinSlashFillLarge"
         public static let plus = "plusLarge"
         public static let price = "priceLarge"
         public static let print = "printLarge"
@@ -102,6 +110,7 @@ public struct StandardImageIdentifiers {
         public static let readerViewFill = "readerViewFillLarge"
         public static let readingList = "readingListLarge"
         public static let readingListAdd = "readingListAddLarge"
+        public static let readingListSlashFill = "readingListSlashFillLarge"
         public static let save = "saveLarge"
         public static let search = "searchLarge"
         public static let settings = "settingsLarge"

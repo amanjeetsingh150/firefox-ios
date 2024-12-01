@@ -22,10 +22,13 @@ enum Route: Equatable {
     ///   - tabId: A string representing the identifier of the tab where the search should be performed.
     case searchURL(url: URL?, tabId: String)
 
-    /// Represents a search route that takes a query string.
+    /// Represents a search route that takes a query string a boolean value indicating whether the search
+    /// is private or not.
     ///
-    /// - Parameter query: A string representing the query to be searched.
-    case searchQuery(query: String)
+    /// - Parameters:
+    ///   - query: A string representing the query to be searched and.
+    ///   - isPrivate: A boolean value indicating whether the search is private or not.
+    case searchQuery(query: String, isPrivate: Bool)
 
     /// Represents a route for sending Glean data.
     ///
@@ -62,6 +65,13 @@ enum Route: Equatable {
     /// - Parameter section: An instance of `DefaultBrowserSection` indicating the section of the default browser
     ///                      settings to be displayed.
     case defaultBrowser(section: DefaultBrowserSection)
+
+    /// A route for opening a share sheet with a URL and an optional message.
+    ///
+    /// - Parameters:
+    ///   - url: The `URL` object to be shared from the share sheet.
+    ///   - title: An optional string to be used as the message in the share sheet.
+    case sharesheet(url: URL, title: String?)
 
     /// An enumeration representing different sections of the home panel.
     enum HomepanelSection: String, CaseIterable, Equatable {
@@ -122,11 +132,5 @@ enum Route: Equatable {
     enum SearchOptions: Equatable {
         /// An option to focus the user's attention on the location field of the search interface.
         case focusLocationField
-
-        /// An option to switch to a normal search mode.
-        case switchToNormalMode
-
-        /// An option to switch to a privacy mode that may hide or obscure search results and prevent data sharing.
-        case switchToPrivacyMode
     }
 }

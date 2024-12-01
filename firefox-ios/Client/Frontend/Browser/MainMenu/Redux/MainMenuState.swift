@@ -7,20 +7,60 @@ import MenuKit
 import Shared
 import Redux
 
+struct AccountData: Equatable {
+    let title: String
+    let subtitle: String?
+    let warningIcon: String?
+    let iconURL: URL?
+}
+
+struct TelemetryInfo: Equatable {
+    let isHomepage: Bool
+    let isActionOn: Bool?
+    let submenuType: MainMenuDetailsViewType?
+    let isDefaultUserAgentDesktop: Bool?
+    let hasChangedUserAgent: Bool?
+
+    init(isHomepage: Bool,
+         isActionOn: Bool? = nil,
+         submenuType: MainMenuDetailsViewType? = nil,
+         isDefaultUserAgentDesktop: Bool? = nil,
+         hasChangedUserAgent: Bool? = nil) {
+        self.isHomepage = isHomepage
+        self.isActionOn = isActionOn
+        self.submenuType = submenuType
+        self.isDefaultUserAgentDesktop = isDefaultUserAgentDesktop
+        self.hasChangedUserAgent = hasChangedUserAgent
+    }
+}
+
 struct MainMenuTabInfo: Equatable {
+    let tabID: TabUUID
     let url: URL?
+    let canonicalURL: URL?
     let isHomepage: Bool
     let isDefaultUserAgentDesktop: Bool
     let hasChangedUserAgent: Bool
+    let zoomLevel: CGFloat
+    let readerModeIsAvailable: Bool
+    let isBookmarked: Bool
+    let isInReadingList: Bool
+    let isPinned: Bool
 }
 
 struct MainMenuState: ScreenState, Equatable {
     var windowUUID: WindowUUID
     var menuElements: [MenuSection]
+
     var shouldDismiss: Bool
 
-    var navigationDestination: MainMenuNavigationDestination?
+    var accountData: AccountData?
+    var accountIcon: UIImage?
+
+    var navigationDestination: MenuNavigationDestination?
     var currentTabInfo: MainMenuTabInfo?
+    var currentSubmenuView: MainMenuDetailsViewType?
+
     private let menuConfigurator = MainMenuConfigurationUtility()
 
     init(appState: AppState, uuid: WindowUUID) {
@@ -37,8 +77,11 @@ struct MainMenuState: ScreenState, Equatable {
             windowUUID: mainMenuState.windowUUID,
             menuElements: mainMenuState.menuElements,
             currentTabInfo: mainMenuState.currentTabInfo,
+            submenuDestination: mainMenuState.currentSubmenuView,
             navigationDestination: mainMenuState.navigationDestination,
-            shouldDismiss: mainMenuState.shouldDismiss
+            shouldDismiss: mainMenuState.shouldDismiss,
+            accountData: mainMenuState.accountData,
+            accountIcon: mainMenuState.accountIcon
         )
     }
 
@@ -47,8 +90,11 @@ struct MainMenuState: ScreenState, Equatable {
             windowUUID: windowUUID,
             menuElements: [],
             currentTabInfo: nil,
+            submenuDestination: nil,
             navigationDestination: nil,
-            shouldDismiss: false
+            shouldDismiss: false,
+            accountData: nil,
+            accountIcon: nil
         )
     }
 
@@ -56,58 +102,106 @@ struct MainMenuState: ScreenState, Equatable {
         windowUUID: WindowUUID,
         menuElements: [MenuSection],
         currentTabInfo: MainMenuTabInfo?,
-        navigationDestination: MainMenuNavigationDestination? = nil,
-        shouldDismiss: Bool = false
+        submenuDestination: MainMenuDetailsViewType? = nil,
+        navigationDestination: MenuNavigationDestination? = nil,
+        shouldDismiss: Bool = false,
+        accountData: AccountData?,
+        accountIcon: UIImage?
     ) {
         self.windowUUID = windowUUID
         self.menuElements = menuElements
+        self.currentSubmenuView = submenuDestination
         self.currentTabInfo = currentTabInfo
         self.navigationDestination = navigationDestination
         self.shouldDismiss = shouldDismiss
+        self.accountData = accountData
+        self.accountIcon = accountIcon
     }
 
     static let reducer: Reducer<Self> = { state, action in
-        guard action.windowUUID == .unavailable || action.windowUUID == state.windowUUID else { return state }
+        guard action.windowUUID == .unavailable || action.windowUUID == state.windowUUID
+        else {
+            return defaultState(from: state)
+        }
 
         switch action.actionType {
         case MainMenuActionType.viewDidLoad:
             return MainMenuState(
                 windowUUID: state.windowUUID,
                 menuElements: state.menuElements,
-                currentTabInfo: state.currentTabInfo
+                currentTabInfo: state.currentTabInfo,
+                accountData: state.accountData,
+                accountIcon: state.accountIcon
             )
-        case MainMenuActionType.updateCurrentTabInfo(let info):
-            return MainMenuState(
-                windowUUID: state.windowUUID,
-                menuElements: state.menuConfigurator.generateMenuElements(
-                    with: state.windowUUID,
-                    andInfo: info
-                ),
-                currentTabInfo: info
-            )
-        case MainMenuActionType.show:
-            guard let menuAction = action as? MainMenuAction else { return state }
+        case MainMenuMiddlewareActionType.updateAccountHeader:
+            guard let action = action as? MainMenuAction
+            else { return defaultState(from: state) }
 
             return MainMenuState(
                 windowUUID: state.windowUUID,
                 menuElements: state.menuElements,
                 currentTabInfo: state.currentTabInfo,
-                navigationDestination: menuAction.navigationDestination
+                accountData: action.accountData,
+                accountIcon: action.accountIcon
             )
-        case MainMenuActionType.toggleUserAgent,
-            MainMenuActionType.closeMenu:
+        case MainMenuActionType.updateCurrentTabInfo:
+            guard let action = action as? MainMenuAction,
+                  let currentTabInfo = action.currentTabInfo
+            else { return defaultState(from: state) }
+
+            return MainMenuState(
+                windowUUID: state.windowUUID,
+                menuElements: state.menuConfigurator.generateMenuElements(
+                    with: currentTabInfo,
+                    for: state.currentSubmenuView,
+                    and: state.windowUUID
+                ),
+                currentTabInfo: currentTabInfo,
+                accountData: state.accountData,
+                accountIcon: state.accountIcon
+            )
+        case MainMenuActionType.tapShowDetailsView:
+            guard let action = action as? MainMenuAction else { return defaultState(from: state) }
             return MainMenuState(
                 windowUUID: state.windowUUID,
                 menuElements: state.menuElements,
                 currentTabInfo: state.currentTabInfo,
-                shouldDismiss: true
+                submenuDestination: action.detailsViewToShow,
+                accountData: state.accountData,
+                accountIcon: state.accountIcon
             )
-        default:
+        case MainMenuActionType.tapNavigateToDestination:
+            guard let action = action as? MainMenuAction else { return defaultState(from: state) }
             return MainMenuState(
                 windowUUID: state.windowUUID,
                 menuElements: state.menuElements,
-                currentTabInfo: state.currentTabInfo
+                currentTabInfo: state.currentTabInfo,
+                navigationDestination: action.navigationDestination,
+                accountData: state.accountData,
+                accountIcon: state.accountIcon
             )
+        case MainMenuActionType.tapToggleUserAgent,
+            MainMenuActionType.tapCloseMenu:
+            return MainMenuState(
+                windowUUID: state.windowUUID,
+                menuElements: state.menuElements,
+                currentTabInfo: state.currentTabInfo,
+                shouldDismiss: true,
+                accountData: state.accountData,
+                accountIcon: state.accountIcon
+            )
+        default:
+            return defaultState(from: state)
         }
+    }
+
+    static func defaultState(from state: MainMenuState) -> MainMenuState {
+        return MainMenuState(
+            windowUUID: state.windowUUID,
+            menuElements: state.menuElements,
+            currentTabInfo: state.currentTabInfo,
+            accountData: state.accountData,
+            accountIcon: state.accountIcon
+        )
     }
 }

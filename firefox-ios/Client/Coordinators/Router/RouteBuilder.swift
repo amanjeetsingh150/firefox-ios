@@ -69,7 +69,7 @@ final class RouteBuilder {
                 }
 
             case .openText:
-                return .searchQuery(query: urlScanner.value(query: "text") ?? "")
+                return .searchQuery(query: urlScanner.value(query: "text") ?? "", isPrivate: isPrivate)
 
             case .glean:
                 return .glean(url: url)
@@ -90,7 +90,7 @@ final class RouteBuilder {
                 // Widget Quick links - medium - open copied url
                 if !UIPasteboard.general.hasURLs {
                     let searchText = UIPasteboard.general.string ?? ""
-                    return .searchQuery(query: searchText)
+                    return .searchQuery(query: searchText, isPrivate: isPrivate)
                 } else {
                     let url = UIPasteboard.general.url
                     return .search(url: url, isPrivate: isPrivate)
@@ -121,6 +121,15 @@ final class RouteBuilder {
 
             case .fxaSignIn:
                 return nil
+
+            case .sharesheet:
+                let linkString = urlScanner.value(query: "url")
+                let titleText = urlScanner.value(query: "title")
+                if let link = linkString, let url = URL(string: link) {
+                  return .sharesheet(url: url, title: titleText)
+                } else {
+                    return nil
+                }
             }
         } else if urlScanner.isHTTPScheme {
             TelemetryWrapper.gleanRecordEvent(category: .action, method: .open, object: .asDefaultBrowser)
@@ -179,7 +188,7 @@ final class RouteBuilder {
             return .search(url: nil, isPrivate: true, options: options)
         case .openLastBookmark:
             if let urlToOpen = (shortcutItem.userInfo?[QuickActionInfos.tabURLKey] as? String)?.asURL {
-                return .search(url: urlToOpen, isPrivate: false, options: [.switchToNormalMode])
+                return .search(url: urlToOpen, isPrivate: isPrivate)
             } else {
                 return nil
             }
@@ -192,7 +201,7 @@ final class RouteBuilder {
 
     private func recordTelemetry(input: DeeplinkInput.Host, isPrivate: Bool) {
         switch input {
-        case .deepLink, .fxaSignIn, .glean:
+        case .deepLink, .fxaSignIn, .glean, .sharesheet:
             return
         case .widgetMediumTopSitesOpenUrl:
             TelemetryWrapper.recordEvent(category: .action, method: .open, object: .mediumTopSitesWidget)

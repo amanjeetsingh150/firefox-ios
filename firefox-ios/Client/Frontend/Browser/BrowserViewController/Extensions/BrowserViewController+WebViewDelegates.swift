@@ -4,10 +4,11 @@
 
 import Foundation
 import Common
-import WebKit
+@preconcurrency import WebKit
 import Shared
 import UIKit
 import Photos
+import SafariServices
 
 // MARK: - WKUIDelegate
 extension BrowserViewController: WKUIDelegate {
@@ -35,6 +36,18 @@ extension BrowserViewController: WKUIDelegate {
             return nil
         }
 
+        let navigationUrl = navigationAction.request.url
+        let navigationUrlString = navigationUrl?.absoluteString ?? ""
+
+        // Check for "data" scheme using WebViewNavigationHandlerImplementation
+        let navigationHandler = WebViewNavigationHandlerImplementation { _ in }
+        var shouldAllowDataScheme = true
+        if navigationHandler.shouldFilterDataScheme(url: navigationUrl) {
+            shouldAllowDataScheme = navigationHandler.shouldAllowDataScheme(for: navigationUrl)
+        }
+
+        guard shouldAllowDataScheme else { return nil }
+
         // If the page uses `window.open()` or `[target="_blank"]`, open the page in a new tab.
         // IMPORTANT!!: WebKit will perform the `URLRequest` automatically!! Attempting to do
         // the request here manually leads to incorrect results!!
@@ -44,7 +57,7 @@ extension BrowserViewController: WKUIDelegate {
             configuration: configuration
         )
 
-        if navigationAction.request.url == nil {
+        if navigationUrl == nil || navigationUrlString.isEmpty {
             newTab.url = URL(string: "about:blank")
         }
 
@@ -62,6 +75,7 @@ extension BrowserViewController: WKUIDelegate {
             logger.log("Javascript message alert will be presented.", level: .info, category: .webview)
 
             present(messageAlert.alertController(), animated: true) {
+                // TODO: [FXIOS-10334] This should be called when the alert is dismissed, not presented
                 completionHandler()
                 self.logger.log("Javascript message alert was completed.", level: .info, category: .webview)
             }
@@ -69,6 +83,7 @@ extension BrowserViewController: WKUIDelegate {
             logger.log("Javascript message alert is queued.", level: .info, category: .webview)
 
             promptingTab.queueJavascriptAlertPrompt(messageAlert)
+            // TODO: [FXIOS-10334] This should be called when the alert is dismissed, not enqueued
             completionHandler()
         }
     }
@@ -324,7 +339,7 @@ extension BrowserViewController: WKUIDelegate {
                  type: WKMediaCaptureType,
                  decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         // If the tab isn't the selected one or we're on the homepage, do not show the media capture prompt
-        guard tabManager.selectedTab?.webView == webView, !contentContainer.hasHomepage else {
+        guard tabManager.selectedTab?.webView == webView, !contentContainer.hasLegacyHomepage else {
             decisionHandler(.deny)
             return
         }
@@ -378,7 +393,10 @@ extension BrowserViewController: WKNavigationDelegate {
         // (orange color) as soon as the page has loaded.
         if let url = webView.url {
             guard !url.isReaderModeURL else { return }
-            updateReaderModeState(for: tabManager.selectedTab, readerModeState: .unavailable)
+            // FXIOS-10239: Reader mode icon shifts when toolbar refactor is enabled
+            if !isToolbarRefactorEnabled {
+                updateReaderModeState(for: tabManager.selectedTab, readerModeState: .unavailable)
+            }
             hideReaderModeBar(animated: false)
         }
     }
@@ -610,33 +628,56 @@ extension BrowserViewController: WKNavigationDelegate {
             return
         }
 
-        if OpenQLPreviewHelper.shouldOpenPreviewHelper(response: response,
-                                                       forceDownload: forceDownload),
+        // For USDZ / Reality 3D model files, we can cancel this response from the webView and open the QL previewer instead
+        if OpenQLPreviewHelper.shouldOpenPreviewHelper(response: response, forceDownload: forceDownload),
            let tab = tabManager[webView],
            let request = request {
-            let previewHelper = OpenQLPreviewHelper(presenter: self)
-            // Certain files are too large to download before the preview presents,
-            // block and use a temporary document instead
-            tab.temporaryDocument = TemporaryDocument(preflightResponse: response,
-                                                      request: request)
+            // Certain files are too large to download before the preview presents, so block until we have something to show
             let group = DispatchGroup()
             var url: URL?
             group.enter()
-            tab.temporaryDocument?.getURL(completionHandler: { docURL in
+            let temporaryDocument = TemporaryDocument(preflightResponse: response, request: request)
+            temporaryDocument.getURL(completionHandler: { docURL in
                 url = docURL
                 group.leave()
             })
             _ = group.wait(timeout: .distantFuture)
 
+            let previewHelper = OpenQLPreviewHelper(presenter: self, withTemporaryDocument: temporaryDocument)
             if previewHelper.canOpen(url: url) {
-                // Open our helper and cancel this response from the webview.
-                previewHelper.open()
+                // Open our helper and cancel this response from the webview
+                tab.quickLookPreviewHelper = previewHelper
+                previewHelper.open {
+                    // Once the preview is closed, we can safely release this object and let the tempory document be deleted
+                    tab.quickLookPreviewHelper = nil
+                }
                 decisionHandler(.cancel)
                 return
-            } else {
-                tab.temporaryDocument = nil
-                // We don't have a temporary document, fallthrough
             }
+
+            // We don't have a temporary document, fallthrough
+        }
+
+        if let url = responseURL, tabManager[webView]?.mimeType == MIMEType.Calendar {
+            let alertMessage: String
+            if let baseDomain = url.baseDomain {
+                alertMessage = String(format: .Alerts.AddToCalendar.Body, baseDomain)
+            } else {
+                alertMessage = .Alerts.AddToCalendar.BodyDefault
+            }
+
+            let alert = UIAlertController(title: .Alerts.AddToCalendar.Title,
+                                          message: alertMessage,
+                                          preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: .Alerts.AddToCalendar.CancelButton, style: .default))
+            alert.addAction(UIAlertAction(title: .Alerts.AddToCalendar.AddButton,
+                                          style: .default,
+                                          handler: { _ in
+                let safariVC = SFSafariViewController(url: url)
+                safariVC.modalPresentationStyle = .fullScreen
+                self.present(safariVC, animated: true, completion: nil)
+            }))
+            present(alert, animated: true)
         }
 
         // Check if this response should be downloaded.
@@ -755,7 +796,51 @@ extension BrowserViewController: WKNavigationDelegate {
         }
 
         if let url = error.userInfo[NSURLErrorFailingURLErrorKey] as? URL {
-            ErrorPageHelper(certStore: profile.certStore).loadPage(error, forUrl: url, inWebView: webView)
+            guard var errorPageURLComponents = URLComponents(
+                string: "\(InternalURL.baseUrl)/\(ErrorPageHandler.path)") else {
+                ErrorPageHelper(certStore: profile.certStore).loadPage(error, forUrl: url, inWebView: webView)
+                return
+            }
+
+            errorPageURLComponents.queryItems = [
+                URLQueryItem(
+                    name: InternalURL.Param.url.rawValue,
+                    value: url.absoluteString
+                ),
+                URLQueryItem(
+                    name: "code",
+                    value: String(
+                        error.code
+                    )
+                )
+            ]
+
+            if let errorPageURL = errorPageURLComponents.url {
+                /// Used for checking if current error code is for no internet connection
+                let noInternetErrorCode = Int(
+                    CFNetworkErrors.cfurlErrorNotConnectedToInternet.rawValue
+                )
+
+                if isNativeErrorPageEnabled {
+                    let action = NativeErrorPageAction(networkError: error,
+                                                       windowUUID: windowUUID,
+                                                       actionType: NativeErrorPageActionType.receivedError
+                    )
+                    store.dispatch(action)
+                    webView.load(PrivilegedRequest(url: errorPageURL) as URLRequest)
+                } else if isNICErrorPageEnabled && (error.code == noInternetErrorCode) {
+                    let action = NativeErrorPageAction(networkError: error,
+                                                       windowUUID: windowUUID,
+                                                       actionType: NativeErrorPageActionType.receivedError
+                    )
+                    store.dispatch(action)
+                    webView.load(PrivilegedRequest(url: errorPageURL) as URLRequest)
+                } else {
+                    ErrorPageHelper(certStore: profile.certStore).loadPage(error, forUrl: url, inWebView: webView)
+                }
+            } else {
+                ErrorPageHelper(certStore: profile.certStore).loadPage(error, forUrl: url, inWebView: webView)
+            }
         }
     }
 

@@ -91,40 +91,48 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
 
     func testShowHomepage_addsOneHomepageOnly() {
         let subject = createSubject()
-        subject.showHomepage(inline: true,
-                             toastContainer: UIView(),
-                             homepanelDelegate: subject.browserViewController,
-                             libraryPanelDelegate: subject.browserViewController,
-                             statusBarScrollDelegate: scrollDelegate,
-                             overlayManager: overlayModeManager)
+        subject.showLegacyHomepage(
+            inline: true,
+            toastContainer: UIView(),
+            homepanelDelegate: subject.browserViewController,
+            libraryPanelDelegate: subject.browserViewController,
+            statusBarScrollDelegate: scrollDelegate,
+            overlayManager: overlayModeManager
+        )
 
-        let secondHomepage = HomepageViewController(profile: profile,
-                                                    toastContainer: UIView(),
-                                                    tabManager: tabManager,
-                                                    overlayManager: overlayModeManager)
+        let secondHomepage = LegacyHomepageViewController(
+            profile: profile,
+            toastContainer: UIView(),
+            tabManager: tabManager,
+            overlayManager: overlayModeManager
+        )
         XCTAssertFalse(subject.browserViewController.contentContainer.canAdd(content: secondHomepage))
-        XCTAssertNotNil(subject.homepageViewController)
+        XCTAssertNotNil(subject.legacyHomepageViewController)
         XCTAssertNil(subject.webviewController)
     }
 
     func testShowHomepage_reuseExistingHomepage() {
         let subject = createSubject()
-        subject.showHomepage(inline: true,
-                             toastContainer: UIView(),
-                             homepanelDelegate: subject.browserViewController,
-                             libraryPanelDelegate: subject.browserViewController,
-                             statusBarScrollDelegate: scrollDelegate,
-                             overlayManager: overlayModeManager)
-        let firstHomepage = subject.homepageViewController
-        XCTAssertNotNil(subject.homepageViewController)
+        subject.showLegacyHomepage(
+            inline: true,
+            toastContainer: UIView(),
+            homepanelDelegate: subject.browserViewController,
+            libraryPanelDelegate: subject.browserViewController,
+            statusBarScrollDelegate: scrollDelegate,
+            overlayManager: overlayModeManager
+        )
+        let firstHomepage = subject.legacyHomepageViewController
+        XCTAssertNotNil(subject.legacyHomepageViewController)
 
-        subject.showHomepage(inline: true,
-                             toastContainer: UIView(),
-                             homepanelDelegate: subject.browserViewController,
-                             libraryPanelDelegate: subject.browserViewController,
-                             statusBarScrollDelegate: scrollDelegate,
-                             overlayManager: overlayModeManager)
-        let secondHomepage = subject.homepageViewController
+        subject.showLegacyHomepage(
+            inline: true,
+            toastContainer: UIView(),
+            homepanelDelegate: subject.browserViewController,
+            libraryPanelDelegate: subject.browserViewController,
+            statusBarScrollDelegate: scrollDelegate,
+            overlayManager: overlayModeManager
+        )
+        let secondHomepage = subject.legacyHomepageViewController
         XCTAssertEqual(firstHomepage, secondHomepage)
     }
 
@@ -132,21 +140,21 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
 
     func testShowNewHomepage_setsProperViewController() {
         let subject = createSubject()
-        subject.showNewHomepage()
+        subject.showHomepage()
 
-        XCTAssertNotNil(subject.newHomepageViewController)
+        XCTAssertNotNil(subject.homepageViewController)
         XCTAssertNil(subject.webviewController)
         XCTAssertNil(subject.privateViewController)
     }
 
     func testShowNewHomepage_hasSameInstance() {
         let subject = createSubject()
-        subject.showNewHomepage()
-        let firstHomepage = subject.newHomepageViewController
-        XCTAssertNotNil(subject.newHomepageViewController)
+        subject.showHomepage()
+        let firstHomepage = subject.homepageViewController
+        XCTAssertNotNil(subject.homepageViewController)
 
-        subject.showNewHomepage()
-        let secondHomepage = subject.newHomepageViewController
+        subject.showHomepage()
+        let secondHomepage = subject.homepageViewController
         XCTAssertEqual(firstHomepage, secondHomepage)
     }
 
@@ -159,7 +167,7 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserViewController = mbvc
         subject.show(webView: webview)
 
-        XCTAssertNil(subject.homepageViewController)
+        XCTAssertNil(subject.legacyHomepageViewController)
         XCTAssertNotNil(subject.webviewController)
         XCTAssertEqual(mbvc.embedContentCalled, 1)
         XCTAssertEqual(mbvc.saveEmbeddedContent?.contentType, .webview)
@@ -224,7 +232,7 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         XCTAssertEqual(mockRouter.presentCalled, 1)
 
         if featureFlags.isFeatureEnabled(.trackingProtectionRefactor, checking: .buildOnly) {
-            XCTAssertTrue(mockRouter.presentedViewController is TrackingProtectionViewController)
+            XCTAssertTrue(mockRouter.presentedViewController is UINavigationController)
         } else {
             XCTAssertTrue(mockRouter.presentedViewController is EnhancedTrackingProtectionMenuVC)
         }
@@ -237,6 +245,24 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
             url: URL(
                 string: "https://www.google.com"
             )!,
+            sourceView: UIView(),
+            toastContainer: UIView()
+        )
+
+        XCTAssertEqual(subject.childCoordinators.count, 1)
+        XCTAssertTrue(subject.childCoordinators.first is ShareExtensionCoordinator)
+        XCTAssertEqual(mockRouter.presentCalled, 1)
+        XCTAssertTrue(mockRouter.presentedViewController is UIActivityViewController)
+    }
+
+    func testShowShareExtension_addsShareExtensionCoordinatorWithTitle() {
+        let subject = createSubject()
+
+        subject.showShareExtension(
+            url: URL(
+                string: "https://www.google.com"
+            )!,
+            title: "TEST TITLE",
             sourceView: UIView(),
             toastContainer: UIView()
         )
@@ -345,6 +371,19 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         XCTAssertTrue(subject.childCoordinators.isEmpty)
     }
 
+    func testShowPasswordGenerator_presentsPasswordGeneratorBottomSheet() {
+        let subject = createSubject()
+        let mockTab = Tab(profile: profile, windowUUID: windowUUID)
+        let URL = URL(string: "https://foo.com")!
+        let webView = WKWebViewMock(URL)
+        let frame = WKFrameInfoMock(webView: webView, frameURL: URL, isMainFrame: true)
+
+        subject.showPasswordGenerator(tab: mockTab, frame: frame)
+
+        XCTAssertEqual(mockRouter.presentCalled, 1)
+        XCTAssertTrue(mockRouter.presentedViewController is BottomSheetViewController)
+    }
+
     // MARK: - ParentCoordinatorDelegate
 
     func testRemoveChildCoordinator_whenDidFinishCalled() {
@@ -370,7 +409,7 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserViewController = mbvc
         subject.browserHasLoaded()
 
-        let result = testCanHandleAndHandle(subject, route: .searchQuery(query: query))
+        let result = testCanHandleAndHandle(subject, route: .searchQuery(query: query, isPrivate: false))
 
         XCTAssertTrue(result)
         XCTAssertTrue(mbvc.handleQueryCalled)
@@ -401,11 +440,10 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserHasLoaded()
 
         let result = testCanHandleAndHandle(subject, route: .search(url: URL(string: "https://example.com")!,
-                                                                    isPrivate: false,
-                                                                    options: [.switchToNormalMode]))
+                                                                    isPrivate: false))
 
         XCTAssertTrue(result)
-        XCTAssertTrue(mbvc.switchToPrivacyModeCalled)
+        XCTAssertFalse(mbvc.switchToPrivacyModeCalled)
         XCTAssertFalse(mbvc.switchToPrivacyModeIsPrivate)
         XCTAssertTrue(mbvc.switchToTabForURLOrOpenCalled)
         XCTAssertEqual(mbvc.switchToTabForURLOrOpenURL, URL(string: "https://example.com")!)
@@ -677,7 +715,9 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserHasLoaded()
 
         let result = testCanHandleAndHandle(subject, route: .settings(section: .general))
-        let settingsCoordinator = subject.childCoordinators[0] as! SettingsCoordinator
+        guard let settingsCoordinator = subject.childCoordinators[0] as? SettingsCoordinator else {
+            return XCTFail("settingsCoordinator was not found")
+        }
         subject.didFinishSettings(from: settingsCoordinator)
 
         XCTAssertTrue(result)
@@ -700,7 +740,9 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserHasLoaded()
 
         subject.showEnhancedTrackingProtection(sourceView: UIView())
-        let etpCoordinator = subject.childCoordinators[0] as! EnhancedTrackingProtectionCoordinator
+        guard let etpCoordinator = subject.childCoordinators[0] as? EnhancedTrackingProtectionCoordinator else {
+            return XCTFail("etpCoordinator was not found")
+        }
         subject.didFinishEnhancedTrackingProtection(from: etpCoordinator)
 
         XCTAssertEqual(mockRouter.dismissCalled, 1)
@@ -758,7 +800,9 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
 
         // Then
         XCTAssertTrue(result)
-        let windowManager = (AppContainer.shared.resolve() as WindowManager) as! MockWindowManager
+        guard let windowManager = (AppContainer.shared.resolve() as WindowManager) as? MockWindowManager else {
+            return XCTFail("windowManager was not found")
+        }
         XCTAssertEqual(windowManager.closePrivateTabsMultiActionCalled, 1)
     }
 
@@ -917,7 +961,9 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         subject.browserHasLoaded()
 
         subject.showFakespotFlowAsModal(productURL: URL(string: "www.example.com")!)
-        let fakespotCoordinator = subject.childCoordinators[0] as! FakespotCoordinator
+        guard let fakespotCoordinator = subject.childCoordinators[0] as? FakespotCoordinator else {
+            return XCTFail("fakespotCoordinator was not found")
+        }
         fakespotCoordinator.dismissModal(animated: false)
 
         XCTAssertEqual(mockRouter.dismissCalled, 1)
@@ -1055,7 +1101,37 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
             return
         }
 
-        menuCoordinator.navigateTo(.customizeHomepage, animated: false)
+        menuCoordinator.navigateTo(MenuNavigationDestination(.customizeHomepage), animated: false)
+
+        XCTAssertTrue(subject.childCoordinators[0] is SettingsCoordinator)
+        XCTAssertTrue(mockRouter.presentedViewController?.children.first is AppSettingsTableViewController)
+    }
+
+    // MARK: - Search Engine Selection
+    func testShowSearchEngineSelection_addsSearchEngineSelectionCoordinator() {
+        let subject = createSubject()
+        XCTAssertTrue(subject.childCoordinators.isEmpty)
+
+        subject.showSearchEngineSelection(forSourceView: UIView())
+
+        XCTAssertEqual(subject.childCoordinators.count, 1)
+        XCTAssertTrue(subject.childCoordinators.first is SearchEngineSelectionCoordinator)
+        XCTAssertEqual(mockRouter.presentCalled, 1)
+        XCTAssertTrue(mockRouter.presentedViewController is DismissableNavigationViewController)
+        XCTAssertTrue(mockRouter.presentedViewController?.children.first is SearchEngineSelectionViewController)
+    }
+
+    func testSearchEngineSelectionCoordinatorDelegate_navigatesToSettings() {
+        let subject = createSubject()
+        subject.browserHasLoaded()
+
+        subject.showSearchEngineSelection(forSourceView: UIView())
+        guard let searchEngineSelectionCoordinator = subject.childCoordinators[0] as? SearchEngineSelectionCoordinator else {
+            XCTFail("Search engine selection coordinator was expected to be resolved")
+            return
+        }
+
+        searchEngineSelectionCoordinator.navigateToSearchSettings(animated: false)
 
         XCTAssertTrue(subject.childCoordinators[0] is SettingsCoordinator)
         XCTAssertTrue(mockRouter.presentedViewController?.children.first is AppSettingsTableViewController)

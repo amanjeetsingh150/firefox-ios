@@ -8,6 +8,7 @@ import UIKit
 import Shared
 import Redux
 import MenuKit
+import SiteImageView
 
 class MainMenuViewController: UIViewController,
                               UIAdaptivePresentationControllerDelegate,
@@ -16,11 +17,21 @@ class MainMenuViewController: UIViewController,
                               MenuTableViewDataDelegate,
                               Themeable,
                               Notifiable,
-                              StoreSubscriber {
+                              StoreSubscriber,
+                              FeatureFlaggable {
+    private struct UX {
+        static let hintViewCornerRadius: CGFloat = 20
+        static let hintViewHeight: CGFloat = 140
+        static let hintViewMargin: CGFloat = 20
+    }
     typealias SubscriberStateType = MainMenuState
 
     // MARK: - UI/UX elements
     private lazy var menuContent: MenuMainView = .build()
+    private var hintView: ContextualHintView = .build { view in
+        view.isAccessibilityElement = true
+    }
+    private var hintViewHeightConstraint: NSLayoutConstraint?
 
     // MARK: - Properties
     var notificationCenter: NotificationProtocol
@@ -29,25 +40,50 @@ class MainMenuViewController: UIViewController,
     weak var coordinator: MainMenuCoordinator?
 
     private let windowUUID: WindowUUID
+    private let profile: Profile
     private var menuState: MainMenuState
+    private let logger: Logger
+
+    let viewProvider: ContextualHintViewProvider
 
     var currentWindowUUID: UUID? { return windowUUID }
+
+    private var isPad: Bool {
+        traitCollection.verticalSizeClass == .regular &&
+        !(UIDevice.current.userInterfaceIdiom == .phone)
+    }
+
+    // Used to save the last screen orientation
+    private var lastOrientation: UIDeviceOrientation
 
     // MARK: - Initializers
     init(
         windowUUID: WindowUUID,
+        profile: Profile,
         notificationCenter: NotificationProtocol = NotificationCenter.default,
-        themeManager: ThemeManager = AppContainer.shared.resolve()
+        themeManager: ThemeManager = AppContainer.shared.resolve(),
+        logger: Logger = DefaultLogger.shared
     ) {
         self.windowUUID = windowUUID
+        self.profile = profile
         self.notificationCenter = notificationCenter
         self.themeManager = themeManager
+        self.logger = logger
         menuState = MainMenuState(windowUUID: windowUUID)
+        viewProvider = ContextualHintViewProvider(forHintType: .mainMenu,
+                                                  with: profile)
+        self.lastOrientation = UIDevice.current.orientation
         super.init(nibName: nil, bundle: nil)
 
         setupNotifications(forObserver: self,
                            observing: [.DynamicFontChanged])
         subscribeToRedux()
+        store.dispatch(
+            MainMenuAction(
+                windowUUID: windowUUID,
+                actionType: MainMenuActionType.didInstantiateView
+            )
+        )
     }
 
     required init?(coder: NSCoder) {
@@ -71,7 +107,26 @@ class MainMenuViewController: UIViewController,
         )
 
         menuContent.accountHeaderView.closeButtonCallback = { [weak self] in
-            self?.coordinator?.dismissMenuModal(animated: true)
+            guard let self else { return }
+            store.dispatch(
+                MainMenuAction(
+                    windowUUID: self.windowUUID,
+                    actionType: MainMenuActionType.tapCloseMenu,
+                    currentTabInfo: menuState.currentTabInfo
+                )
+            )
+        }
+
+        menuContent.accountHeaderView.mainButtonCallback = { [weak self] in
+            guard let self else { return }
+            store.dispatch(
+                MainMenuAction(
+                    windowUUID: self.windowUUID,
+                    actionType: MainMenuActionType.tapNavigateToDestination,
+                    navigationDestination: MenuNavigationDestination(.syncSignIn),
+                    currentTabInfo: menuState.currentTabInfo
+                )
+            )
         }
 
         setupAccessibilityIdentifiers()
@@ -84,13 +139,16 @@ class MainMenuViewController: UIViewController,
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        store.dispatch(
-            MainMenuAction(
-                windowUUID: windowUUID,
-                actionType: MainMenuActionType.mainMenuDidAppear
-            )
-        )
         updateModalA11y()
+
+        if shouldDisplayHintView() {
+            setupHintView()
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        hintView.removeFromSuperview()
     }
 
     deinit {
@@ -114,8 +172,15 @@ class MainMenuViewController: UIViewController,
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
-        coordinator.animate(alongsideTransition: { _ in
-            self.adjustLayout()
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            guard let self else { return }
+            // We should dismiss CFR when device is rotating
+            if UIDevice.current.orientation != lastOrientation {
+                lastOrientation = UIDevice.current.orientation
+                self.adjustLayout(isDeviceRotating: true)
+            } else {
+                self.adjustLayout()
+            }
         }, completion: nil)
     }
 
@@ -141,12 +206,57 @@ class MainMenuViewController: UIViewController,
                                  icon: icon)
     }
 
+    private func setupHintView() {
+        var viewModel = ContextualHintViewModel(
+            isActionType: viewProvider.isActionType,
+            actionButtonTitle: viewProvider.getCopyFor(.action),
+            title: viewProvider.getCopyFor(.title),
+            description: viewProvider.getCopyFor(.description),
+            arrowDirection: .unknown,
+            closeButtonA11yLabel: .ContextualHints.ContextualHintsCloseAccessibility,
+            actionButtonA11yId: AccessibilityIdentifiers.ContextualHints.actionButton
+        )
+        viewModel.closeButtonAction = { [weak self] _ in
+            self?.hintView.removeFromSuperview()
+        }
+        hintView.configure(viewModel: viewModel)
+        viewProvider.markContextualHintPresented()
+        hintView.applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.addSubview(hintView)
+            if isPad {
+                NSLayoutConstraint.activate([
+                    hintView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UX.hintViewMargin * 4),
+                    hintView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UX.hintViewMargin * 4),
+                    hintView.topAnchor.constraint(equalTo: menuContent.accountHeaderView.topAnchor,
+                                                  constant: UX.hintViewMargin)
+                ])
+            } else {
+                NSLayoutConstraint.activate([
+                    hintView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UX.hintViewMargin),
+                    hintView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UX.hintViewMargin),
+                    hintView.bottomAnchor.constraint(equalTo: menuContent.accountHeaderView.topAnchor,
+                                                     constant: -UX.hintViewMargin)
+                ])
+            }
+            hintViewHeightConstraint = hintView.heightAnchor.constraint(equalToConstant: UX.hintViewHeight)
+            hintViewHeightConstraint?.isActive = true
+        }
+        hintView.layer.cornerRadius = UX.hintViewCornerRadius
+        hintView.layer.masksToBounds = true
+        adjustLayout()
+    }
+
     // MARK: - Redux
     func subscribeToRedux() {
-        let action = ScreenAction(windowUUID: windowUUID,
-                                  actionType: ScreenActionType.showScreen,
-                                  screen: .mainMenu)
-        store.dispatch(action)
+        store.dispatch(
+            ScreenAction(
+                windowUUID: windowUUID,
+                actionType: ScreenActionType.showScreen,
+                screen: .mainMenu
+            )
+        )
         let uuid = windowUUID
         store.subscribe(self, transform: {
             return $0.select({ appState in
@@ -156,16 +266,27 @@ class MainMenuViewController: UIViewController,
     }
 
     func unsubscribeFromRedux() {
-        let action = ScreenAction(windowUUID: windowUUID,
-                                  actionType: ScreenActionType.closeScreen,
-                                  screen: .mainMenu)
-        store.dispatch(action)
+        store.dispatch(
+            ScreenAction(
+                windowUUID: windowUUID,
+                actionType: ScreenActionType.closeScreen,
+                screen: .mainMenu
+            )
+        )
     }
 
     func newState(state: MainMenuState) {
         menuState = state
 
-        reloadTableView(with: menuState.menuElements)
+        if let accountData = menuState.accountData {
+            updateHeaderWith(accountData: accountData, icon: menuState.accountIcon)
+            setupAccessibilityIdentifiers(mainButtonA11yLabel: accountData.title)
+        }
+
+        if menuState.currentSubmenuView != nil {
+            coordinator?.showDetailViewController()
+            return
+        }
 
         if let navigationDestination = menuState.navigationDestination {
             coordinator?.navigateTo(navigationDestination, animated: true)
@@ -174,7 +295,10 @@ class MainMenuViewController: UIViewController,
 
         if menuState.shouldDismiss {
             coordinator?.dismissMenuModal(animated: true)
+            return
         }
+
+        reloadTableView(with: menuState.menuElements)
     }
 
     // MARK: - UX related
@@ -182,6 +306,14 @@ class MainMenuViewController: UIViewController,
         let theme = themeManager.getCurrentTheme(for: windowUUID)
         view.backgroundColor = theme.colors.layer3
         menuContent.applyTheme(theme: theme)
+    }
+
+    private func updateHeaderWith(accountData: AccountData, icon: UIImage?) {
+        menuContent.accountHeaderView.setupDetails(subtitle: accountData.subtitle ?? "",
+                                                   title: accountData.title,
+                                                   icon: icon,
+                                                   warningIcon: accountData.warningIcon,
+                                                   theme: themeManager.getCurrentTheme(for: windowUUID))
     }
 
     // MARK: - A11y
@@ -212,29 +344,73 @@ class MainMenuViewController: UIViewController,
         return sheetController.selectedDetentIdentifier
     }
 
-    private func setupAccessibilityIdentifiers() {
+    private func setupAccessibilityIdentifiers(
+        mainButtonA11yLabel: String = .MainMenu.Account.AccessibilityLabels.MainButton) {
         menuContent.setupAccessibilityIdentifiers(
             closeButtonA11yLabel: .MainMenu.Account.AccessibilityLabels.CloseButton,
             closeButtonA11yId: AccessibilityIdentifiers.MainMenu.HeaderView.closeButton,
-            mainButtonA11yLabel: .MainMenu.Account.AccessibilityLabels.MainButton,
+            mainButtonA11yLabel: mainButtonA11yLabel,
             mainButtonA11yId: AccessibilityIdentifiers.MainMenu.HeaderView.mainButton,
             menuA11yId: AccessibilityIdentifiers.MainMenu.mainMenu,
             menuA11yLabel: .MainMenu.TabsSection.AccessibilityLabels.MainMenu)
     }
 
-    private func adjustLayout() {
+    private func adjustLayout(isDeviceRotating: Bool = false) {
         menuContent.accountHeaderView.adjustLayout()
+        if isDeviceRotating {
+            hintView.removeFromSuperview()
+        } else {
+            if let screenHeight = view.window?.windowScene?.screen.bounds.height {
+                let maxHeight: CGFloat = if isPad {
+                    view.frame.height / 2
+                } else {
+                    screenHeight - view.frame.height - UX.hintViewMargin * 4
+                }
+                let height = min(UIFontMetrics.default.scaledValue(for: UX.hintViewHeight), maxHeight)
+                let contentSizeCategory = UIApplication.shared.preferredContentSizeCategory
+                hintViewHeightConstraint?.constant =
+                contentSizeCategory.isAccessibilityCategory ? height : UX.hintViewHeight
+            }
+        }
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+    }
+
+    private func shouldDisplayHintView() -> Bool {
+        // Don't display CFR in landscape mode for iPhones
+        if UIDevice.current.isIphoneLandscape {
+            return false
+        }
+
+        // Don't display CFR for fresh installs for users that never saw before the photon main menu
+        if InstallType.get() == .fresh {
+            if let photonMainMenuShown = profile.prefs.boolForKey(PrefsKeys.PhotonMainMenuShown),
+               photonMainMenuShown {
+                return viewProvider.shouldPresentContextualHint()
+            }
+            viewProvider.markContextualHintPresented()
+            return false
+        }
+        return viewProvider.shouldPresentContextualHint()
     }
 
     // MARK: - UIAdaptivePresentationControllerDelegate
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        coordinator?.dismissMenuModal(animated: true)
+        store.dispatch(
+            MainMenuAction(
+                windowUUID: self.windowUUID,
+                actionType: MainMenuActionType.menuDismissed,
+                currentTabInfo: menuState.currentTabInfo
+            )
+        )
+        coordinator?.removeCoordinatorFromParent()
     }
 
     // MARK: - UISheetPresentationControllerDelegate
     func sheetPresentationControllerDidChangeSelectedDetentIdentifier(
         _ sheetPresentationController: UISheetPresentationController
     ) {
+        hintView.removeFromSuperview()
         updateModalA11y()
     }
 

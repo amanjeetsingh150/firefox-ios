@@ -5,7 +5,7 @@
 import Foundation
 import Common
 import Shared
-import SiteImageView
+import ComponentLibrary
 
 import Security
 import CryptoKit
@@ -20,7 +20,10 @@ struct CertificateKeys {
 
 typealias CertificateItems = [(key: String, value: String)]
 
-class CertificatesViewController: UIViewController, Themeable, UITableViewDelegate, UITableViewDataSource {
+class CertificatesViewController: UIViewController,
+                                  Themeable,
+                                  UITableViewDelegate,
+                                  UITableViewDataSource {
     private enum CertificatesItemType: Int, CaseIterable {
         case subjectName
         case issuerName
@@ -31,7 +34,7 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
     // MARK: - UI
     struct UX {
         static let titleLabelMargin = 8.0
-        static let titleLabelTopMargin = 20.0
+        static let titleLabelMinHeight = 60.0
         static let headerStackViewMargin = 8.0
         static let headerStackViewTopMargin = 20.0
     }
@@ -39,6 +42,11 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
     private let titleLabel: UILabel = .build { label in
         label.font = FXFontStyles.Bold.title1.scaledFont()
         label.text = .Menu.EnhancedTrackingProtection.certificatesTitle
+        label.textAlignment = .left
+    }
+
+    private let headerView: NavigationHeaderView = .build { header in
+        header.accessibilityIdentifier = AccessibilityIdentifiers.EnhancedTrackingProtection.CertificatesScreen.headerView
     }
 
     // TODO: FXIOS-9980 Tracking Protection Certificates Screen tableView header text is a little bit cutted off
@@ -52,23 +60,26 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
 
     // MARK: - Variables
     private var constraints = [NSLayoutConstraint]()
-    var viewModel: CertificatesViewModel
+    var model: CertificatesModel
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
     var themeObserver: NSObjectProtocol?
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { return windowUUID }
+    private let logger: Logger
 
     // MARK: - View Lifecycle
 
-    init(with viewModel: CertificatesViewModel,
+    init(with viewModel: CertificatesModel,
          windowUUID: WindowUUID,
          and notificationCenter: NotificationProtocol = NotificationCenter.default,
-         themeManager: ThemeManager = AppContainer.shared.resolve()) {
-        self.viewModel = viewModel
+         themeManager: ThemeManager = AppContainer.shared.resolve(),
+         logger: Logger = DefaultLogger.shared) {
+        self.model = viewModel
         self.windowUUID = windowUUID
         self.notificationCenter = notificationCenter
         self.themeManager = themeManager
+        self.logger = logger
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -93,55 +104,104 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
         applyTheme()
     }
 
+    // MARK: View Setup
     private func setupView() {
-        constraints.removeAll()
+        setupHeaderView()
         setupTitleConstraints()
         setupCertificatesTableView()
         setupAccessibilityIdentifiers()
-        NSLayoutConstraint.activate(constraints)
     }
 
+    // MARK: Header View Setup
+    private func setupHeaderView() {
+        view.addSubview(headerView)
+        NSLayoutConstraint.activate([
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerView.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: TPMenuUX.UX.popoverTopDistance
+            )
+        ])
+        setupHeaderViewActions()
+    }
+
+    // MARK: Header Actions
+    private func setupHeaderViewActions() {
+        headerView.backToMainMenuCallback = { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
+        headerView.dismissMenuCallback = { [weak self] in
+            self?.navigationController?.dismissVC()
+        }
+    }
+
+    // MARK: Title Setup
     private func setupTitleConstraints() {
         view.addSubview(titleLabel)
         NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UX.titleLabelMargin),
-            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -UX.titleLabelMargin),
-            titleLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: UX.titleLabelTopMargin)
+            titleLabel.heightAnchor.constraint(
+                greaterThanOrEqualToConstant: UX.titleLabelMinHeight
+            ),
+            titleLabel.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor,
+                constant: UX.titleLabelMargin
+            ),
+            titleLabel.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor,
+                constant: -UX.titleLabelMargin
+            ),
+            titleLabel.topAnchor.constraint(
+                equalTo: headerView.bottomAnchor
+            )
         ])
     }
 
+    // MARK: TableView Setup
     private func setupCertificatesTableView() {
         certificatesTableView.delegate = self
         certificatesTableView.dataSource = self
         view.addSubview(certificatesTableView)
         NSLayoutConstraint.activate([
-            certificatesTableView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor,
-                                                       constant: UX.titleLabelTopMargin),
-            certificatesTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            certificatesTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            certificatesTableView.topAnchor.constraint(
+                equalTo: titleLabel.bottomAnchor
+            ),
+            certificatesTableView.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor,
+                constant: UX.headerStackViewMargin
+            ),
+            certificatesTableView.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor,
+                constant: -UX.headerStackViewMargin
+            ),
             certificatesTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
     // MARK: - UITableViewDataSource
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        guard !viewModel.certificates.isEmpty else { return 0 }
+        guard !model.certificates.isEmpty else { return 0 }
         return CertificatesItemType.allCases.count
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let headerView = tableView.dequeueReusableHeaderFooterView(
-            withIdentifier: CertificatesHeaderView.cellIdentifier) as! CertificatesHeaderView
+        guard let headerView = tableView.dequeueReusableHeaderFooterView(
+            withIdentifier: CertificatesHeaderView.cellIdentifier) as? CertificatesHeaderView else {
+            logger.log("Failed to dequeue CertificatesHeaderView with identifier \(CertificatesHeaderView.cellIdentifier)",
+                       level: .fatal,
+                       category: .certificate)
+            return UIView()
+        }
         var items: [CertificatesHeaderItem] = []
-        for (index, certificate) in viewModel.certificates.enumerated() {
+        for (index, certificate) in model.certificates.enumerated() {
             let certificateValues = certificate.subject.description.getDictionary()
             if !certificateValues.isEmpty, let commonName = certificateValues[CertificateKeys.commonName] {
                 let item: CertificatesHeaderItem = .build()
                 item.configure(theme: self.currentTheme(),
                                title: commonName,
-                               isSelected: viewModel.selectedCertificateIndex == index) { [weak self] in
+                               isSelected: model.selectedCertificateIndex == index) { [weak self] in
                     guard let self else { return }
-                    self.viewModel.selectedCertificateIndex = index
+                    self.model.selectedCertificateIndex = index
                     self.certificatesTableView.reloadData()
                 }
                 items.append(item)
@@ -157,11 +217,11 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
             return UITableViewCell()
         }
 
-        guard !viewModel.certificates.isEmpty else {
+        guard !model.certificates.isEmpty else {
             return cell
         }
 
-        let certificate = viewModel.certificates[viewModel.selectedCertificateIndex]
+        let certificate = model.certificates[model.selectedCertificateIndex]
 
         switch CertificatesItemType(rawValue: indexPath.row) {
         case .subjectName:
@@ -188,15 +248,15 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
                            sectionTitle: .Menu.EnhancedTrackingProtection.certificateValidity,
                            items: [
                             (.Menu.EnhancedTrackingProtection.certificateValidityNotBefore,
-                                certificate.notValidBefore.toRFC822String()),
+                             certificate.notValidBefore.toRFC822String()),
                             (.Menu.EnhancedTrackingProtection.certificateValidityNotAfter,
-                                certificate.notValidAfter.toRFC822String())
+                             certificate.notValidAfter.toRFC822String())
                            ])
 
         case .subjectAltName:
             cell.configure(theme: currentTheme(),
                            sectionTitle: .Menu.EnhancedTrackingProtection.certificateSubjectAltNames,
-                           items: viewModel.getDNSNames(for: certificate))
+                           items: model.getDNSNames(for: certificate))
         case .none: break
         }
         return cell
@@ -221,12 +281,14 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
     }
 
     private func adjustLayout() {
+        headerView.adjustLayout()
         view.setNeedsLayout()
         view.layoutIfNeeded()
     }
 
     private func updateViewDetails() {
-        self.certificatesTableView.reloadData()
+        certificatesTableView.reloadData()
+        headerView.setViews(with: model.topLevelDomain, and: .KeyboardShortcuts.Back)
     }
 
     // MARK: - Actions
@@ -239,9 +301,9 @@ class CertificatesViewController: UIViewController, Themeable, UITableViewDelega
 extension CertificatesViewController {
     func applyTheme() {
         let theme = currentTheme()
-        view.backgroundColor = theme.colors.layer5
+        view.backgroundColor = theme.colors.layer3
         titleLabel.textColor = theme.colors.textPrimary
         titleLabel.backgroundColor = theme.colors.layer5
-        certificatesTableView.reloadData()
+        headerView.applyTheme(theme: theme)
     }
 }

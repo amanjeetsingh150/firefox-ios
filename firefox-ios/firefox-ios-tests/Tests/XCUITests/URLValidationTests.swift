@@ -8,6 +8,7 @@ class URLValidationTests: BaseTestCase {
     let urlTypes = ["www.mozilla.org", "www.mozilla.org/", "https://www.mozilla.org", "www.mozilla.org/en", "www.mozilla.org/en-",
                     "www.mozilla.org/en-US", "https://www.mozilla.org/", "https://www.mozilla.org/en", "https://www.mozilla.org/en-US"]
     let urlHttpTypes = ["http://example.com", "http://example.com/"]
+    let urlField = XCUIApplication().textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
 
     override func setUp() {
         super.setUp()
@@ -22,20 +23,24 @@ class URLValidationTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2460854
     // Smoketest
     func testDifferentURLTypes() {
-        for i in urlTypes {
-            navigator.openURL(i)
+        for url in urlTypes {
+            navigator.openURL(url)
             waitUntilPageLoad()
-            mozWaitForElementToExist(app.otherElements.staticTexts["Mozilla"])
-            mozWaitForElementToExist(app.buttons["Menu"])
-            mozWaitForValueContains(app.textFields["url"], value: "www.mozilla.org/en-US/")
+            waitForElementsToExist(
+                [
+                    app.otherElements.staticTexts["Mozilla"],
+                    app.buttons["Menu"]
+                ]
+            )
+            mozWaitForValueContains(urlField, value: "mozilla.org")
             clearURL()
         }
 
-        for i in urlHttpTypes {
-            navigator.openURL(i)
+        for url in urlHttpTypes {
+            navigator.openURL(url)
             waitUntilPageLoad()
             mozWaitForElementToExist(app.otherElements.staticTexts["Example Domain"])
-            mozWaitForValueContains(app.textFields["url"], value: "example.com/")
+            mozWaitForValueContains(urlField, value: "example.com")
             clearURL()
         }
     }
@@ -43,8 +48,7 @@ class URLValidationTests: BaseTestCase {
     private func clearURL() {
         if iPad() {
             navigator.goto(URLBarOpen)
-            mozWaitForElementToExist(app.buttons["Clear text"])
-            app.buttons["Clear text"].tap()
+            app.buttons["Clear text"].waitAndTap()
         }
     }
 }

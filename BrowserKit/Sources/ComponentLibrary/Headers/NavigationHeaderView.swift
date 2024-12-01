@@ -9,7 +9,7 @@ public final class NavigationHeaderView: UIView {
     private struct UX {
         static let closeButtonSize: CGFloat = 30
         static let imageMargins: CGFloat = 10
-        static let baseDistance: CGFloat = 20
+        static let baseDistance: CGFloat = 21
         static let horizontalMargin: CGFloat = 16
         static let separatorHeight: CGFloat = 1
         static let largeFaviconImageSize: CGFloat = 48
@@ -98,11 +98,16 @@ public final class NavigationHeaderView: UIView {
 
     public func setupAccessibility(closeButtonA11yLabel: String,
                                    closeButtonA11yId: String,
+                                   titleA11yId: String? = nil,
                                    backButtonA11yLabel: String,
                                    backButtonA11yId: String) {
         let closeButtonViewModel = CloseButtonViewModel(a11yLabel: closeButtonA11yLabel,
                                                         a11yIdentifier: closeButtonA11yId)
         closeButton.configure(viewModel: closeButtonViewModel)
+        if let titleA11yId {
+            titleLabel.isAccessibilityElement = true
+            titleLabel.accessibilityIdentifier = titleA11yId
+        }
         backButton.accessibilityIdentifier = backButtonA11yId
         backButton.accessibilityLabel = backButtonA11yLabel
     }
@@ -115,6 +120,14 @@ public final class NavigationHeaderView: UIView {
     public func adjustLayout() {
         backButton.titleLabel?.font = FXFontStyles.Regular.body.scaledFont()
         updateLayout(isAccessibilityCategory: UIApplication.shared.preferredContentSizeCategory.isAccessibilityCategory)
+    }
+
+    public func updateHeaderLineView(isHidden: Bool) {
+        if (isHidden && !horizontalLine.isHidden) || (!isHidden && horizontalLine.isHidden) {
+            UIView.animate(withDuration: 0.3) { [weak self] in
+                self?.horizontalLine.isHidden = isHidden
+            }
+        }
     }
 
     @objc
@@ -133,9 +146,10 @@ public final class NavigationHeaderView: UIView {
             .withTintColor(theme.colors.iconSecondary)
         closeButton.setImage(buttonImage, for: .normal)
         closeButton.backgroundColor = theme.colors.layer2
-        backButton.tintColor = theme.colors.iconAction
+        backButton.tintColor = theme.colors.iconAccent
         backButton.setTitleColor(theme.colors.textAccent, for: .normal)
         horizontalLine.backgroundColor = theme.colors.borderPrimary
         titleLabel.textColor = theme.colors.textPrimary
+        backgroundColor = theme.colors.layer3
     }
 }

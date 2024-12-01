@@ -8,6 +8,11 @@ import ComponentLibrary
 
 public final class MenuMainView: UIView,
                                  MenuTableViewDataDelegate, ThemeApplicable {
+    private struct UX {
+        static let headerTopMargin: CGFloat = 15
+        static let horizontalTableViewMargin: CGFloat = 4
+    }
+
     // MARK: - UI Elements
     private var tableView: MenuTableView = .build()
     public var accountHeaderView: HeaderView = .build()
@@ -18,6 +23,7 @@ public final class MenuMainView: UIView,
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupView()
+        handleUpdateHeaderLineView()
     }
 
     required init?(coder: NSCoder) {
@@ -26,11 +32,12 @@ public final class MenuMainView: UIView,
 
     // MARK: - UI Setup
     private func setupView() {
+        accountHeaderView.updateHeaderLineView(isHidden: true)
         self.addSubview(accountHeaderView)
         self.addSubview(tableView)
 
         NSLayoutConstraint.activate([
-            accountHeaderView.topAnchor.constraint(equalTo: self.topAnchor),
+            accountHeaderView.topAnchor.constraint(equalTo: self.topAnchor, constant: UX.headerTopMargin),
             accountHeaderView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             accountHeaderView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
 
@@ -63,6 +70,13 @@ public final class MenuMainView: UIView,
 
     public func adjustLayout() {
         accountHeaderView.adjustLayout()
+    }
+
+    private func handleUpdateHeaderLineView() {
+        tableView.updateHeaderLineView = { [weak self] isHidden in
+            guard let self else { return }
+            self.accountHeaderView.updateHeaderLineView(isHidden: isHidden)
+        }
     }
 
     // MARK: - Interface

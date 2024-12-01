@@ -8,7 +8,7 @@ import XCTest
 let url = "www.mozilla.org"
 let urlLabel = "Internet for people, not profit — Mozilla"
 let urlValue = "mozilla.org"
-let urlValueLong = "localhost:\(serverPort)/test-fixture/test-mozilla-org.html"
+let urlValueLong = "localhost"
 
 let urlExample = path(forTestPage: "test-example.html")
 let urlLabelExample = "Example Domain"
@@ -36,8 +36,8 @@ class TopTabsTest: BaseTestCase {
 
         // The tab tray shows the correct tabs
         if iPad() {
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
-            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].tap()
+//            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
+            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].waitAndTap()
         } else {
             navigator.goto(TabTray)
         }
@@ -73,19 +73,25 @@ class TopTabsTest: BaseTestCase {
         waitForTabsButton()
         navigator.goto(TabTray)
 
-        mozWaitForElementToExist(app.cells.staticTexts[urlLabel])
-        app.cells.staticTexts[urlLabel].firstMatch.tap()
-        let valueMozilla = app.textFields["url"].value as! String
+        app.cells.staticTexts[urlLabel].firstMatch.waitAndTap()
+        guard let valueMozilla = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].value
+                as? String else {
+            XCTFail("Failed to retrieve the URL value from the Mozilla browser's URL bar")
+            return
+        }
         XCTAssertEqual(valueMozilla, urlValueLong)
 
         navigator.nowAt(BrowserTab)
         waitForTabsButton()
         navigator.goto(TabTray)
 
-        mozWaitForElementToExist(app.cells.staticTexts[urlLabelExample])
-        app.cells.staticTexts[urlLabelExample].firstMatch.tap()
-        let value = app.textFields["url"].value as! String
-        XCTAssertEqual(value, urlValueLongExample)
+        app.cells.staticTexts[urlLabelExample].firstMatch.waitAndTap()
+        guard let value = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].value
+                as? String else {
+            XCTFail("Failed to retrieve the URL value from the Mozilla browser's URL bar")
+            return
+        }
+        XCTAssertEqual(value, urlValueLong)
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2354449
@@ -126,10 +132,8 @@ class TopTabsTest: BaseTestCase {
         waitForTabsButton()
         navigator.nowAt(BrowserTab)
         if iPad() {
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
-            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].tap()
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.TabTray.newTabButton])
-            app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].tap()
+            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].waitAndTap()
+            app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].waitAndTap()
         } else {
             navigator.performAction(Action.OpenNewTabFromTabTray)
             mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
@@ -145,8 +149,7 @@ class TopTabsTest: BaseTestCase {
         // Close all tabs, undo it and check that the number of tabs is correct
         navigator.performAction(Action.AcceptRemovingAllTabs)
 
-        mozWaitForElementToExist(app.otherElements.buttons.staticTexts["Undo"])
-        app.otherElements.buttons.staticTexts["Undo"].tap()
+        app.otherElements.buttons.staticTexts["Undo"].waitAndTap()
 
         mozWaitForElementToExist(
             app.collectionViews.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
@@ -170,7 +173,8 @@ class TopTabsTest: BaseTestCase {
     // Smoketest
     func testCloseAllTabsPrivateModeUndo() {
         navigator.goto(URLBarOpen)
-        mozWaitForElementToExist(app.buttons["urlBar-cancel"], timeout: TIMEOUT_LONG)
+        let cancelButton = app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton]
+        mozWaitForElementToExist(cancelButton, timeout: TIMEOUT_LONG)
         navigator.back()
         // A different tab than home is open to do the proper checks
         navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
@@ -179,10 +183,8 @@ class TopTabsTest: BaseTestCase {
         waitForTabsButton()
 
         if iPad() {
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
-            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].tap()
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.TabTray.newTabButton])
-            app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].tap()
+            app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].waitAndTap()
+            app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].waitAndTap()
         } else {
             navigator.performAction(Action.OpenNewTabFromTabTray)
             mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton])
@@ -250,24 +252,14 @@ class TopTabsTest: BaseTestCase {
     func testOpenNewTabLandscape() {
         XCUIDevice.shared.orientation = .landscapeLeft
         // Verify the '+' icon is shown and open a tab with it
-        if iPad() {
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
-            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].tap()
-        } else {
-            mozWaitForElementToExist(
-                app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton]
-            )
-            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].tap()
-        }
-        app.typeText("google.com\n")
+        navigator.openURL(path(forTestPage: "test-mozilla-org.html"))
         waitUntilPageLoad()
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
 
         // Go back to portrait mode
         XCUIDevice.shared.orientation = .portrait
-        // Verify that the '+' is not displayed
-        if !iPad() {
-            mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
-        }
+        // Verify that the '+' is displayed
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2306838
@@ -278,8 +270,12 @@ class TopTabsTest: BaseTestCase {
             navigator.nowAt(NewTabScreen)
             mozWaitForElementToExist(app.buttons["Show Tabs"])
             app.buttons["Show Tabs"].press(forDuration: 1)
-            mozWaitForElementToExist(app.cells.otherElements[StandardImageIdentifiers.Large.plus])
-            mozWaitForElementToExist(app.cells.otherElements[StandardImageIdentifiers.Large.cross])
+            waitForElementsToExist(
+                [
+                    app.cells.otherElements[StandardImageIdentifiers.Large.plus],
+                    app.cells.otherElements[StandardImageIdentifiers.Large.cross]
+                ]
+            )
 
             // Open New Tab
             app.cells.otherElements[StandardImageIdentifiers.Large.plus].tap()
@@ -287,8 +283,7 @@ class TopTabsTest: BaseTestCase {
 
             waitForTabsButton()
             checkNumberOfTabsExpectedToBeOpen(expectedNumberOfTabsOpen: 2)
-            mozWaitForElementToExist(app.cells.staticTexts["Homepage"])
-            app.cells.staticTexts["Homepage"].firstMatch.tap()
+            app.cells.staticTexts["Homepage"].firstMatch.waitAndTap()
             mozWaitForElementToExist(
                 app.collectionViews.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
             )
@@ -305,8 +300,7 @@ class TopTabsTest: BaseTestCase {
             checkNumberOfTabsExpectedToBeOpen(expectedNumberOfTabsOpen: 1)
 
             // Go to Private Mode
-            mozWaitForElementToExist(app.cells.staticTexts["Homepage"])
-            app.cells.staticTexts["Homepage"].firstMatch.tap()
+            app.cells.staticTexts["Homepage"].firstMatch.waitAndTap()
             mozWaitForElementToExist(
                 app.collectionViews.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
             )
@@ -314,9 +308,9 @@ class TopTabsTest: BaseTestCase {
             navigator.nowAt(NewTabScreen)
             mozWaitForElementToExist(app.buttons["Show Tabs"])
             app.buttons["Show Tabs"].press(forDuration: 1)
-            mozWaitForElementToExist(app.tables.cells.otherElements["Private Browsing Mode"])
-            app.tables.cells.otherElements["Private Browsing Mode"].tap()
+            app.tables.cells.otherElements["New Private Tab"].waitAndTap()
             navigator.nowAt(NewTabScreen)
+            app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
             checkNumberOfTabsExpectedToBeOpen(expectedNumberOfTabsOpen: 1)
         }
     }
@@ -329,7 +323,7 @@ class TopTabsTest: BaseTestCase {
         for _ in 1...10 {
             navigator.createNewTab()
             if app.keyboards.element.isVisible() && !iPad() {
-                mozWaitForElementToExist(app.buttons["urlBar-cancel"])
+                mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton])
                 navigator.performAction(Action.CloseURLBarOpen)
             }
         }
@@ -361,14 +355,10 @@ class TopTabsTest: BaseTestCase {
         navigator.nowAt(NewTabScreen)
         waitForTabsButton()
         navigator.goto(TabTray)
-        app.swipeDown()
+        mozWaitForElementToExist(tabsTrayCell.firstMatch)
         app.swipeUp()
         if !iPad() {
-            if #available(iOS 16, *) {
-                XCTAssertEqual(tabsTrayCell.element(boundBy: 3).label, "Homepage. Currently selected tab.")
-            } else {
-                XCTAssertEqual(tabsTrayCell.element(boundBy: 3).label, "Homepage")
-            }
+            XCTAssertEqual(tabsTrayCell.element(boundBy: 3).label, "Homepage. Currently selected tab.")
         } else {
             XCTAssertEqual(tabsTrayCell.element(boundBy: 6).label, "Homepage. Currently selected tab.")
         }
@@ -426,7 +416,7 @@ class TopTabsTest: BaseTestCase {
         for _ in 1...4 {
             navigator.createNewTab()
             if app.keyboards.element.isVisible() && !iPad() {
-                mozWaitForElementToExist(app.buttons["urlBar-cancel"])
+                mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton])
                 navigator.performAction(Action.CloseURLBarOpen)
             }
         }
@@ -436,19 +426,27 @@ class TopTabsTest: BaseTestCase {
         for _ in 0...3 {
             app.collectionViews.cells["Homepage. Currently selected tab."].buttons["crossLarge"].tap()
             // A toast notification is displayed with the message "Tab Closed" and the Undo option
-            mozWaitForElementToExist(app.buttons["Undo"])
-            mozWaitForElementToExist(app.staticTexts["Tab Closed"])
+            waitForElementsToExist(
+                [
+                    app.buttons["Undo"],
+                    app.staticTexts["Tab Closed"]
+                ]
+            )
         }
         app.collectionViews.buttons["crossLarge"].tap()
-        mozWaitForElementToExist(app.buttons["Undo"])
-        mozWaitForElementToExist(app.staticTexts["Tab Closed"])
+        waitForElementsToExist(
+            [
+                app.buttons["Undo"],
+                app.staticTexts["Tab Closed"]
+            ]
+        )
     }
 
     private func addTabsAndUndoCloseTabAction(nrOfTabs: Int) {
         for _ in 1...nrOfTabs {
             navigator.createNewTab()
             if app.keyboards.element.isVisible() && !iPad() {
-                mozWaitForElementToExist(app.buttons["urlBar-cancel"])
+                mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton])
                 navigator.performAction(Action.CloseURLBarOpen)
             }
         }
@@ -459,13 +457,21 @@ class TopTabsTest: BaseTestCase {
         let tabsTrayCell = app.otherElements["Tabs Tray"].cells
         app.otherElements["Tabs Tray"].cells.staticTexts.element(boundBy: 3).press(forDuration: 1.6)
         // Context menu opens
-        mozWaitForElementToExist(app.buttons["Close Tab"])
-        mozWaitForElementToExist(app.buttons["Copy URL"])
+        waitForElementsToExist(
+            [
+                app.buttons["Close Tab"],
+                app.buttons["Copy URL"]
+            ]
+        )
         // Choose to close the tab
         app.buttons["Close Tab"].tap()
         // A toast notification is displayed with the message "Tab Closed" and the Undo option
-        mozWaitForElementToExist(app.buttons["Undo"])
-        mozWaitForElementToExist(app.staticTexts["Tab Closed"])
+        waitForElementsToExist(
+            [
+                app.buttons["Undo"],
+                app.staticTexts["Tab Closed"]
+            ]
+        )
         app.buttons["Undo"].tap()
         mozWaitForElementToNotExist(app.buttons["Undo"])
         mozWaitForElementToNotExist(app.staticTexts["Tab Closed"])
@@ -567,12 +573,12 @@ class TopTabsTestIphone: IphoneOnlyTestCase {
         app.webViews.links.firstMatch.press(forDuration: 1)
         mozWaitForElementToExist(app.buttons["Open in New Tab"])
         app.buttons["Open in New Tab"].press(forDuration: 1)
-        mozWaitForElementToExist(app.buttons["Switch"])
-        app.buttons["Switch"].tap()
+        app.buttons["Switch"].waitAndTap()
 
         // Check that the tab has changed
         waitUntilPageLoad()
-        mozWaitForValueContains(app.textFields["url"], value: "iana")
+        mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
+                                value: "iana")
         XCTAssertTrue(app.links["RFC 2606"].exists)
         mozWaitForElementToExist(app.buttons["Show Tabs"])
         let numTab = app.buttons["Show Tabs"].value as? String
@@ -591,13 +597,13 @@ class TopTabsTestIphone: IphoneOnlyTestCase {
         app.webViews.links.firstMatch.press(forDuration: 1)
         mozWaitForElementToExist(app.buttons["Open in New Tab"])
         app.buttons["Open in New Private Tab"].press(forDuration: 1)
-        mozWaitForElementToExist(app.buttons["Switch"])
-        app.buttons["Switch"].tap()
+        app.buttons["Switch"].waitAndTap()
 
         // Check that the tab has changed to the new open one and that the user is in private mode
         waitUntilPageLoad()
-        mozWaitForElementToExist(app.textFields["url"])
-        mozWaitForValueContains(app.textFields["url"], value: "iana")
+        mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
+        mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
+                                value: "iana")
         navigator.goto(TabTray)
         XCTAssertTrue(app.buttons["privateModeLarge"].isEnabled)
     }

@@ -48,26 +48,32 @@ class AppSettingsTableViewController: SettingsTableViewController,
     private var debugSettingsClickCount: Int = 0
     private var appAuthenticator: AppAuthenticationProtocol
     private var applicationHelper: ApplicationHelper
+    private let logger: Logger
 
     weak var parentCoordinator: SettingsFlowDelegate?
 
     // MARK: - Data Settings
     private var sendAnonymousUsageDataSetting: BoolSetting?
+    private var sendCrashReportsSetting: BoolSetting?
     private var studiesToggleSetting: BoolSetting?
 
     // MARK: - Initializers
     init(with profile: Profile,
          and tabManager: TabManager,
-         delegate: SettingsDelegate? = nil,
+         settingsDelegate: SettingsDelegate,
+         parentCoordinator: SettingsFlowDelegate,
          appAuthenticator: AppAuthenticationProtocol = AppAuthenticator(),
-         applicationHelper: ApplicationHelper = DefaultApplicationHelper()) {
+         applicationHelper: ApplicationHelper = DefaultApplicationHelper(),
+         logger: Logger = DefaultLogger.shared) {
         self.appAuthenticator = appAuthenticator
         self.applicationHelper = applicationHelper
+        self.logger = logger
 
         super.init(windowUUID: tabManager.windowUUID)
         self.profile = profile
         self.tabManager = tabManager
-        self.settingsDelegate = delegate
+        self.settingsDelegate = settingsDelegate
+        self.parentCoordinator = parentCoordinator
         setupNavigationBar()
         setupDataSettings()
     }
@@ -168,11 +174,14 @@ class AppSettingsTableViewController: SettingsTableViewController,
     // MARK: Data settings setup
 
     private func setupDataSettings() {
-        let anonymousUsageDataSetting = SendAnonymousUsageDataSetting(
+        let isSentCrashReportsEnabled = featureFlags.isFeatureEnabled(.tosFeature, checking: .buildOnly)
+
+        let anonymousUsageDataSetting = SendDataSetting(
             prefs: profile.prefs,
             delegate: settingsDelegate,
             theme: themeManager.getCurrentTheme(for: windowUUID),
-            settingsDelegate: parentCoordinator
+            settingsDelegate: parentCoordinator,
+            sendDataType: .usageData
         )
 
         let studiesSetting = StudiesToggleSetting(
@@ -182,8 +191,23 @@ class AppSettingsTableViewController: SettingsTableViewController,
             settingsDelegate: parentCoordinator
         )
 
-        anonymousUsageDataSetting.shouldSendUsageData = { value in
+        anonymousUsageDataSetting.shouldSendData = { value in
             studiesSetting.updateSetting(for: value)
+        }
+
+        // Only add this toggle to the Settings if Terms Of Service feature flag is enabled
+        if isSentCrashReportsEnabled {
+            let sendCrashReportsSettings = SendDataSetting(
+                prefs: profile.prefs,
+                delegate: settingsDelegate,
+                theme: themeManager.getCurrentTheme(for: windowUUID),
+                settingsDelegate: parentCoordinator,
+                sendDataType: .crashReports
+            )
+            sendCrashReportsSettings.shouldSendData = { value in
+                // TODO: FXIOS-10348 Firefox iOS: Manage Privacy Preferences in Settings
+            }
+            self.sendCrashReportsSetting = sendCrashReportsSettings
         }
 
         sendAnonymousUsageDataSetting = anonymousUsageDataSetting
@@ -329,7 +353,11 @@ class AppSettingsTableViewController: SettingsTableViewController,
                         prefKey: PrefsKeys.Settings.closePrivateTabs,
                         defaultValue: true,
                         titleText: .AppSettingsClosePrivateTabsTitle,
-                        statusText: .AppSettingsClosePrivateTabsDescription)
+                        statusText: .AppSettingsClosePrivateTabsDescription) { _ in
+                            let action = TabTrayAction(windowUUID: self.windowUUID,
+                                                       actionType: TabTrayActionType.closePrivateTabsSettingToggled)
+                            store.dispatch(action)
+            }
         ]
 
         privacySettings.append(ContentBlockerSetting(settings: self, settingsDelegate: parentCoordinator))
@@ -349,15 +377,36 @@ class AppSettingsTableViewController: SettingsTableViewController,
 
     private func getSupportSettings() -> [SettingSection] {
         guard let sendAnonymousUsageDataSetting, let studiesToggleSetting else { return [] }
-        let supportSettings = [
+        let isSentFromFirefoxEnabled = featureFlags.isFeatureEnabled(.sentFromFirefox, checking: .buildOnly)
+
+        var supportSettings = [
             ShowIntroductionSetting(settings: self, settingsDelegate: self),
             SendFeedbackSetting(settingsDelegate: parentCoordinator),
-            sendAnonymousUsageDataSetting,
+        ]
+
+        // Only add this toggle to the Settings if Sent from Firefox feature flag is enabled
+        if isSentFromFirefoxEnabled {
+            supportSettings.append(
+                SentFromFirefoxSetting(
+                    prefs: profile.prefs,
+                    delegate: settingsDelegate,
+                    theme: themeManager.getCurrentTheme(for: windowUUID),
+                    settingsDelegate: parentCoordinator
+                )
+            )
+        }
+
+        supportSettings.append(sendAnonymousUsageDataSetting)
+        if let sendCrashReportsSetting {
+            supportSettings.append(sendCrashReportsSetting)
+        }
+
+        supportSettings.append(contentsOf: [
             studiesToggleSetting,
             OpenSupportPageSetting(delegate: settingsDelegate,
                                    theme: themeManager.getCurrentTheme(for: windowUUID),
                                    settingsDelegate: parentCoordinator),
-        ]
+        ])
 
         return [SettingSection(title: NSAttributedString(string: .AppSettingsSupport),
                                children: supportSettings)]
@@ -392,7 +441,7 @@ class AppSettingsTableViewController: SettingsTableViewController,
             SentryIDSetting(settings: self, settingsDelegate: self),
             FasterInactiveTabs(settings: self, settingsDelegate: self),
             OpenFiftyTabsDebugOption(settings: self, settingsDelegate: self),
-            FirefoxSuggestSettings(settings: self, settingsDelegate: self),
+            FirefoxSuggestSettings(settings: self, settingsDelegate: self)
         ]
 
         #if MOZ_CHANNEL_BETA || MOZ_CHANNEL_FENNEC
@@ -456,10 +505,15 @@ class AppSettingsTableViewController: SettingsTableViewController,
     // MARK: - UITableViewDelegate
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let headerView = super.tableView(
+        guard let headerView = super.tableView(
             tableView,
             viewForHeaderInSection: section
-        ) as! ThemedTableSectionHeaderFooterView
+        ) as? ThemedTableSectionHeaderFooterView else {
+            logger.log("Failed to cast or retrieve ThemedTableSectionHeaderFooterView for section: \(section)",
+                       level: .fatal,
+                       category: .lifecycle)
+            return UIView()
+        }
         return headerView
     }
 }

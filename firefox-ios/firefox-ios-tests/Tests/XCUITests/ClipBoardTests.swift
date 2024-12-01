@@ -9,21 +9,18 @@ class ClipBoardTests: BaseTestCase {
 
     // Check for test url in the browser
     func checkUrl() {
-        let urlTextField = app.textFields["url"]
-        mozWaitForValueContains(urlTextField, value: "www.example")
+        let urlTextField = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        mozWaitForValueContains(urlTextField, value: "example.com")
     }
 
     // Copy url from the browser
     func copyUrl() {
         navigator.goto(URLBarOpen)
-        mozWaitForElementToExist(app.textFields["address"])
-        app.textFields["address"].tap()
+        urlBarAddress.waitAndTap()
         if iPad() {
-            app.textFields["address"].press(forDuration: 1)
             app.menuItems["Select All"].tap()
         }
-        mozWaitForElementToExist(app.menuItems["Copy"])
-        app.menuItems["Copy"].tap()
+        app.menuItems["Copy"].waitAndTap()
         app.typeText("\r")
         navigator.nowAt(BrowserTab)
     }
@@ -38,7 +35,11 @@ class ClipBoardTests: BaseTestCase {
                     allowBtn.tap()
                 }
 
-                var value = app.textFields["url"].value as! String
+                guard var value = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].value
+                        as? String else {
+                    XCTFail("Failed to retrieve the value from the URL bar text field")
+                    return
+                }
                 if value.hasPrefix("http") == false {
                     value = "http://\(value)"
                 }
@@ -62,9 +63,9 @@ class ClipBoardTests: BaseTestCase {
         mozWaitForElementToNotExist(app.staticTexts["XCUITests-Runner pasted from Fennec"])
         navigator.nowAt(NewTabScreen)
         navigator.goto(URLBarOpen)
-        app.textFields["address"].press(forDuration: 3)
-        app.menuItems["Paste"].tap()
-        mozWaitForValueContains(app.textFields["address"], value: "www.example.com")
+        urlBarAddress.press(forDuration: 3)
+        app.otherElements["Paste"].tap()
+        mozWaitForValueContains(urlBarAddress, value: "http://www.example.com/")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307051
@@ -77,13 +78,13 @@ class ClipBoardTests: BaseTestCase {
         mozWaitForElementToExist(app.staticTexts["URL Copied To Clipboard"])
         // Open a new tab. Long tap on the URL and tap "Paste & Go"
         navigator.performAction(Action.OpenNewTabFromTabTray)
-        let urlBar = app.textFields[AccessibilityIdentifiers.Browser.UrlBar.url]
+        let urlBar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
         mozWaitForElementToExist(urlBar)
         urlBar.press(forDuration: 1.5)
         app.otherElements[AccessibilityIdentifiers.Photon.pasteAndGoAction].tap()
         // The URL is pasted and the page is correctly loaded
         mozWaitForElementToExist(urlBar)
-        waitForValueContains(urlBar, value: "test-example.html")
+        waitForValueContains(urlBar, value: "localhost")
         mozWaitForElementToExist(app.staticTexts["Example Domain"])
     }
 
@@ -103,13 +104,13 @@ class ClipBoardTests: BaseTestCase {
 //        mozWaitForElementToNotExist(app.staticTexts["XCUITests-Runner pasted from Fennec"])
 //        navigator.createNewTab()
 //        mozWaitForElementToNotExist(app.staticTexts["XCUITests-Runner pasted from Fennec"])
-//        app.textFields["url"].press(forDuration: 3)
+//        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 3)
 //        mozWaitForElementToExist(app.tables["Context Menu"])
 //        mozWaitForElementToExist(
 //            app.tables["Context Menu"].otherElements[AccessibilityIdentifiers.Photon.pasteAndGoAction]
 //        )
 //        app.tables["Context Menu"].otherElements[AccessibilityIdentifiers.Photon.pasteAndGoAction].tap()
-//        mozWaitForElementToExist(app.textFields["url"])
-//        mozWaitForValueContains(app.textFields["url"], value: "www.example.com")
+//        mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
+//        mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField], value: "www.example.com")
     }
 }

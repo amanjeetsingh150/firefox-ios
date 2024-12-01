@@ -13,6 +13,7 @@ protocol LocationTextFieldDelegate: AnyObject {
     func locationTextFieldShouldClear(_ textField: LocationTextField) -> Bool
     func locationTextFieldDidBeginEditing(_ textField: UITextField)
     func locationTextFieldDidEndEditing(_ textField: UITextField)
+    func locationTextFieldNeedsSearchReset(_ textField: UITextField)
 }
 
 class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
@@ -41,7 +42,7 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
         super.init(frame: .zero)
         super.addTarget(self, action: #selector(LocationTextField.textDidChange), for: .editingChanged)
 
-        font = UIFont.preferredFont(forTextStyle: .body)
+        font = FXFontStyles.Regular.body.scaledFont()
         adjustsFontForContentSizeCategory = true
         clearButtonMode = .whileEditing
         keyboardType = .webSearch
@@ -106,6 +107,7 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard isEditing else { return }
         applyCompletion()
         super.touchesBegan(touches, with: event)
     }
@@ -137,14 +139,7 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
 
         let suggestionText = String(suggestion.dropFirst(normalized.count))
         setMarkedText(suggestionText, selectedRange: NSRange())
-
-        // Only call forceResetCursor() if `hideCursor` changes.
-        // Because forceResetCursor() auto accept iOS user's text replacement
-        // (e.g. mu->μ) which makes user unable to type "mu".
-        if !hideCursor {
-            hideCursor = true
-            forceResetCursor()
-        }
+        hideCursor = true
     }
 
     // MARK: - ThemeApplicable
@@ -152,11 +147,16 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
         let colors = theme.colors
         tintColor = colors.layerSelectedText
         clearButtonTintColor = colors.iconPrimary
-        markedTextStyle = [NSAttributedString.Key.backgroundColor: colors.layerSelectedText]
+        markedTextStyle = [NSAttributedString.Key.backgroundColor: colors.layerAutofillText]
 
         if isEditing {
             textColor = colors.textPrimary
         }
+
+        attributedPlaceholder = NSAttributedString(
+            string: placeholder ?? "",
+            attributes: [NSAttributedString.Key.foregroundColor: colors.textSecondary]
+        )
 
         tintClearButton()
     }
@@ -274,7 +274,7 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
         // can reset itself since it will only lookup results if the new text is
         // longer than the previous text.
         if lastReplacement == nil {
-            autocompleteDelegate?.locationTextField(self, didEnterText: "")
+            autocompleteDelegate?.locationTextFieldNeedsSearchReset(textField)
         }
 
         lastReplacement = string

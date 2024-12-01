@@ -41,6 +41,7 @@ class PocketTests: BaseTestCase {
         app.collectionViews.scrollViews.cells[AccessibilityIdentifiers.FirefoxHomepage.Pocket.itemCell].firstMatch.tap()
         waitUntilPageLoad()
         // The url textField is not empty
-        XCTAssertNotEqual(app.textFields["url"].value as! String, "", "The url textField is empty")
+        let url = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        XCTAssertNotEqual(url.value as? String, "", "The url textField is empty")
     }
 }

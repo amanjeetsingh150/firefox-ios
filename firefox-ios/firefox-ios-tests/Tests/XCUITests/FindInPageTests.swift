@@ -14,8 +14,12 @@ class FindInPageTests: BaseTestCase {
 
         navigator.goto(FindInPage)
 
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.FindInPage.findNextButton])
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton])
+        waitForElementsToExist(
+            [
+                app.buttons[AccessibilityIdentifiers.FindInPage.findNextButton],
+                app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton]
+            ]
+        )
         if #available(iOS 16, *) {
             mozWaitForElementToExist(app.searchFields["find.searchField"])
         } else {
@@ -31,11 +35,8 @@ class FindInPageTests: BaseTestCase {
         navigator.nowAt(BrowserTab)
 
         mozWaitForElementToNotExist(app.staticTexts["Fennec pasted from XCUITests-Runner"])
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
-        app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].tap()
-        mozWaitForElementToExist(app.tables["Context Menu"]
-            .otherElements[StandardImageIdentifiers.Large.search])
-        app.tables["Context Menu"].otherElements[StandardImageIdentifiers.Large.search].tap()
+        app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].waitAndTap()
+        app.tables["Context Menu"].otherElements[StandardImageIdentifiers.Large.search].waitAndTap()
 
         // Enter some text to start finding
         if #available(iOS 16, *) {
@@ -122,8 +123,7 @@ class FindInPageTests: BaseTestCase {
         // Workaround until FxSGraph is fixed to allow the previous way with goto
         waitUntilPageLoad()
         navigator.nowAt(BrowserTab)
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
-        app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].tap()
+        app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].waitAndTap()
         // Enter some text to start finding
         app.tables["Context Menu"].otherElements[StandardImageIdentifiers.Large.search].tap()
         if #available(iOS 16, *) {
@@ -174,8 +174,8 @@ class FindInPageTests: BaseTestCase {
         openFindInPageFromMenu(openSite: userState.url!)
 
         // Before reloading, it is necessary to hide the keyboard
-        app.textFields["url"].tap()
-        app.textFields["address"].typeText("\n")
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].tap()
+        urlBarAddress.typeText("\n")
 
         // Once the page is reloaded the search bar should not appear
         if #available(iOS 16, *) {
@@ -199,8 +199,7 @@ class FindInPageTests: BaseTestCase {
         // Going to tab tray and back to the website hides the search field.
         navigator.goto(TabTray)
 
-        mozWaitForElementToExist(app.cells.staticTexts["The Book of Mozilla"])
-        app.cells.staticTexts["The Book of Mozilla"].firstMatch.tap()
+        app.cells.staticTexts["The Book of Mozilla"].firstMatch.waitAndTap()
         XCTAssertFalse(app.searchFields["find.searchField"].exists)
         XCTAssertFalse(app.buttons[AccessibilityIdentifiers.FindInPage.findNextButton].exists)
         XCTAssertFalse(app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton].exists)

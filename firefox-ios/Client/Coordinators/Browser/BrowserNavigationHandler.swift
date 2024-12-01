@@ -7,6 +7,7 @@ import Storage
 import WebKit
 
 import struct MozillaAppServices.CreditCard
+import enum MozillaAppServices.VisitType
 
 protocol BrowserNavigationHandler: AnyObject, QRCodeNavigationHandler {
     /// Asks to show a settings page, can be a general settings page or a child page
@@ -33,6 +34,7 @@ protocol BrowserNavigationHandler: AnyObject, QRCodeNavigationHandler {
     ///                             from actions in the share extension
     /// - Parameter popoverArrowDirection: The arrow direction for the view controller presented as popover.
     func showShareExtension(url: URL,
+                            title: String?,
                             sourceView: UIView,
                             sourceRect: CGRect?,
                             toastContainer: UIView,
@@ -92,13 +94,25 @@ protocol BrowserNavigationHandler: AnyObject, QRCodeNavigationHandler {
 
     func showMicrosurvey(model: MicrosurveyModel)
 
+    func showPasswordGenerator(tab: Tab, frame: WKFrameInfo)
+
     /// Shows the app menu
     func showMainMenu()
+
+    /// Shows the toolbar's search engine selection bottom sheet (iPhone) or popup (iPad)
+    func showSearchEngineSelection(forSourceView sourceView: UIView)
+
+    /// Navigates from home page to a new link
+    func navigateFromHomePanel(to url: URL, visitType: VisitType, isGoogleTopSite: Bool)
+
+    /// Navigates to our custom context menu (Photon Action Sheet)
+    func showContextMenu()
 }
 
 extension BrowserNavigationHandler {
     func showShareExtension(
         url: URL,
+        title: String? = nil,
         sourceView: UIView,
         sourceRect: CGRect? = nil,
         toastContainer: UIView,
@@ -106,6 +120,7 @@ extension BrowserNavigationHandler {
     ) {
         showShareExtension(
             url: url,
+            title: title,
             sourceView: sourceView,
             sourceRect: sourceRect,
             toastContainer: toastContainer,

@@ -38,28 +38,21 @@ class MultiWindowTests: IpadOnlyTestCase {
         if skipPlatform { return }
         splitViewFromHomeScreen()
         // Access hamburger menu and tap on "new tab"
-        let menuButton = AccessibilityIdentifiers.Toolbar.settingsMenuButton
-        let newTab = StandardImageIdentifiers.Large.plus
         let tabsButtonIdentifier = AccessibilityIdentifiers.Toolbar.tabsButton
         let topSites = AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell
-        let homeButtom = AccessibilityIdentifiers.Toolbar.homeButton
+        let homeButtom = AccessibilityIdentifiers.Toolbar.addNewTabButton
         // A new tab is opened in the same window
-        app.collectionViews.cells.matching(identifier: topSites).firstMatch.tap()
-        mozWaitForElementToExist(app.buttons[homeButtom])
-        app.buttons.matching(identifier: menuButton).element(boundBy: 0).tap()
-        mozWaitForElementToExist(app.tables.otherElements[newTab])
-        app.tables.otherElements[newTab].tap()
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
+        app.collectionViews.cells.matching(identifier: topSites).firstMatch.waitAndTap()
+        app.buttons[homeButtom].firstMatch.tap()
+        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].firstMatch.tap()
         let tabButtonSecondWindow = app.buttons.matching(identifier: tabsButtonIdentifier).element(boundBy: 0)
-        XCTAssertEqual(tabButtonSecondWindow.value as! String, "2", "Number of tabs opened should be equal to 2")
+        XCTAssertEqual(tabButtonSecondWindow.value as? String, "2", "Number of tabs opened should be equal to 2")
         // A new tab is opened in the same window
-        app.collectionViews.cells.matching(identifier: topSites).element(boundBy: 6).tap()
-        mozWaitForElementToExist(app.buttons[homeButtom])
-        app.buttons.matching(identifier: menuButton).element(boundBy: 1).tap()
-        app.tables.otherElements[newTab].tap()
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
+        app.collectionViews.cells.matching(identifier: topSites).element(boundBy: 6).waitAndTap()
+        app.buttons[homeButtom].firstMatch.tap()
+        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].firstMatch.tap()
         let tabButtonFirstWindow = app.buttons.matching(identifier: tabsButtonIdentifier).element(boundBy: 1)
-        XCTAssertEqual(tabButtonFirstWindow.value as! String, "2", "Number of tabs opened should be equal to 2")
+        XCTAssertEqual(tabButtonFirstWindow.value as? String, "2", "Number of tabs opened should be equal to 2")
     }
 
     func testOpenWindowFromTabSwitcher() {
@@ -69,18 +62,15 @@ class MultiWindowTests: IpadOnlyTestCase {
     }
 
     private func splitViewFromHomeScreen() {
-        mozWaitForElementToExist(dotMenu)
-        dotMenu.tap()
-        mozWaitForElementToExist(splitView)
-        splitView.tap()
+        dotMenu.waitAndTap()
+        splitView.waitAndTap()
         springboard.icons.elementContainingText("split view with Fennec").tap()
     }
 
     // Param windowsNumber - number of tab windows to open from switcher
     private func openWindowFromTabSwitcher(windowsNumber: Int) {
         for  _ in 1...windowsNumber {
-            mozWaitForElementToExist(dotMenu)
-            dotMenu.tap()
+            dotMenu.waitAndTap()
             let cardOrgMozillaIosFennecButton = springboard.buttons["card:org.mozilla.ios.Fennec:"]
             cardOrgMozillaIosFennecButton.tap()
         }
@@ -88,10 +78,8 @@ class MultiWindowTests: IpadOnlyTestCase {
 
     // Param windowToClose - 0 for the first window, 1 for the second window
     func closeSplitViewWindow(windowToClose: Int) {
-        mozWaitForElementToExist(dotMenuIdentifier.element(boundBy: windowToClose))
-        dotMenuIdentifier.element(boundBy: windowToClose).tap()
-        mozWaitForElementToExist(springboard.buttons["top-affordance-close-window"])
-        springboard.buttons["top-affordance-close-window"].tap()
+        dotMenuIdentifier.element(boundBy: windowToClose).waitAndTap()
+        springboard.buttons["top-affordance-close-window"].waitAndTap()
     }
 
     // Coudn't find a way to select a tab from switcher

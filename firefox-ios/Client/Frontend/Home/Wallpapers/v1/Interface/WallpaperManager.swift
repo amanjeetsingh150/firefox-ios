@@ -109,7 +109,7 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
         } catch {
             logger.log("Failed to set wallpaper: \(error.localizedDescription)",
                        level: .warning,
-                       category: .homepage)
+                       category: .legacyHomepage)
             completion(.failure(WallpaperManagerError.other(error)))
         }
     }
@@ -148,7 +148,7 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
             } catch {
                 logger.log("Error fetching wallpaper resources: \(error.localizedDescription)",
                            level: .warning,
-                           category: .homepage)
+                           category: .legacyHomepage)
                 completion(.failure(WallpaperManagerError.downloadFailed(error)))
             }
         }
@@ -199,10 +199,7 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
     }
 
     private func addDefaultWallpaper(to availableCollections: [WallpaperCollection]) -> [WallpaperCollection] {
-        let defaultWallpaper = [Wallpaper(id: "fxDefault",
-                                          textColor: nil,
-                                          cardColor: nil,
-                                          logoTextColor: nil)]
+        let defaultWallpaper = [Wallpaper.defaultWallpaper]
 
         if availableCollections.isEmpty {
             return [WallpaperCollection(id: "classic-firefox",
@@ -237,7 +234,7 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
         } catch {
             logger.log("Error getting stored metadata: \(error.localizedDescription)",
                        level: .warning,
-                       category: .homepage)
+                       category: .legacyHomepage)
             return nil
         }
     }

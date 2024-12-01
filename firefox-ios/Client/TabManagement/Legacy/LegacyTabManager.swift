@@ -79,7 +79,6 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
     var backupCloseTab: BackupCloseTab?
     var backupCloseTabs = [Tab]()
 
-    var tabDisplayType: TabDisplayType = .TabGrid
     let delaySelectingNewPopupTab: TimeInterval = 0.1
 
     var normalTabs: [Tab] {
@@ -408,7 +407,6 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
         let popup = Tab(profile: profile,
                         isPrivate: parentTab.isPrivate,
                         windowUUID: windowUUID)
-
         // Configure the tab for the child popup webview. In this scenario we need to be sure to pass along
         // the specific `configuration` that we are given by the WKUIDelegate callback, since if we do not
         // use this configuration WebKit will throw an exception.
@@ -448,12 +446,6 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
         } else if let parent = parent, var insertIndex = tabs.firstIndex(of: parent) {
             placeNextToParentTab = true
             insertIndex += 1
-
-            // If we are on iPad (.TopTabTray), the new tab should be inserted immediately after the parent tab.
-            // In this scenario the while loop shouldn't be executed.
-            while insertIndex < tabs.count && tabs[insertIndex].isDescendentOf(parent) && tabDisplayType == .TabGrid {
-                insertIndex += 1
-            }
 
             tab.parent = parent
             tabs.insert(tab, at: insertIndex)
@@ -510,7 +502,7 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
 
     // MARK: - Move tabs
     func reorderTabs(isPrivate privateMode: Bool, fromIndex visibleFromIndex: Int, toIndex visibleToIndex: Int) {
-        let currentTabs = privateMode ? privateTabs : normalTabs
+        let currentTabs = privateMode ? privateTabs : normalActiveTabs
 
         guard visibleFromIndex < currentTabs.count, visibleToIndex < currentTabs.count else { return }
 
@@ -583,12 +575,11 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
         guard let index = tabs.firstIndex(where: { $0.tabUUID == tabUUID }) else { return }
 
         let tab = tabs[index]
-        if TabTrayFlagManager.isRefactorEnabled {
-            backupCloseTab = BackupCloseTab(
-                tab: tab,
-                restorePosition: index,
-                isSelected: selectedTab?.tabUUID == tab.tabUUID)
-        }
+        backupCloseTab = BackupCloseTab(
+            tab: tab,
+            restorePosition: index,
+            isSelected: selectedTab?.tabUUID == tab.tabUUID)
+
         self.removeTab(tab, flushToDisk: true)
         self.updateSelectedTabAfterRemovalOf(tab, deletedIndex: index)
 
@@ -711,7 +702,7 @@ class LegacyTabManager: NSObject, FeatureFlaggable, TabManager, TabEventHandler 
     }
 
     @MainActor
-    func undoCloseInactiveTabs() { fatalError("should never be called") }
+    func undoCloseInactiveTabs() async { fatalError("should never be called") }
 
     func backgroundRemoveAllTabs(isPrivate: Bool = false,
                                  didClearTabs: @escaping (_ tabsToRemove: [Tab],

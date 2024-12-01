@@ -15,7 +15,7 @@ let buttonSettings = "Settings"
 let buttonDone = "Done"
 let reloadButton = "TabLocationView.reloadButton"
 let reloadWithWithoutProtectionButton = "shieldSlashLarge"
-let secureTrackingProtectionOnLabel = "Secure connection"
+let secureTrackingProtectionOnLabel = "Privacy & Security Settings"
 let secureTrackingProtectionOffLabel = "Secure connection. Enhanced Tracking Protection is off."
 
 class TrackingProtectionTests: BaseTestCase {
@@ -24,7 +24,7 @@ class TrackingProtectionTests: BaseTestCase {
     }
 
     private func checkTrackingProtectionDisabledForSite() {
-        mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection])
+        mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon])
     }
 
     private func checkTrackingProtectionEnabledForSite() {
@@ -36,11 +36,13 @@ class TrackingProtectionTests: BaseTestCase {
         mozWaitForElementToExist(app.buttons.element(matching: .button, identifier: reloadButton), timeout: 10)
         app.buttons.element(matching: .button, identifier: reloadButton).press(forDuration: 3)
         if label == "Without Tracking Protection" {
+            mozWaitForElementToExist(app.otherElements[reloadWithWithoutProtectionButton], timeout: 5)
             XCTAssertEqual(
                 "Reload Without Tracking Protection",
                 app.otherElements.element(matching: .any, identifier: reloadWithWithoutProtectionButton).label
             )
         } else {
+            mozWaitForElementToExist(app.otherElements[reloadWithWithoutProtectionButton], timeout: 5)
             XCTAssertEqual(
                 "Reload With Tracking Protection",
                 app.otherElements.element(
@@ -50,7 +52,12 @@ class TrackingProtectionTests: BaseTestCase {
             )
         }
         app.otherElements.element(matching: .any, identifier: reloadWithWithoutProtectionButton).tap()
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection], timeout: 5)
+        waitUntilPageLoad()
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
+        if #unavailable(iOS 16) {
+            XCTAssert(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].isHittable)
+            sleep(2)
+        }
     }
 
     private func enableStrictMode() {
@@ -64,7 +71,7 @@ class TrackingProtectionTests: BaseTestCase {
         if iPad() {
             sleep(1)
         }
-        if app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label
+        if app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label
             == secureTrackingProtectionOffLabel {
             trackingProtection = false
         }
@@ -75,7 +82,8 @@ class TrackingProtectionTests: BaseTestCase {
     // Smoketest
     func testStandardProtectionLevel() {
         navigator.goto(URLBarOpen)
-        mozWaitForElementToExist(app.buttons["urlBar-cancel"], timeout: TIMEOUT_LONG)
+        let cancelButton = app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton]
+        mozWaitForElementToExist(cancelButton, timeout: TIMEOUT_LONG)
         navigator.back()
         navigator.goto(TrackingProtectionSettings)
 
@@ -90,9 +98,11 @@ class TrackingProtectionTests: BaseTestCase {
         waitUntilPageLoad()
 
         // The lock icon should still be there
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection])
-        mozWaitForElementToExist(
-            app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
+        waitForElementsToExist(
+            [
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon],
+                app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
+            ]
         )
 
         // Switch to Private Browsing
@@ -101,13 +111,14 @@ class TrackingProtectionTests: BaseTestCase {
         waitUntilPageLoad()
 
         // Make sure TP is also there in PBM
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection])
-        mozWaitForElementToExist(
-            app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
+        waitForElementsToExist(
+            [
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon],
+                app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
+            ]
         )
         navigator.goto(BrowserTabMenu)
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.settings])
-        app.tables.otherElements[StandardImageIdentifiers.Large.settings].tap()
+        app.tables.otherElements[StandardImageIdentifiers.Large.settings].waitAndTap()
         navigator.nowAt(SettingsScreen)
         mozWaitForElementToExist(app.tables.cells["NewTab"])
         app.tables.cells["NewTab"].swipeUp()
@@ -121,9 +132,9 @@ class TrackingProtectionTests: BaseTestCase {
     func testLockIconMenu() {
         navigator.openURL(differentWebsite)
         waitUntilPageLoad()
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection])
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon])
         if #unavailable(iOS 16) {
-            XCTAssert(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].isHittable)
+            XCTAssert(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].isHittable)
             sleep(2)
         }
         navigator.nowAt(BrowserTab)
@@ -131,21 +142,21 @@ class TrackingProtectionTests: BaseTestCase {
         mozWaitForElementToExist(app.staticTexts["Connection not secure"], timeout: 5)
         var switchValue = app.switches.firstMatch.value!
         // Need to make sure first the setting was not turned off previously
-        if switchValue as! String == "0" {
+        if switchValue as? String == "0" {
             app.switches.firstMatch.tap()
         }
         switchValue = app.switches.firstMatch.value!
-        XCTAssertEqual(switchValue as! String, "1")
+        XCTAssertEqual(switchValue as? String, "1")
 
         app.switches.firstMatch.tap()
         let switchValueOFF = app.switches.firstMatch.value!
-        XCTAssertEqual(switchValueOFF as! String, "0")
+        XCTAssertEqual(switchValueOFF as? String, "0")
 
         // Open TP Settings menu
         app.buttons["Privacy settings"].tap()
         mozWaitForElementToExist(app.navigationBars["Tracking Protection"], timeout: 5)
         let switchSettingsValue = app.switches["prefkey.trackingprotection.normalbrowsing"].value!
-        XCTAssertEqual(switchSettingsValue as! String, "1")
+        XCTAssertEqual(switchSettingsValue as? String, "1")
         app.switches["prefkey.trackingprotection.normalbrowsing"].tap()
         // Disable ETP from setting and check that it applies to the site
         app.buttons["Settings"].tap()
@@ -162,11 +173,15 @@ class TrackingProtectionTests: BaseTestCase {
         navigator.goto(TrackingProtectionSettings)
         // See Basic mode info
         app.cells["Settings.TrackingProtectionOption.BlockListBasic"].buttons["More Info"].tap()
-        mozWaitForElementToExist(app.navigationBars["Client.TPAccessoryInfo"])
-        mozWaitForElementToExist(app.cells.staticTexts["Social Trackers"])
-        mozWaitForElementToExist(app.cells.staticTexts["Cross-Site Trackers"])
-        mozWaitForElementToExist(app.cells.staticTexts["Fingerprinters"])
-        mozWaitForElementToExist(app.cells.staticTexts["Cryptominers"])
+        waitForElementsToExist(
+            [
+                app.navigationBars["Client.TPAccessoryInfo"],
+                app.cells.staticTexts["Social Trackers"],
+                app.cells.staticTexts["Cross-Site Trackers"],
+                app.cells.staticTexts["Fingerprinters"],
+                app.cells.staticTexts["Cryptominers"]
+            ]
+        )
         mozWaitForElementToNotExist(app.cells.staticTexts["Tracking content"])
 
         // Go back to TP settings
@@ -193,14 +208,18 @@ class TrackingProtectionTests: BaseTestCase {
         navigator.nowAt(BrowserTab)
         navigator.goto(TrackingProtectionContextMenuDetails)
         // A page displaying the connection is secure
-        mozWaitForElementToExist(app.staticTexts["mozilla.org"])
-        mozWaitForElementToExist(app.staticTexts["Secure connection"])
+        waitForElementsToExist(
+            [
+                app.staticTexts["mozilla.org"],
+                app.staticTexts["Secure connection"]
+            ]
+        )
         XCTAssertEqual(
-            app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
-            "Secure connection"
+            app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
+            secureTrackingProtectionOnLabel
         )
         // Dismiss the view and visit "badssl.com". Tap on "expired"
-        app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].tap(force: true)
+        navigator.performAction(Action.CloseTPContextMenu)
         navigator.nowAt(BrowserTab)
         navigator.openNewURL(urlString: "https://www.badssl.com")
         waitUntilPageLoad()
@@ -213,7 +232,11 @@ class TrackingProtectionTests: BaseTestCase {
             timeout: TIMEOUT_LONG
         )
         mozWaitForElementToExist(app.staticTexts.elementContainingText("Firefox has not connected to this website."))
-        XCTAssertEqual(app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label, "Connection not secure")
+
+        XCTAssertEqual(
+            app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
+            secureTrackingProtectionOnLabel
+        )
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2693741
@@ -228,9 +251,11 @@ class TrackingProtectionTests: BaseTestCase {
         // Tap "Secure connection"
         navigator.nowAt(BrowserTab)
         navigator.goto(TrackingProtectionContextMenuDetails)
-        mozWaitForElementToExist(app.staticTexts["Secure connection"])
+        mozWaitForElementToExist(
+            app.staticTexts[AccessibilityIdentifiers.EnhancedTrackingProtection.MainScreen.securityStatusLabel])
         navigator.performAction(Action.CloseTPContextMenu)
-        mozWaitForElementToNotExist(app.staticTexts["Secure connection"])
+        mozWaitForElementToNotExist(
+            app.staticTexts[AccessibilityIdentifiers.EnhancedTrackingProtection.MainScreen.securityStatusLabel])
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307063
@@ -240,38 +265,45 @@ class TrackingProtectionTests: BaseTestCase {
         enableStrictMode()
         navigator.nowAt(BrowserTab)
         navigator.openURL(trackingProtectionTestUrl)
+        waitUntilPageLoad()
 
         if checkTrackingProtectionOn() {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
                 secureTrackingProtectionOnLabel
             )
             navigator.nowAt(BrowserTab)
             reloadWithWithoutTrackingProtection(label: "Without Tracking Protection")
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
-                secureTrackingProtectionOffLabel
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
+                secureTrackingProtectionOnLabel
             )
             reloadWithWithoutTrackingProtection(label: "With Tracking Protection")
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
                 secureTrackingProtectionOnLabel
             )
         } else {
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
-                secureTrackingProtectionOffLabel
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
+                secureTrackingProtectionOnLabel
             )
             navigator.nowAt(BrowserTab)
             reloadWithWithoutTrackingProtection(label: "With Tracking Protection")
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
                 secureTrackingProtectionOnLabel
             )
             reloadWithWithoutTrackingProtection(label: "Without Tracking Protection")
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon], timeout: 5)
             XCTAssertEqual(
-                app.buttons[AccessibilityIdentifiers.Toolbar.trackingProtection].label,
-                secureTrackingProtectionOffLabel
+                app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon].label,
+                secureTrackingProtectionOnLabel
             )
         }
     }

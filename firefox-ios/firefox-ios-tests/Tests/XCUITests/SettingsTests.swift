@@ -9,9 +9,9 @@ class SettingsTests: BaseTestCase {
         let noImageStatusMode = app.otherElements.tables.cells.switches["NoImageModeStatus"]
         mozWaitForElementToExist(noImageStatusMode)
         if showImages {
-            XCTAssertEqual(noImageStatusMode.value as! String, "0")
+            XCTAssertEqual(noImageStatusMode.value as? String, "0")
         } else {
-            XCTAssertEqual(noImageStatusMode.value as! String, "1")
+            XCTAssertEqual(noImageStatusMode.value as? String, "1")
         }
     }
 
@@ -29,7 +29,8 @@ class SettingsTests: BaseTestCase {
         helpMenu.tap()
 
         waitUntilPageLoad()
-        mozWaitForValueContains(app.textFields["url"], value: "support.mozilla.org")
+        let url = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        mozWaitForValueContains(url, value: "support.mozilla.org")
         mozWaitForElementToExist(app.webViews.staticTexts["Firefox for iOS Support"])
 
         let numTabs = app.buttons["Show Tabs"].value
@@ -154,7 +155,8 @@ class SettingsTests: BaseTestCase {
             table.cells[settingsQuery.CreditCards.title], table.cells[settingsQuery.Address.title],
             table.cells[settingsQuery.ClearData.title], app.switches[settingsQuery.ClosePrivateTabs.title],
             table.cells[settingsQuery.ContentBlocker.title], table.cells[settingsQuery.Notifications.title],
-            table.cells[settingsQuery.ShowIntroduction.title], table.cells[settingsQuery.SendAnonymousUsageData.title],
+            table.cells[settingsQuery.ShowIntroduction.title],
+            table.cells[settingsQuery.SendData.sendAnonymousUsageDataTitle],
             table.cells[settingsQuery.StudiesToggle.title], table.cells[settingsQuery.Version.title],
             table.cells[settingsQuery.PrivacyPolicy.title], table.cells[settingsQuery.SendFeedback.title],
             table.cells[settingsQuery.Help.title], table.cells[settingsQuery.RateOnAppStore.title],

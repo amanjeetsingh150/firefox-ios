@@ -44,6 +44,8 @@ struct ContextualHintEligibilityUtility: ContextualHintEligibilityUtilityProtoco
             hintTypeShouldBePresented = canPresentJumpBackInSyncedTab
         case .toolbarLocation:
             hintTypeShouldBePresented = isSearchBarLocationFeatureEnabled
+        case .mainMenu:
+            hintTypeShouldBePresented = canMenuCFRBePresented
         case .inactiveTabs:
             hintTypeShouldBePresented = true
         case .shoppingExperience:
@@ -61,6 +63,14 @@ struct ContextualHintEligibilityUtility: ContextualHintEligibilityUtilityProtoco
         guard overlayState != nil else { return false }
 
         return overlayState?.inOverlayMode ?? false
+    }
+
+    /// Determine if the CFR for Menu is presentable.
+    ///
+    /// It's presentable on these conditions:
+    /// - menu-hint flag is enabled
+    private var canMenuCFRBePresented: Bool {
+        return featureFlags.isFeatureEnabled(.menuRefactorHint, checking: .buildOnly) ? true : false
     }
 
     /// If device is iPhone we present JumpBackIn and SyncTab CFRs only after Toolbar CFR has been

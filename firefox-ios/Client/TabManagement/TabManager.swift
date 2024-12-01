@@ -28,7 +28,6 @@ protocol TabManager: AnyObject {
     var normalActiveTabs: [Tab] { get }
     var inactiveTabs: [Tab] { get }
     var privateTabs: [Tab] { get }
-    var tabDisplayType: TabDisplayType { get set }
     subscript(index: Int) -> Tab? { get }
     subscript(webView: WKWebView) -> Tab? { get }
 
@@ -93,11 +92,11 @@ protocol TabManager: AnyObject {
     /// - Returns: Return list of tabs considered inactive
     func getInactiveTabs() -> [Tab]
 
-    /// Async Remove all inactive tabs, used when user closes all inactive tabs and TabTrayFlagManager is enabled
+    /// Async Remove all inactive tabs, used when user closes all inactive tabs
     func removeAllInactiveTabs() async
 
     /// Undo all inactive tabs closure. All inactive tabs are added back to the list of tabs
-    func undoCloseInactiveTabs()
+    func undoCloseInactiveTabs() async
 }
 
 extension TabManager {

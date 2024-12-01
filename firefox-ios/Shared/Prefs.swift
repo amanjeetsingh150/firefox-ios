@@ -20,6 +20,7 @@ public struct PrefsKeys {
     public static let HasFocusInstalled = "HasFocusInstalled"
     public static let HasPocketInstalled = "HasPocketInstalled"
     public static let IntroSeen = "IntroViewControllerSeen"
+    public static let TermsOfServiceAccepted = "TermsOfServiceAccepted"
     public static let HomePageTab = "HomePageTab"
     public static let HomeButtonHomePageURL = "HomeButtonHomepageURL"
     public static let NumberOfTopSiteRows = "NumberOfTopSiteRows"
@@ -77,6 +78,7 @@ public struct PrefsKeys {
         public static let InactiveTabs = "InactiveTabsUserPrefsKey"
         public static let JumpBackInSection = "JumpBackInSectionUserPrefsKey"
         public static let SearchBarPosition = "SearchBarPositionUsersPrefsKey"
+        public static let SentFromFirefox = "SentFromFirefoxUserPrefsKey"
     }
 
     public struct SearchSettings {
@@ -112,6 +114,7 @@ public struct PrefsKeys {
         case jumpBackInSyncedTabConfiguredKey = "JumpBackInSyncedTabConfigured"
         case inactiveTabsKey = "ContextualHintInactiveTabs"
         case toolbarOnboardingKey = "ContextualHintToolbarOnboardingKey"
+        case mainMenuKey = "MainMenuHintKey"
         case shoppingOnboardingKey = "ShoppingOnboardingCFRKey"
         case shoppingOnboardingCFRsCounterKey = "ShoppingOnboardingCFRsCounterKey"
         case navigationKey = "ContextualHintNavigation"
@@ -120,6 +123,7 @@ public struct PrefsKeys {
     // Firefox settings
     public struct Settings {
         public static let closePrivateTabs = "ClosePrivateTabs"
+        public static let sentFromFirefoxWhatsApp = "SentFromFirefoxWhatsApp"
     }
 
     // Activity Stream
@@ -140,8 +144,6 @@ public struct PrefsKeys {
     public static let KeyBlockPopups = "blockPopups"
 
     // Tabs Tray
-    public static let KeyInactiveTabsModel = "KeyInactiveTabsModelKey"
-    public static let KeyInactiveTabsFirstTimeRun = "KeyInactiveTabsFirstTimeRunKey"
     public static let KeyTabDisplayOrder = "KeyTabDisplayOrderKey"
     public static let TabMigrationKey = "TabMigrationKey"
     public static let TabSyncEnabled = "sync.engine.tabs.enabled"
@@ -188,6 +190,15 @@ public struct PrefsKeys {
 
     // Used to show splash screen only during first time on fresh install
     public static let splashScreenShownKey = "splashScreenShownKey"
+
+    public static let PasswordGeneratorShown = "PasswordGeneratorShown"
+
+    // Represents whether or not the user has seen the photon main menu once, at least.
+    public static let PhotonMainMenuShown = "PhotonMainMenuShown"
+
+    public struct Usage {
+        public static let profileId = "profileId"
+    }
 }
 
 public protocol Prefs {
@@ -326,7 +337,7 @@ open class MockProfilePrefs: Prefs {
     }
 
     open func clearAll() {
-        let dictionary = things as! [String: Any]
+        guard let dictionary = things as? [String: Any] else { return }
         let keysToDelete: [String] = dictionary.keys.filter { $0.hasPrefix(self.prefix) }
         things.removeObjects(forKeys: keysToDelete)
     }

@@ -9,7 +9,7 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     @MainActor
     func testPanelsEmptyState() {
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton], timeout: 10)
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
         navigator.nowAt(NewTabScreen)
         navigator.goto(LibraryPanel_Bookmarks)
         snapshot("PanelsEmptyState-LibraryPanels.Bookmarks")
@@ -28,7 +28,7 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
         mozWaitForElementToNotExist(app.staticTexts["XCUITests-Runner pasted from Fennec"])
 
         // Select some text and long press to find the option
-        mozWaitForElementToExist(app.webViews.element(boundBy: 0).staticTexts.element(boundBy: 0), timeout: 10)
+        mozWaitForElementToExist(app.webViews.element(boundBy: 0).staticTexts.element(boundBy: 0))
         app.webViews.element(boundBy: 0).staticTexts.element(boundBy: 0).press(forDuration: 1)
         snapshot("LongPressTextOptions-01")
         if app.menuItems["show.next.items.menu.button"].exists {
@@ -82,7 +82,7 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
     func testPageMenuOnWebPage() {
         navigator.openURL(loremIpsumURL)
         mozWaitForElementToNotExist(app.staticTexts["XCUITests-Runner pasted from Fennec"])
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton], timeout: 15)
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
         navigator.goto(BrowserTabMenu)
         snapshot("MenuOnWebPage-03")
     }
@@ -90,12 +90,12 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
     @MainActor
     func testFxASignInPage() {
         navigator.openURL(loremIpsumURL)
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton], timeout: 10)
+        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
         navigator.nowAt(NewTabScreen)
         navigator.goto(BrowserTabMenu)
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.sync], timeout: 5)
+        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.sync])
         navigator.goto(Intro_FxASignin)
-        mozWaitForElementToExist(app.navigationBars.staticTexts["FxASingin.navBar"], timeout: 10)
+        mozWaitForElementToExist(app.navigationBars.staticTexts["FxASingin.navBar"])
         snapshot("FxASignInScreen-01")
     }
 
@@ -114,8 +114,7 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
             app.buttons.staticTexts["Continue"].tap()
             app.tables["Add Credential"].cells.element(boundBy: 1).tap()
         }
-        mozWaitForElementToExist(key, timeout: 5)
-        key.tap()
+        key.waitAndTap(timeout: 5)
     }
 
     @MainActor
@@ -123,10 +122,9 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
         let key = 15
         navigator.nowAt(NewTabScreen)
         navigator.goto(SettingsScreen)
-        mozWaitForElementToExist(app.cells["Search"], timeout: 5)
+        mozWaitForElementToExist(app.cells["Search"])
         app.cells["Search"].swipeUp()
-        mozWaitForElementToExist(app.cells["Logins"], timeout: 15)
-        app.cells["Logins"].tap()
+        app.cells["Logins"].waitAndTap(timeout: 15)
 
         // Press continue button on the password onboarding if it's shown
         if app.buttons[AccessibilityIdentifiers.Settings.Passwords.onboardingContinue].exists {
@@ -134,8 +132,7 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
         }
 
         let passcodeInput = springboard.secureTextFields.firstMatch
-        mozWaitForElementToExist(passcodeInput, timeout: 30)
-        passcodeInput.tap()
+        passcodeInput.waitAndTap(timeout: 30)
         passcodeInput.typeText("foo\n")
 
         mozWaitForElementToExist(app.tables["Login List"], timeout: 25)
@@ -143,18 +140,14 @@ class L10nSuite2SnapshotTests: L10nBaseSnapshotTests {
         snapshot("CreateLogin")
         app.buttons["addCredentialButton"].tap()
 
-        mozWaitForElementToExist(app.tables["Add Credential"].cells.element(boundBy: 0), timeout: 15)
-        app.tables["Add Credential"].cells.element(boundBy: 0).tap()
+        app.tables["Add Credential"].cells.element(boundBy: 0).waitAndTap(timeout: 15)
         tapKeyboardKey(key)
-        mozWaitForElementToExist(app.tables["Add Credential"].cells.element(boundBy: 1), timeout: 15)
 
-        app.tables["Add Credential"].cells.element(boundBy: 1).tap()
+        app.tables["Add Credential"].cells.element(boundBy: 1).waitAndTap(timeout: 15)
         tapKeyboardKey(key)
-        mozWaitForElementToExist(app.tables["Add Credential"].cells.element(boundBy: 2), timeout: 5)
-        app.tables["Add Credential"].cells.element(boundBy: 2).tap()
+        app.tables["Add Credential"].cells.element(boundBy: 2).waitAndTap(timeout: 5)
         tapKeyboardKey(key)
-        mozWaitForElementToExist(app.navigationBars["Client.AddCredentialView"].buttons.element(boundBy: 1), timeout: 5)
-        app.navigationBars["Client.AddCredentialView"].buttons.element(boundBy: 1).tap()
+        app.navigationBars["Client.AddCredentialView"].buttons.element(boundBy: 1).waitAndTap(timeout: 5)
         mozWaitForElementToExist(app.tables["Login List"], timeout: 15)
         snapshot("CreatedLoginView")
 

@@ -17,15 +17,14 @@ class ToolbarMenuTests: BaseTestCase {
         let hamburgerMenu = app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
         let tabsButton = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton]
         let firstPocketCell = app.collectionViews.cells["PocketCell"].firstMatch
-        let bookmarksButton = app.buttons[AccessibilityIdentifiers.Toolbar.bookmarksButton]
-        mozWaitForElementToExist(hamburgerMenu)
-        mozWaitForElementToExist(firstPocketCell)
+        waitForElementsToExist(
+            [
+                hamburgerMenu,
+                firstPocketCell
+            ]
+        )
         if iPad() {
-            mozWaitForElementToExist(bookmarksButton)
-            XCTAssertTrue(
-                hamburgerMenu.isRightOf(rightElement: bookmarksButton),
-                "Menu button is not on the right side of bookmarks button"
-            )
+            mozWaitForElementToExist(firstPocketCell)
             XCTAssertTrue(
                 hamburgerMenu.isAbove(element: firstPocketCell),
                 "Menu button is not above the pocket cells area"
@@ -47,21 +46,12 @@ class ToolbarMenuTests: BaseTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         mozWaitForElementToExist(hamburgerMenu)
         mozWaitForElementToNotExist(app.tables["Context Menu"])
-        mozWaitForElementToExist(app.textFields["url"])
-        mozWaitForElementToExist(app.webViews["contentView"])
-        if iPad() {
-            mozWaitForElementToExist(bookmarksButton)
-            XCTAssertTrue(
-                hamburgerMenu.isRightOf(rightElement: bookmarksButton),
-                "Menu button is not on the right side of bookmarks button"
-            )
-        } else {
-            mozWaitForElementToExist(tabsButton)
-            XCTAssertTrue(
-                hamburgerMenu.isRightOf(rightElement: tabsButton),
-                "Menu button is not on the right side of tabs button"
-            )
-        }
+        mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
+        mozWaitForElementToExist(tabsButton)
+        XCTAssertTrue(
+            hamburgerMenu.isRightOf(rightElement: tabsButton),
+            "Menu button is not on the right side of tabs button"
+        )
         mozWaitForElementToExist(firstPocketCell)
         XCTAssertTrue(
             hamburgerMenu.isAbove(element: firstPocketCell),
@@ -75,15 +65,19 @@ class ToolbarMenuTests: BaseTestCase {
     }
 
     private func validateMenuOptions() {
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.bookmarkTrayFill])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.download])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.readingList])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.login])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.sync])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.nightMode])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.whatsNew])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.helpCircle])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.edit])
-        mozWaitForElementToExist(app.tables.otherElements[StandardImageIdentifiers.Large.settings])
+        waitForElementsToExist(
+            [
+                app.tables.otherElements[StandardImageIdentifiers.Large.bookmarkTrayFill],
+                app.tables.otherElements[StandardImageIdentifiers.Large.download],
+                app.tables.otherElements[StandardImageIdentifiers.Large.readingList],
+                app.tables.otherElements[StandardImageIdentifiers.Large.login],
+                app.tables.otherElements[StandardImageIdentifiers.Large.sync],
+                app.tables.otherElements[StandardImageIdentifiers.Large.nightMode],
+                app.tables.otherElements[StandardImageIdentifiers.Large.whatsNew],
+                app.tables.otherElements[StandardImageIdentifiers.Large.helpCircle],
+                app.tables.otherElements[StandardImageIdentifiers.Large.edit],
+                app.tables.otherElements[StandardImageIdentifiers.Large.settings]
+            ]
+        )
     }
 }
