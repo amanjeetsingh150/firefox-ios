@@ -270,7 +270,7 @@ class PrivateBrowsingTest: BaseTestCase {
         waitUntilPageLoad()
         navigator.goto(BrowserTabMenu)
         // Validate menu option New Private Tab
-        let newPrivateTab = app.tables.otherElements["New Private Tab"]
+        let newPrivateTab = app.staticTexts["New Private Tab"]
         mozWaitForElementToExist(newPrivateTab)
         scrollToElement(newPrivateTab)
         // Tap on "New private tab" option
@@ -334,10 +334,10 @@ class PrivateBrowsingTestIphone: IphoneOnlyTestCase {
         waitForElementsToExist(
             [
                 app.links["RFC 2606"],
-                app.buttons["Show Tabs"]
+                app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton]
             ]
         )
-        let numPrivTab = app.buttons["Show Tabs"].value as? String
+        let numPrivTab = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].value as? String
         XCTAssertEqual("2", numPrivTab)
     }
 }

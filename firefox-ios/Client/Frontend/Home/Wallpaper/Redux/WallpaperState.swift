@@ -48,18 +48,32 @@ struct WallpaperConfiguration: Equatable {
     var textColor: UIColor?
     var cardColor: UIColor?
     var logoTextColor: UIColor?
+    var hasImage: Bool
 
     init(
         landscapeImage: UIImage? = nil,
         portraitImage: UIImage? = nil,
         textColor: UIColor? = nil,
         cardColor: UIColor? = nil,
-        logoTextColor: UIColor? = nil
+        logoTextColor: UIColor? = nil,
+        hasImage: Bool = false
     ) {
         self.landscapeImage = landscapeImage
         self.portraitImage = portraitImage
         self.textColor = textColor
         self.cardColor = cardColor
         self.logoTextColor = logoTextColor
+        self.hasImage = hasImage
+    }
+
+    init(wallpaper: Wallpaper) {
+        self.init(
+            landscapeImage: wallpaper.landscape,
+            portraitImage: wallpaper.portrait,
+            textColor: wallpaper.textColor,
+            cardColor: wallpaper.cardColor,
+            logoTextColor: wallpaper.logoTextColor,
+            hasImage: wallpaper.hasImage
+        )
     }
  }

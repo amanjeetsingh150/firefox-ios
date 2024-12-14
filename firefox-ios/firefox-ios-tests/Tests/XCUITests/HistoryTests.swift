@@ -4,6 +4,7 @@
 
 import Common
 import XCTest
+import Shared
 
 let webpage = [
     "url": "www.mozilla.org",
@@ -530,9 +531,6 @@ class HistoryTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306890
     // Smoketest
     func testDeleteHistoryEntryBySwiping() {
-        navigateToPage()
-        navigator.goto(LibraryPanel_History)
-        waitForExistence(app.cells.staticTexts["http://example.com/"])
         navigateToPage()
         navigator.goto(LibraryPanel_History)
         mozWaitForElementToExist(app.cells.staticTexts["http://example.com/"])

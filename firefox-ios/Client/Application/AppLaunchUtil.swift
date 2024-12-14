@@ -30,6 +30,8 @@ class AppLaunchUtil {
             logger.copyLogsToDocuments()
         }
 
+        DefaultBrowserUtil().processUserDefaultState(isFirstRun: introScreenManager.shouldShowIntroScreen)
+
         TelemetryWrapper.shared.setup(profile: profile)
         recordStartUpTelemetry()
 

@@ -33,7 +33,7 @@ class SettingsTests: BaseTestCase {
         mozWaitForValueContains(url, value: "support.mozilla.org")
         mozWaitForElementToExist(app.webViews.staticTexts["Firefox for iOS Support"])
 
-        let numTabs = app.buttons["Show Tabs"].value
+        let numTabs = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].value
         XCTAssertEqual("2", numTabs as? String, "Sume should be open in a different tab")
     }
 
@@ -69,8 +69,7 @@ class SettingsTests: BaseTestCase {
         app.navigationBars["Settings"].buttons["Done"].tap()
 
         app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].tap()
-        let settingsmenuitemCell = app.tables.otherElements["Settings"]
-        settingsmenuitemCell.tap()
+        app.staticTexts["Settings"].waitAndTap()
 
         // Check Offer to open copied links, when opening firefox is on
         let value3 = app.tables.cells.switches["Offer to Open Copied Links, When opening Firefox"].value

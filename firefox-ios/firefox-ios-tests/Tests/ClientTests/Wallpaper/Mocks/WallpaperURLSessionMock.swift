@@ -30,6 +30,18 @@ class WallpaperURLSessionMock: URLSessionProtocol {
         self.error = error
     }
 
+    func data(from url: URL) async throws -> (Data, URLResponse) {
+        if let error = error {
+            throw error
+        }
+
+        return (data ?? Data(), response ?? URLResponse())
+    }
+
+    func data(from urlRequest: URLRequest) async throws -> (Data, URLResponse) {
+        try await data(from: urlRequest.url!)
+    }
+
     func dataTaskWith(_ url: URL,
                       completionHandler completion: @escaping DataTaskResult
     ) -> URLSessionDataTaskProtocol {

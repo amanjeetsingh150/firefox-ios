@@ -4,6 +4,7 @@
 
 import XCTest
 import Common
+import Shared
 
 let websiteUrl1 = "www.mozilla.org"
 let websiteUrl2 = "developer.mozilla.org"
@@ -95,8 +96,9 @@ class HomePageSettingsUITests: BaseTestCase {
         let homePageMenuItem = app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton]
         homePageMenuItem.waitAndTap()
         waitUntilPageLoad()
+        mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
         mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
-                                value: "example")
+                                value: "example.com")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2339258
@@ -136,19 +138,21 @@ class HomePageSettingsUITests: BaseTestCase {
         waitUntilPageLoad()
         navigator.nowAt(BrowserTab)
         navigator.performAction(Action.GoToHomePage)
+        waitUntilPageLoad()
         mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
+        mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
+                                value: "mozilla.org")
 
         // Now after setting History, make sure FF home is set
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
         navigator.goto(SettingsScreen)
         navigator.goto(NewTabSettings)
         navigator.performAction(Action.SelectHomeAsFirefoxHomePage)
-        if iPad() {
-            let homepage = AccessibilityIdentifiers.Settings.Homepage.self
-            mozWaitForElementToExist(app.cells[homepage.CustomizeFirefox.Shortcuts.settingsPage])
-        } else {
-            mozWaitForElementToExist(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
-        }
+        navigator.nowAt(HomeSettings)
+        navigator.goto(SettingsScreen)
+        navigator.goto(HomePanelsScreen)
+        mozWaitForElementToExist(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
+        XCTAssertTrue(app.collectionViews.cells.staticTexts
+            .elementContainingText("Mozilla - Internet for people").exists)
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307031
@@ -165,12 +169,9 @@ class HomePageSettingsUITests: BaseTestCase {
         waitForTabsButton()
         navigator.nowAt(BrowserTab)
         navigator.performAction(Action.GoToHomePage)
-
-        // Workaround needed after Xcode 11.3 update Issue 5937
-        // Lets check only that website is open
         mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
         mozWaitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
-                                value: "mozilla")
+                                value: "mozilla.org")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2339489
@@ -454,7 +455,10 @@ class HomePageSettingsUITests: BaseTestCase {
         navigator.openURL(website)
         waitUntilPageLoad()
         navigator.goto(BrowserTabMenu)
-        app.tables.otherElements[StandardImageIdentifiers.Large.pin].waitAndTap()
+        // Tap on Save item
+        app.otherElements.images[StandardImageIdentifiers.Large.save].waitAndTap()
+        // Tap on Add to Shortcuts
+        app.otherElements.images[StandardImageIdentifiers.Large.pin].waitAndTap()
         navigator.nowAt(BrowserTab)
         navigator.performAction(Action.OpenNewTabFromTabTray)
         navigator.performAction(Action.CloseURLBarOpen)
