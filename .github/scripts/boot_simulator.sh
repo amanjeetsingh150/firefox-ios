@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Specify the device type and runtime as per your requirements
-DEVICE_TYPE="iPhone 14"
-RUNTIME="iOS17.2"
+DEVICE_TYPE="iPhone 15"
+RUNTIME="iOS17.5"
 
 # Create a unique identifier for the new simulator to avoid naming conflicts
 SIMULATOR_NAME="Simulator_$(uuidgen)"

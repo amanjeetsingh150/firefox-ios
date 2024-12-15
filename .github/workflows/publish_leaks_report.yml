@@ -5,7 +5,7 @@ on:
 
 jobs:
   publish:
-    runs-on: macos-13
+    runs-on: macos-15
 
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 600000
@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4.1.7
 
       - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_15.2.0.app && /usr/bin/xcodebuild -version
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.0.app && /usr/bin/xcodebuild -version
       
       - name: Install Maestro
         run: |
@@ -46,12 +46,15 @@ jobs:
           ./checkout.sh
           ./bootstrap.sh --force
           xcodebuild \
+            -resolvePackageDependencies \
+            -onlyUsePackageVersionsFromResolvedFile
+          xcodebuild \
             build-for-testing \
             -scheme Fennec \
             -project ./firefox-ios/Client.xcodeproj \
-            -destination "generic/platform=iOS Simulator" \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
             -derivedDataPath ./build \
-            ARCHS="x86_64"
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ARCHS="arm64"
       
       - name: Install App
         run: |
