@@ -29,7 +29,8 @@ class BrowserCoordinator: BaseCoordinator,
                           WindowEventCoordinator,
                           MainMenuCoordinatorDelegate,
                           ETPCoordinatorSSLStatusDelegate,
-                          SearchEngineSelectionCoordinatorDelegate {
+                          SearchEngineSelectionCoordinatorDelegate,
+                          BookmarksRefactorFeatureFlagProvider {
     private struct UX {
         static let searchEnginePopoverSize = CGSize(width: 250, height: 536)
     }
@@ -59,7 +60,7 @@ class BrowserCoordinator: BaseCoordinator,
          profile: Profile = AppContainer.shared.resolve(),
          themeManager: ThemeManager = AppContainer.shared.resolve(),
          windowManager: WindowManager = AppContainer.shared.resolve(),
-         glean: GleanWrapper = DefaultGleanWrapper.shared,
+         glean: GleanWrapper = DefaultGleanWrapper(),
          applicationHelper: ApplicationHelper = DefaultApplicationHelper()) {
         self.screenshotService = screenshotService
         self.profile = profile
@@ -142,16 +143,8 @@ class BrowserCoordinator: BaseCoordinator,
         isZeroSearch: Bool,
         statusBarScrollDelegate: StatusBarScrollDelegate
     ) {
-        let homepageCoordinator = childCoordinators[HomepageCoordinator.self] ?? HomepageCoordinator(
-            windowUUID: windowUUID,
-            profile: profile,
-            isZeroSearch: isZeroSearch,
-            router: router
-        )
-        add(child: homepageCoordinator)
         let homepageController = self.homepageViewController ?? HomepageViewController(
             windowUUID: windowUUID,
-            homepageDelegate: homepageCoordinator,
             overlayManager: overlayManager,
             statusBarScrollDelegate: statusBarScrollDelegate
         )
@@ -160,6 +153,7 @@ class BrowserCoordinator: BaseCoordinator,
             return
         }
         self.homepageViewController = homepageController
+        homepageController.scrollToTop()
     }
 
     func showPrivateHomepage(overlayManager: OverlayModeManager) {
@@ -183,7 +177,27 @@ class BrowserCoordinator: BaseCoordinator,
                                                    modalStyle: .overFullScreen)
         let sheet = PhotonActionSheet(viewModel: viewModel, windowUUID: windowUUID)
         sheet.modalTransitionStyle = .crossDissolve
-        present(sheet, animated: true)
+        present(sheet)
+    }
+
+    func showEditBookmark(parentFolder: FxBookmarkNode, bookmark: FxBookmarkNode) {
+        let navigationController = DismissableNavigationViewController()
+        let router = DefaultRouter(navigationController: navigationController)
+        let bookmarksCoordinator = BookmarksCoordinator(
+            router: router,
+            profile: profile,
+            windowUUID: windowUUID,
+            libraryCoordinator: self,
+            libraryNavigationHandler: nil,
+            isBookmarkRefactorEnabled: isBookmarkRefactorEnabled
+        )
+        add(child: bookmarksCoordinator)
+        bookmarksCoordinator.start(parentFolder: parentFolder, bookmark: bookmark)
+        navigationController.onViewDismissed = { [weak self] in
+            // Remove coordinator when user drags down to dismiss modal
+            self?.didFinish(from: bookmarksCoordinator)
+        }
+        present(navigationController)
     }
 
     // MARK: - PrivateHomepageDelegate
@@ -263,7 +277,7 @@ class BrowserCoordinator: BaseCoordinator,
             return browserViewController.tabManager.selectedTab?.currentWebView()?.hasOnlySecureContent ?? false
         }
 
-        guard let bar = browserViewController.urlBar else { return false }
+        guard let bar = browserViewController.legacyUrlBar else { return false }
         return bar.locationView.hasSecureContent
     }
 
@@ -506,7 +520,7 @@ class BrowserCoordinator: BaseCoordinator,
         return windowUUID
     }
 
-    func didFinishLibrary(from coordinator: LibraryCoordinator) {
+    func didFinishLibrary(from coordinator: Coordinator) {
         router.dismiss(animated: true, completion: nil)
         remove(child: coordinator)
     }
@@ -586,14 +600,6 @@ class BrowserCoordinator: BaseCoordinator,
 
     private func makeMenuNavViewController() -> DismissableNavigationViewController? {
         if let mainMenuCoordinator = childCoordinators.first(where: { $0 is MainMenuCoordinator }) as? MainMenuCoordinator {
-            logger.log(
-                "MainMenuCoordinator already exists when it shouldn't. Removing and recreating it to access menu",
-                level: .fatal,
-                category: .mainMenu,
-                extra: ["existing mainMenuCoordinator UUID": "\(mainMenuCoordinator.windowUUID)",
-                        "BrowserCoordinator windowUUID": "\(windowUUID)"]
-            )
-
             mainMenuCoordinator.dismissMenuModal(animated: false)
         }
 
@@ -614,14 +620,6 @@ class BrowserCoordinator: BaseCoordinator,
         coordinator.navigationHandler = self
         add(child: coordinator)
         coordinator.start()
-
-        navigationController.onViewDismissed = { [weak self] in
-            self?.logger.log(
-                "MainMenu NavigationController - onViewDismissed",
-                level: .info,
-                category: .mainMenu
-            )
-        }
 
         return navigationController
     }
@@ -1017,9 +1015,7 @@ class BrowserCoordinator: BaseCoordinator,
         controller.sheetPresentationController?.selectedDetentIdentifier = .large
     }
 
-    private func present(_ viewController: UIViewController,
-                         animated: Bool = true,
-                         completion: (() -> Void)? = nil) {
+    private func present(_ viewController: UIViewController) {
         browserViewController.willNavigateAway()
         router.present(viewController)
     }

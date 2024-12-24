@@ -18,6 +18,7 @@ final class PrivacyPreferencesViewController: UIViewController,
     }
 
     // MARK: - Properties
+    private var profile: Profile
     var windowUUID: WindowUUID
     var themeManager: ThemeManager
     var themeObserver: (any NSObjectProtocol)?
@@ -46,16 +47,22 @@ final class PrivacyPreferencesViewController: UIViewController,
 
     private lazy var contentView: UIView = .build()
 
-    private lazy var crashReportsSwitch: SwitchDetailedView = .build()
+    private lazy var crashReportsSwitch: SwitchDetailedView = .build { [weak self] view in
+        view.setSwitchValue(isOn: self?.profile.prefs.boolForKey(AppConstants.prefSendCrashReports) ?? true)
+    }
 
-    private lazy var technicalDataSwitch: SwitchDetailedView = .build()
+    private lazy var technicalDataSwitch: SwitchDetailedView = .build { [weak self] view in
+        view.setSwitchValue(isOn: self?.profile.prefs.boolForKey(AppConstants.prefSendUsageData) ?? true)
+    }
 
     // MARK: - Initializers
     init(
+        profile: Profile,
         windowUUID: WindowUUID,
         themeManager: ThemeManager = AppContainer.shared.resolve(),
         notificationCenter: NotificationProtocol = NotificationCenter.default
     ) {
+        self.profile = profile
         self.windowUUID = windowUUID
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
@@ -86,8 +93,8 @@ final class PrivacyPreferencesViewController: UIViewController,
         view.addSubview(doneButton)
         view.addSubview(contentScrollView)
         contentScrollView.addSubview(contentView)
-        contentView.addSubview(crashReportsSwitch)
         contentView.addSubview(technicalDataSwitch)
+        contentView.addSubview(crashReportsSwitch)
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: UX.headerViewTopMargin),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: UX.contentHorizontalMargin),
@@ -108,20 +115,7 @@ final class PrivacyPreferencesViewController: UIViewController,
             contentView.widthAnchor.constraint(equalTo: contentScrollView.frameLayoutGuide.widthAnchor),
             contentView.heightAnchor.constraint(equalTo: contentScrollView.heightAnchor).priority(.defaultLow),
 
-            crashReportsSwitch.topAnchor.constraint(equalTo: contentView.topAnchor),
-            crashReportsSwitch.leadingAnchor.constraint(
-                equalTo: contentView.leadingAnchor,
-                constant: UX.contentHorizontalMargin
-            ),
-            crashReportsSwitch.trailingAnchor.constraint(
-                equalTo: contentView.trailingAnchor,
-                constant: -UX.contentHorizontalMargin
-            ),
-
-            technicalDataSwitch.topAnchor.constraint(
-                equalTo: crashReportsSwitch.bottomAnchor,
-                constant: UX.contentDistance
-            ),
+            technicalDataSwitch.topAnchor.constraint(equalTo: contentView.topAnchor),
             technicalDataSwitch.leadingAnchor.constraint(
                 equalTo: contentView.leadingAnchor,
                 constant: UX.contentHorizontalMargin
@@ -130,7 +124,20 @@ final class PrivacyPreferencesViewController: UIViewController,
                 equalTo: contentView.trailingAnchor,
                 constant: -UX.contentHorizontalMargin
             ),
-            technicalDataSwitch.bottomAnchor.constraint(
+
+            crashReportsSwitch.topAnchor.constraint(
+                equalTo: technicalDataSwitch.bottomAnchor,
+                constant: UX.contentDistance
+            ),
+            crashReportsSwitch.leadingAnchor.constraint(
+                equalTo: contentView.leadingAnchor,
+                constant: UX.contentHorizontalMargin
+            ),
+            crashReportsSwitch.trailingAnchor.constraint(
+                equalTo: contentView.trailingAnchor,
+                constant: -UX.contentHorizontalMargin
+            ),
+            crashReportsSwitch.bottomAnchor.constraint(
                 equalTo: contentView.bottomAnchor,
                 constant: -UX.contentDistance)
         ])
@@ -154,16 +161,19 @@ final class PrivacyPreferencesViewController: UIViewController,
     }
 
     private func setupCallbacks() {
-        // TODO: FXIOS-10675 Firefox iOS: Manage Privacy Preferences during Onboarding - Logic
-        crashReportsSwitch.switchCallback = { _ in }
-        technicalDataSwitch.switchCallback = { _ in }
+        crashReportsSwitch.switchCallback = { [weak self] value in
+            self?.profile.prefs.setBool(value, forKey: AppConstants.prefSendCrashReports)
+        }
 
-        // TODO: FXIOS-10739 Firefox iOS: Use the correct links for Learn more buttons, in Manage Privacy Preferences screen
+        technicalDataSwitch.switchCallback = { [weak self] value in
+            self?.profile.prefs.setBool(value, forKey: AppConstants.prefSendUsageData)
+        }
+
         crashReportsSwitch.learnMoreCallBack = { [weak self] in
-            self?.presentLink(with: nil)
+            self?.presentLink(with: SupportUtils.URLForTopic("mobile-crash-reports"))
         }
         technicalDataSwitch.learnMoreCallBack = { [weak self] in
-            self?.presentLink(with: nil)
+            self?.presentLink(with: SupportUtils.URLForTopic("mobile-technical-and-interaction-data"))
         }
     }
 

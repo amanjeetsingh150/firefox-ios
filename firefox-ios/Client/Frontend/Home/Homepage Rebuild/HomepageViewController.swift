@@ -5,9 +5,11 @@
 import Foundation
 import Common
 import Redux
+import Shared
 
 final class HomepageViewController: UIViewController,
                                     UICollectionViewDelegate,
+                                    FeatureFlaggable,
                                     ContentContainable,
                                     Themeable,
                                     Notifiable,
@@ -37,7 +39,6 @@ final class HomepageViewController: UIViewController,
 
     // MARK: - Private variables
     private typealias a11y = AccessibilityIdentifiers.FirefoxHomepage
-    private weak var homepageDelegate: HomepageDelegate?
     private var collectionView: UICollectionView?
     private var dataSource: HomepageDiffableDataSource?
     // TODO: FXIOS-10541 will handle scrolling for wallpaper and other scroll issues
@@ -46,6 +47,7 @@ final class HomepageViewController: UIViewController,
     private var overlayManager: OverlayModeManager
     private var logger: Logger
     private var homepageState: HomepageState
+    private var lastContentOffsetY: CGFloat = 0
 
     private var currentTheme: Theme {
         themeManager.getCurrentTheme(for: windowUUID)
@@ -53,7 +55,6 @@ final class HomepageViewController: UIViewController,
 
     // MARK: - Initializers
     init(windowUUID: WindowUUID,
-         homepageDelegate: HomepageDelegate? = nil,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
          overlayManager: OverlayModeManager,
          statusBarScrollDelegate: StatusBarScrollDelegate? = nil,
@@ -61,7 +62,6 @@ final class HomepageViewController: UIViewController,
          logger: Logger = DefaultLogger.shared
     ) {
         self.windowUUID = windowUUID
-        self.homepageDelegate = homepageDelegate
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager
@@ -105,17 +105,7 @@ final class HomepageViewController: UIViewController,
 
         listenForThemeChange(view)
         applyTheme()
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            guard let self = self else { return }
-            // TODO: FXIOS-10312 Possibly move overlay mode to Redux
-            let canPresentModally = !self.overlayManager.inOverlayMode
-            self.homepageDelegate?.showWallpaperSelectionOnboarding(canPresentModally)
-        }
+        addTapGestureRecognizerToDismissKeyboard()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -123,7 +113,25 @@ final class HomepageViewController: UIViewController,
         wallpaperView.updateImageForOrientationChange()
     }
 
+    // called when the homepage is displayed to make sure it's scrolled to top
+    func scrollToTop(animated: Bool = false) {
+        collectionView?.setContentOffset(.zero, animated: animated)
+        if let collectionView = collectionView {
+            handleScroll(collectionView, isUserInteraction: false)
+        }
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        handleScroll(scrollView, isUserInteraction: true)
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        lastContentOffsetY = scrollView.contentOffset.y
+        handleToolbarStateOnScroll()
+    }
+
+    private func handleScroll(_ scrollView: UIScrollView, isUserInteraction: Bool) {
+        // We only handle status bar overlay alpha if there's a wallpaper applied on the homepage
         if homepageState.wallpaperState.wallpaperConfiguration.hasImage {
             let theme = themeManager.getCurrentTheme(for: windowUUID)
             statusBarScrollDelegate?.scrollViewDidScroll(
@@ -131,6 +139,37 @@ final class HomepageViewController: UIViewController,
                 statusBarFrame: statusBarFrame,
                 theme: theme
             )
+        }
+        // this action controls the address toolbar's border position, and to prevent spamming redux with actions for every
+        // change in content offset, we keep track of lastContentOffsetY to know if the border needs to be updated
+        if (lastContentOffsetY > 0 && scrollView.contentOffset.y <= 0) ||
+            (lastContentOffsetY <= 0 && scrollView.contentOffset.y > 0) {
+            lastContentOffsetY = scrollView.contentOffset.y
+            store.dispatch(
+                GeneralBrowserMiddlewareAction(
+                    scrollOffset: scrollView.contentOffset,
+                    windowUUID: windowUUID,
+                    actionType: GeneralBrowserMiddlewareActionType.websiteDidScroll))
+        }
+    }
+
+    private func handleToolbarStateOnScroll() {
+        // TODO: FXIOS-10877 This logic will be handled by toolbar state, the homepage will just dispatch the action
+        let toolbarState = store.state.screenState(ToolbarState.self, for: .toolbar, window: windowUUID)
+
+        // Only dispatch action when user is in edit mode to avoid having the toolbar re-displayed
+        if featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly),
+           let toolbarState,
+           toolbarState.addressToolbar.isEditing {
+            // When the user scrolls the homepage (not overlaid on a webpage when searching) we cancel edit mode
+            // On a website we just dismiss the keyboard
+            if toolbarState.addressToolbar.url == nil {
+                let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEdit)
+                store.dispatch(action)
+            } else {
+                let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.hideKeyboard)
+                store.dispatch(action)
+            }
         }
     }
 
@@ -400,13 +439,27 @@ final class HomepageViewController: UIViewController,
         }
     }
 
+    // MARK: Tap Geasutre Recognizer
+    private func addTapGestureRecognizerToDismissKeyboard() {
+        // We want any interaction with the homepage to dismiss the keyboard, including taps
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
+
+    @objc
+    private func dismissKeyboard() {
+        let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEdit)
+        store.dispatch(action)
+    }
+
     // MARK: Long Press (Photon Action Sheet)
     private lazy var longPressRecognizer: UILongPressGestureRecognizer = {
         return UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
     }()
 
     @objc
-    fileprivate func handleLongPress(_ longPressGestureRecognizer: UILongPressGestureRecognizer) {
+    private func handleLongPress(_ longPressGestureRecognizer: UILongPressGestureRecognizer) {
         guard longPressGestureRecognizer.state == .began else { return }
         // TODO: FXIOS-10613 - Pass proper action data to context menu
         navigateToContextMenu()

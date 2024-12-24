@@ -182,8 +182,8 @@ public struct PrefsKeys {
     // Representing whether or not the last user session was private
     public static let LastSessionWasPrivate = "wasLastSessionPrivate"
 
-    // Only used to force nimbus features to true with tests
-    public static let NimbusFeatureTestsOverride = "NimbusFeatureTestsOverride"
+    // Only used in unit tests to override the user's setting for nimbus features
+    public static let NimbusUserEnabledFeatureTestsOverride = "NimbusUserEnabledFeatureTestsOverride"
 
     // Only used to force faster transition of tabs to the inactive state (10 seconds)
     public static let FasterInactiveTabsOverride = "FasterInactiveTabsOverride"
@@ -198,6 +198,13 @@ public struct PrefsKeys {
 
     // Represents whether or not the user has seen the photon main menu once, at least.
     public static let PhotonMainMenuShown = "PhotonMainMenuShown"
+
+    // The guid of the bookmark folder that was most recently created or saved to by the user.
+    // Used to indicate where we should save the next bookmark by default.
+    public static let RecentBookmarkFolder = "RecentBookmarkFolder"
+    // Represents whether or not the bookmark refactor feature flag is enabled
+    // Used in the share extension
+    public static let IsBookmarksRefactorEnabled = "IsBookmarksRefactorEnabled"
 
     public struct Usage {
         public static let profileId = "profileId"

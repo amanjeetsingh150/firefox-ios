@@ -150,7 +150,7 @@ class HomePageSettingsUITests: BaseTestCase {
         navigator.nowAt(HomeSettings)
         navigator.goto(SettingsScreen)
         navigator.goto(HomePanelsScreen)
-        mozWaitForElementToExist(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
+        mozWaitForElementToExist(app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
         XCTAssertTrue(app.collectionViews.cells.staticTexts
             .elementContainingText("Mozilla - Internet for people").exists)
     }
@@ -188,7 +188,7 @@ class HomePageSettingsUITests: BaseTestCase {
         navigator.goto(NewTabScreen)
         app.buttons["Done"].tap()
 
-        mozWaitForElementToNotExist(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
+        mozWaitForElementToNotExist(app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
         mozWaitForElementToNotExist(app.collectionViews.cells.staticTexts["YouTube"])
     }
 
@@ -213,10 +213,10 @@ class HomePageSettingsUITests: BaseTestCase {
 
     // Function to check the number of top sites shown given a selected number of rows
     private func checkNumberOfExpectedTopSites(numberOfExpectedTopSites: Int) {
-        mozWaitForElementToExist(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
-        XCTAssertTrue(app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell].exists)
+        mozWaitForElementToExist(app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell])
+        XCTAssertTrue(app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell].exists)
         let numberOfTopSites = app
-            .cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
+            .links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
             .collectionViews
             .cells
             .count
@@ -444,8 +444,8 @@ class HomePageSettingsUITests: BaseTestCase {
         app.buttons["Shortcuts"].tap()
         navigator.goto(NewTabScreen)
         app.buttons["Done"].tap()
-        mozWaitForElementToExist(app.cells["TopSitesCell"])
-        let totalTopSites = app.cells.matching(identifier: "TopSitesCell").count
+        mozWaitForElementToExist(app.links["TopSitesCell"])
+        let totalTopSites = app.links.matching(identifier: "TopSitesCell").count
         XCTAssertTrue(totalTopSites > minBoundary)
         XCTAssertTrue(totalTopSites < maxBoundary)
     }
@@ -456,9 +456,7 @@ class HomePageSettingsUITests: BaseTestCase {
         waitUntilPageLoad()
         navigator.goto(BrowserTabMenu)
         // Tap on Save item
-        app.otherElements.images[StandardImageIdentifiers.Large.save].waitAndTap()
-        // Tap on Add to Shortcuts
-        app.otherElements.images[StandardImageIdentifiers.Large.pin].waitAndTap()
+        navigator.performAction(Action.PinToTopSitesPAM)
         navigator.nowAt(BrowserTab)
         navigator.performAction(Action.OpenNewTabFromTabTray)
         navigator.performAction(Action.CloseURLBarOpen)

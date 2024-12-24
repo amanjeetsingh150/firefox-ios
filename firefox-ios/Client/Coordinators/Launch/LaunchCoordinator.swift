@@ -4,6 +4,7 @@
 
 import Common
 import Foundation
+import Shared
 
 protocol LaunchCoordinatorDelegate: AnyObject {
     func didFinishTermsOfService(from coordinator: LaunchCoordinator)
@@ -49,10 +50,22 @@ class LaunchCoordinator: BaseCoordinator,
     // MARK: - Terms of Service
     private func presentTermsOfService(with manager: TermsOfServiceManager,
                                        isFullScreen: Bool) {
-        let viewController = TermsOfServiceViewController(windowUUID: windowUUID)
+        let viewController = TermsOfServiceViewController(profile: profile, windowUUID: windowUUID)
         viewController.didFinishFlow = { [weak self] in
-            manager.setAccepted()
             guard let self = self else { return }
+            manager.setAccepted()
+
+            let sendTechnicalData = profile.prefs.boolForKey(AppConstants.prefSendUsageData) ?? true
+            manager.shouldSendTechnicalData(value: sendTechnicalData)
+            self.profile.prefs.setBool(sendTechnicalData, forKey: AppConstants.prefSendUsageData)
+
+            let sendCrashReports = profile.prefs.boolForKey(AppConstants.prefSendCrashReports) ?? true
+            self.profile.prefs.setBool(sendCrashReports, forKey: AppConstants.prefSendCrashReports)
+            self.logger.setup(sendCrashReports: sendCrashReports)
+
+            TelemetryWrapper.shared.setup(profile: profile)
+            TelemetryWrapper.shared.recordStartUpTelemetry()
+
             self.parentCoordinator?.didFinishTermsOfService(from: self)
         }
         viewController.modalPresentationStyle = .fullScreen

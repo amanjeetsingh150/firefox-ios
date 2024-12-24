@@ -539,7 +539,7 @@ func createScreenGraph(for test: XCTestCase, with app: XCUIApplication) -> MMScr
     }
 
     map.addScreenState(HomePanel_TopSites) { screenState in
-        let topSites = app.cells[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
+        let topSites = app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
         screenState.press(
             topSites.cells.matching(
                 identifier: AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell
@@ -1099,7 +1099,7 @@ func createScreenGraph(for test: XCTestCase, with app: XCUIApplication) -> MMScr
             to: PageZoom)
         // Turn on night mode
         screenState.tap(
-            app.otherElements.images[StandardImageIdentifiers.Large.nightMode],
+            app.tables.cells[AccessibilityIdentifiers.MainMenu.nightMode],
             forAction: Action.ToggleNightMode,
             transitionTo: BrowserTab
         ) { userState in

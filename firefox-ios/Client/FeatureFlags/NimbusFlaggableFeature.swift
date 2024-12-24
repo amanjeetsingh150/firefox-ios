@@ -45,6 +45,7 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case splashScreen
     case unifiedAds
     case unifiedSearch
+    case universalLinks
     case toolbarRefactor
     case toolbarOneTapNewTab
     case toolbarNavigationHint
@@ -133,6 +134,7 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .splashScreen,
                 .unifiedAds,
                 .unifiedSearch,
+                .universalLinks,
                 .toolbarRefactor,
                 .toolbarOneTapNewTab,
                 .toolbarNavigationHint,
@@ -151,11 +153,6 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
 
     // MARK: - Public methods
     public func isNimbusEnabled(using nimbusLayer: NimbusFeatureFlagLayer) -> Bool {
-        // Provide a way to override nimbus feature enabled for tests
-        if AppConstants.isRunningUnitTest, UserDefaults.standard.bool(forKey: PrefsKeys.NimbusFeatureTestsOverride) {
-            return true
-        }
-
         return nimbusLayer.checkNimbusConfigFor(featureID)
     }
 
@@ -166,7 +163,15 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
     public func isUserEnabled(using nimbusLayer: NimbusFeatureFlagLayer) -> Bool {
         guard let optionsKey = featureKey,
               let option = profile.prefs.boolForKey(optionsKey)
-        else { return isNimbusEnabled(using: nimbusLayer) }
+        else {
+            // In unit tests only, we provide a way to return an override value to simulate a user's preference for a feature
+            if AppConstants.isRunningUnitTest,
+               UserDefaults.standard.valueExists(forKey: PrefsKeys.NimbusUserEnabledFeatureTestsOverride) {
+                return UserDefaults.standard.bool(forKey: PrefsKeys.NimbusUserEnabledFeatureTestsOverride)
+            }
+
+            return isNimbusEnabled(using: nimbusLayer)
+        }
 
         return option
     }

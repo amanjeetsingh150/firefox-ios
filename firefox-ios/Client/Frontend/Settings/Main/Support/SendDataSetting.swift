@@ -7,16 +7,10 @@ import Foundation
 import Glean
 import Shared
 
-enum SendDataType {
-    case usageData
-    case technicalData
-    case crashReports
-    case dailyUsagePing
-}
-
 class SendDataSetting: BoolSetting {
     private weak var settingsDelegate: SupportSettingsDelegate?
-    private let sendDataType: SendDataType
+    private var a11yId: String
+    private var learnMoreURL: URL?
 
     var shouldSendData: ((Bool) -> Void)?
 
@@ -24,37 +18,13 @@ class SendDataSetting: BoolSetting {
          delegate: SettingsDelegate?,
          theme: Theme,
          settingsDelegate: SupportSettingsDelegate?,
-         sendDataType: SendDataType) {
-        var title: String
-        var message: String
-        var linkedText: String
-        var prefKey: String
-
-        switch sendDataType {
-        case .usageData:
-            title = .SendUsageSettingTitle
-            message = .SendUsageSettingMessage
-            linkedText = .SendUsageSettingLink
-            prefKey = AppConstants.prefSendUsageData
-        case .technicalData:
-            title = .SendTechnicalDataSettingTitle
-            message = String(format: .SendTechnicalDataSettingMessage,
-                             MozillaName.shortName.rawValue,
-                             AppName.shortName.rawValue)
-            linkedText = .SendTechnicalDataSettingLink
-            prefKey = AppConstants.prefSendTechnicalData
-        case .crashReports:
-            title = .SendCrashReportsSettingTitle
-            message = String(format: .SendCrashReportsSettingMessage, MozillaName.shortName.rawValue)
-            linkedText = .SendCrashReportsSettingLink
-            prefKey = AppConstants.prefSendCrashReports
-        case .dailyUsagePing:
-            title = .SendDailyUsagePingSettingTitle
-            message = String(format: .SendDailyUsagePingSettingMessage, MozillaName.shortName.rawValue)
-            linkedText = .SendDailyUsagePingSettingLink
-            prefKey = AppConstants.prefSendDailyUsagePing
-        }
-
+         title: String,
+         message: String,
+         linkedText: String,
+         prefKey: String,
+         a11yId: String,
+         learnMoreURL: URL?,
+         isToSEnabled: Bool) {
         let statusText = NSMutableAttributedString()
         statusText.append(
             NSAttributedString(
@@ -64,7 +34,7 @@ class SendDataSetting: BoolSetting {
         )
         statusText.append(
             NSAttributedString(
-                string: " "
+                string: isToSEnabled ? "\n" : " "
             )
         )
         statusText.append(
@@ -74,7 +44,8 @@ class SendDataSetting: BoolSetting {
             )
         )
 
-        self.sendDataType = sendDataType
+        self.a11yId = a11yId
+        self.learnMoreURL = learnMoreURL
         self.settingsDelegate = settingsDelegate
         super.init(
             prefs: prefs,
@@ -93,48 +64,16 @@ class SendDataSetting: BoolSetting {
 
     private func setupSettingDidChange() {
         self.settingDidChange = { [weak self] value in
-            // AdjustHelper.setEnabled($0)
-            DefaultGleanWrapper.shared.setUpload(isEnabled: value)
-
-            if !value {
-                self?.prefs?.removeObjectForKey(PrefsKeys.Usage.profileId)
-
-                // set dummy uuid to make sure the previous one is deleted
-                if let uuid = UUID(uuidString: "beefbeef-beef-beef-beef-beeefbeefbee") {
-                    GleanMetrics.Usage.profileId.set(uuid)
-                }
-            }
-
-            Experiments.setTelemetrySetting(value)
             self?.shouldSendData?(value)
         }
     }
 
     override var accessibilityIdentifier: String? {
-        switch sendDataType {
-        case .usageData:
-            return AccessibilityIdentifiers.Settings.SendData.sendAnonymousUsageDataTitle
-        case .technicalData:
-            return AccessibilityIdentifiers.Settings.SendData.sendTechnicalDataTitle
-        case .crashReports:
-            return AccessibilityIdentifiers.Settings.SendData.sendCrashReportsTitle
-        case .dailyUsagePing:
-            return AccessibilityIdentifiers.Settings.SendData.sendDailyUsagePingTitle
-        }
+        return a11yId
     }
 
-    // TODO: FXIOS-10739 Firefox iOS: Use the correct links for Learn more buttons, in Manage Privacy Preferences screen
     override var url: URL? {
-        switch sendDataType {
-        case .usageData:
-            return SupportUtils.URLForTopic("adjust")
-        case .technicalData:
-            return nil
-        case .crashReports:
-            return nil
-        case .dailyUsagePing:
-            return SupportUtils.URLForTopic("dau-ping-settings-mobile")
-        }
+        return learnMoreURL
     }
 
     override func onClick(_ navigationController: UINavigationController?) {
