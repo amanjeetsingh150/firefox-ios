@@ -43,9 +43,7 @@ final class HomepageViewController: UIViewController,
     private var dataSource: HomepageDiffableDataSource?
     // TODO: FXIOS-10541 will handle scrolling for wallpaper and other scroll issues
     private lazy var wallpaperView: WallpaperBackgroundView = .build { _ in }
-    private var layoutConfiguration = HomepageSectionLayoutProvider().createCompositionalLayout()
-    private var overlayManager: OverlayModeManager
-    private var logger: Logger
+
     private var homepageState: HomepageState
     private var lastContentOffsetY: CGFloat = 0
 
@@ -53,11 +51,17 @@ final class HomepageViewController: UIViewController,
         themeManager.getCurrentTheme(for: windowUUID)
     }
 
+    // MARK: - Private constants
+    private let overlayManager: OverlayModeManager
+    private let logger: Logger
+    private let toastContainer: UIView
+
     // MARK: - Initializers
     init(windowUUID: WindowUUID,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
          overlayManager: OverlayModeManager,
          statusBarScrollDelegate: StatusBarScrollDelegate? = nil,
+         toastContainer: UIView,
          notificationCenter: NotificationProtocol = NotificationCenter.default,
          logger: Logger = DefaultLogger.shared
     ) {
@@ -66,6 +70,7 @@ final class HomepageViewController: UIViewController,
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager
         self.statusBarScrollDelegate = statusBarScrollDelegate
+        self.toastContainer = toastContainer
         self.logger = logger
         homepageState = HomepageState(windowUUID: windowUUID)
         super.init(nibName: nil, bundle: nil)
@@ -154,23 +159,10 @@ final class HomepageViewController: UIViewController,
     }
 
     private func handleToolbarStateOnScroll() {
-        // TODO: FXIOS-10877 This logic will be handled by toolbar state, the homepage will just dispatch the action
-        let toolbarState = store.state.screenState(ToolbarState.self, for: .toolbar, window: windowUUID)
-
-        // Only dispatch action when user is in edit mode to avoid having the toolbar re-displayed
-        if featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly),
-           let toolbarState,
-           toolbarState.addressToolbar.isEditing {
-            // When the user scrolls the homepage (not overlaid on a webpage when searching) we cancel edit mode
-            // On a website we just dismiss the keyboard
-            if toolbarState.addressToolbar.url == nil {
-                let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEdit)
-                store.dispatch(action)
-            } else {
-                let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.hideKeyboard)
-                store.dispatch(action)
-            }
-        }
+        guard featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly) else { return }
+        // When the user scrolls the homepage (not overlaid on a webpage when searching) we cancel edit mode
+        let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEditOnHomepage)
+        store.dispatch(action)
     }
 
     // MARK: - Redux
@@ -252,6 +244,7 @@ final class HomepageViewController: UIViewController,
     }
 
     private func configureCollectionView() {
+        let layoutConfiguration = HomepageSectionLayoutProvider(windowUUID: windowUUID).createCompositionalLayout()
         let collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layoutConfiguration)
 
         HomepageItem.cellTypes.forEach {
@@ -357,7 +350,7 @@ final class HomepageViewController: UIViewController,
             pocketCell.configure(story: story, theme: currentTheme)
 
             return pocketCell
-        case .pocketDiscover:
+        case .pocketDiscover(let item):
             guard let pocketDiscoverCell = collectionView?.dequeueReusableCell(
                 cellType: PocketDiscoverCell.self,
                 for: indexPath
@@ -365,7 +358,7 @@ final class HomepageViewController: UIViewController,
                 return UICollectionViewCell()
             }
 
-            pocketDiscoverCell.configure(text: homepageState.pocketState.pocketDiscoverItem.title, theme: currentTheme)
+            pocketDiscoverCell.configure(text: item.title, theme: currentTheme)
 
             return pocketDiscoverCell
 
@@ -461,8 +454,20 @@ final class HomepageViewController: UIViewController,
     @objc
     private func handleLongPress(_ longPressGestureRecognizer: UILongPressGestureRecognizer) {
         guard longPressGestureRecognizer.state == .began else { return }
-        // TODO: FXIOS-10613 - Pass proper action data to context menu
-        navigateToContextMenu()
+        let point = longPressGestureRecognizer.location(in: collectionView)
+        guard let indexPath = collectionView?.indexPathForItem(at: point),
+              let item = dataSource?.itemIdentifier(for: indexPath),
+              let section = dataSource?.sectionIdentifier(for: indexPath.section),
+              let sourceView = collectionView?.cellForItem(at: indexPath)
+        else {
+            self.logger.log(
+                "Item selected at \(point) but does not navigate to context menu",
+                level: .debug,
+                category: .homepage
+            )
+            return
+        }
+        navigateToContextMenu(for: section, and: item, sourceView: sourceView)
     }
 
     // MARK: Dispatch Actions
@@ -478,6 +483,7 @@ final class HomepageViewController: UIViewController,
     private func navigateToHomepageSettings() {
         store.dispatch(
             NavigationBrowserAction(
+                navigationDestination: NavigationDestination(.settings(.homePage)),
                 windowUUID: self.windowUUID,
                 actionType: NavigationBrowserActionType.tapOnCustomizeHomepage
             )
@@ -487,16 +493,23 @@ final class HomepageViewController: UIViewController,
     private func navigateToPocketLearnMore() {
         store.dispatch(
             NavigationBrowserAction(
-                url: homepageState.pocketState.footerURL,
+                navigationDestination: NavigationDestination(.link, url: homepageState.pocketState.footerURL),
                 windowUUID: self.windowUUID,
                 actionType: NavigationBrowserActionType.tapOnLink
             )
         )
     }
 
-    private func navigateToContextMenu() {
+    private func navigateToContextMenu(for section: HomepageSection, and item: HomepageItem, sourceView: UIView? = nil) {
+        let configuration = ContextMenuConfiguration(
+            homepageSection: section,
+            item: item,
+            sourceView: sourceView,
+            toastContainer: toastContainer
+        )
         store.dispatch(
             NavigationBrowserAction(
+                navigationDestination: NavigationDestination(.contextMenu, contextMenuConfiguration: configuration),
                 windowUUID: windowUUID,
                 actionType: NavigationBrowserActionType.longPressOnCell
             )
@@ -517,8 +530,11 @@ final class HomepageViewController: UIViewController,
         case .topSite(let state, _):
             store.dispatch(
                 NavigationBrowserAction(
-                    url: state.site.url.asURL,
-                    isGoogleTopSite: state.isGoogleURL,
+                    navigationDestination: NavigationDestination(
+                        .link,
+                        url: state.site.url.asURL,
+                        isGoogleTopSite: state.isGoogleURL
+                    ),
                     windowUUID: self.windowUUID,
                     actionType: NavigationBrowserActionType.tapOnCell
                 )
@@ -526,15 +542,18 @@ final class HomepageViewController: UIViewController,
         case .pocket(let story):
             store.dispatch(
                 NavigationBrowserAction(
-                    url: story.url,
+                    navigationDestination: NavigationDestination(.link, url: story.url),
                     windowUUID: self.windowUUID,
                     actionType: NavigationBrowserActionType.tapOnCell
                 )
             )
-        case .pocketDiscover:
+        case .pocketDiscover(let item):
             store.dispatch(
                 NavigationBrowserAction(
-                    url: homepageState.pocketState.pocketDiscoverItem.url,
+                    navigationDestination: NavigationDestination(
+                        .link,
+                        url: item.url
+                    ),
                     windowUUID: self.windowUUID,
                     actionType: NavigationBrowserActionType.tapOnCell
                 )

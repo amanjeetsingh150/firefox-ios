@@ -35,7 +35,7 @@ final class HomepageDiffableDataSource:
         case topSite(TopSiteState, TextColor?)
         case topSiteEmpty
         case pocket(PocketStoryState)
-        case pocketDiscover
+        case pocketDiscover(PocketDiscoverState)
         case customizeHomepage
 
         static var cellTypes: [ReusableCell.Type] {
@@ -57,15 +57,30 @@ final class HomepageDiffableDataSource:
         snapshot.appendSections([.header, .topSites, .pocket(textColor), .customizeHomepage])
         snapshot.appendItems([.header(textColor)], toSection: .header)
 
-        let topSites: [HomeItem] = state.topSitesState.topSitesData.compactMap { .topSite($0, textColor) }
+        let topSites = getTopSites(with: state.topSitesState, and: textColor)
         snapshot.appendItems(topSites, toSection: .topSites)
 
         let stories: [HomeItem] = state.pocketState.pocketData.compactMap { .pocket($0) }
         snapshot.appendItems(stories, toSection: .pocket(textColor))
-        snapshot.appendItems([.pocketDiscover], toSection: .pocket(textColor))
+        snapshot.appendItems([.pocketDiscover(state.pocketState.pocketDiscoverItem)], toSection: .pocket(textColor))
 
         snapshot.appendItems([.customizeHomepage], toSection: .customizeHomepage)
 
         apply(snapshot, animatingDifferences: true)
+    }
+
+    /// Gets the proper amount of top sites based on layout configuration
+    /// which is determined by the number of rows and number of tiles per row
+    /// - Parameters:
+    ///   - topSiteState: state object for top site section
+    ///   - textColor: text color from wallpaper configuration
+    private func getTopSites(
+        with topSitesState: TopSitesSectionState,
+        and textColor: TextColor?
+    ) -> [HomepageDiffableDataSource.HomeItem] {
+        guard topSitesState.numberOfTilesPerRow != 0 else { return [] }
+        let topSites: [HomeItem] = topSitesState.topSitesData.compactMap { .topSite($0, textColor) }
+        let filterTopSites = topSites.prefix(Int(topSitesState.numberOfRows) * topSitesState.numberOfTilesPerRow)
+        return Array(filterTopSites)
     }
 }
