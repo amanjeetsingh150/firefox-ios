@@ -73,9 +73,6 @@
 /* Title for a link that explains how Mozilla send crash reports. */
 "Settings.CrashReports.Link.v136" = "Көбірек білу";
 
-/* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
-"Settings.CrashReports.Message.v135" = "Құлау хабарламалары бізге браузердегі ақауларды анықтауға және түзетуге мүмкіндік береді.";
-
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Title.v135" = "Құлау хабарламаларын автоматты түрде жіберу";
 
