@@ -73,9 +73,6 @@
 /* Title for a link that explains how Mozilla send crash reports. */
 "Settings.CrashReports.Link.v136" = "Argibide gehiago";
 
-/* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
-"Settings.CrashReports.Message.v135" = "Hutsegite-txostenek nabigatzailearen arazoak diagnostikatzen laguntzen digute.";
-
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Title.v135" = "Bidali automatikoki hutsegite-txostenak";
 

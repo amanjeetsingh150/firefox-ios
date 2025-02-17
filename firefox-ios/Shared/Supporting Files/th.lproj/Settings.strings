@@ -73,9 +73,6 @@
 /* Title for a link that explains how Mozilla send crash reports. */
 "Settings.CrashReports.Link.v136" = "เรียนรู้เพิ่มเติม";
 
-/* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
-"Settings.CrashReports.Message.v135" = "รายงานข้อขัดข้องช่วยให้เราวินิจฉัยและแก้ไขปัญหาของเบราว์เซอร์ได้";
-
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Title.v135" = "ส่งรายงานข้อขัดข้องโดยอัตโนมัติ";
 

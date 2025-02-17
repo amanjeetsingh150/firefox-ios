@@ -131,7 +131,7 @@
 "Onboarding.TermsOfService.PrivacyPreferences.SendCrashReportsTitle.v135" = "Invia automaticamente segnalazioni di arresto anomalo";
 
 /* Description for the technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. First placeholder is for the app name. The second placeholder is for the Learn more button link, to open a link where user can find more information about this send technical and interaction data option. */
-"Onboarding.TermsOfService.PrivacyPreferences.SendTechnicalDataDescription.v135" = "I dati relativi al dispositivo, la configurazione hardware e il modo in cui utilizzi %1$@ aiutano a migliorare funzionalità, prestazioni e stabilità per tutti. %2$@";
+"Onboarding.TermsOfService.PrivacyPreferences.SendTechnicalDataDescription.v135" = "I dati relativi al tuo dispositivo, alla sua configurazione hardware e al modo in cui utilizzi %1$@ aiutano a migliorarne funzionalità, prestazioni e stabilità per tutti. %2$@";
 
 /* Title for the send technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. Placeholder will be replaced the company name of Mozilla. */
 "Onboarding.TermsOfService.PrivacyPreferences.SendTechnicalDataTitle.v135" = "Invia dati tecnici e di interazione a %@";
@@ -143,10 +143,10 @@
 "Onboarding.TermsOfService.Subtitle.v136" = "Navigazione veloce e sicura";
 
 /* Agreement text for Terms of Service in the Terms of Service screen. Placeholder is for the Terms of Service link button that redirect the user to the Terms of Service page */
-"Onboarding.TermsOfService.TermsOfServiceAgreement.v135" = "Proseguendo, accetti le %@.";
+"Onboarding.TermsOfService.TermsOfServiceAgreement.v135" = "Proseguendo, accetti le %@";
 
 /* Title for the Terms of Service button link, in the Terms of Service screen for redirecting the user to the Terms of Service page. Placeholder is for the app name. */
-"Onboarding.TermsOfService.TermsOfServiceLink.v135" = "Condizioni di utilizzo del servizio di %@";
+"Onboarding.TermsOfService.TermsOfServiceLink.v135" = "condizioni di utilizzo del servizio di %@";
 
 /* Title for the Terms of Service screen in the onboarding process. Placeholder is for app name. */
 "Onboarding.TermsOfService.Title.v135" = "Benvenuto in %@";
