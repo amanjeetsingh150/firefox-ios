@@ -4,6 +4,7 @@
 
 import XCTest
 import Storage
+import MozillaAppServices
 
 @testable import Client
 
@@ -35,14 +36,19 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
     func test_updateSnapshot_hasCorrectData() throws {
         let dataSource = try XCTUnwrap(diffableDataSource)
 
-        dataSource.updateSnapshot(state: HomepageState(windowUUID: .XCTestDefaultUUID))
+        dataSource.updateSnapshot(
+            state: HomepageState(windowUUID: .XCTestDefaultUUID),
+            jumpBackInDisplayConfig: mockSectionConfig
+        )
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfSections, 4)
-        XCTAssertEqual(snapshot.sectionIdentifiers, [.header, .topSites, .pocket(nil), .customizeHomepage])
-
+        XCTAssertEqual(snapshot.numberOfSections, 2)
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
         XCTAssertEqual(snapshot.itemIdentifiers(inSection: .header).count, 1)
-        XCTAssertEqual(snapshot.itemIdentifiers(inSection: .pocket(nil)).count, 1)
         XCTAssertEqual(snapshot.itemIdentifiers(inSection: .customizeHomepage).count, 1)
     }
 
@@ -58,6 +64,15 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
 
         let state = HomepageState.reducer(
             HomepageState(windowUUID: .XCTestDefaultUUID),
+            PocketAction(
+                pocketStories: createStories(),
+                windowUUID: .XCTestDefaultUUID,
+                actionType: PocketMiddlewareActionType.retrievedUpdatedStories
+            )
+        )
+
+        let updatedState = HomepageState.reducer(
+            state,
             WallpaperAction(
                 wallpaperConfiguration: wallpaperConfig,
                 windowUUID: .XCTestDefaultUUID,
@@ -65,10 +80,13 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
             )
         )
 
-        dataSource.updateSnapshot(state: state)
+        dataSource.updateSnapshot(
+            state: updatedState,
+            jumpBackInDisplayConfig: mockSectionConfig
+        )
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(.systemCyan)), 1)
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(.systemCyan)), 21)
     }
 
     func test_updateSnapshot_withValidState_returnTopSites() throws {
@@ -86,34 +104,169 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         let updatedState = HomepageState.reducer(
             state,
             TopSitesAction(
-                numberOfRows: 4,
+                numberOfRows: 2,
                 windowUUID: .XCTestDefaultUUID,
                 actionType: TopSitesActionType.updatedNumberOfRows
             )
         )
 
-        let finalState = HomepageState.reducer(
-            updatedState,
-            TopSitesAction(
-                numberOfTilesPerRow: 4,
+        dataSource.updateSnapshot(state: updatedState, jumpBackInDisplayConfig: mockSectionConfig)
+
+        let snapshot = dataSource.snapshot()
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .topSites(4)), 8)
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .topSites(4),
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    func test_updateSnapshot_withValidState_returnPocketStories() throws {
+        let dataSource = try XCTUnwrap(diffableDataSource)
+
+        let state = HomepageState.reducer(
+            HomepageState(windowUUID: .XCTestDefaultUUID),
+            PocketAction(
+                pocketStories: createStories(),
                 windowUUID: .XCTestDefaultUUID,
-                actionType: TopSitesActionType.updatedNumberOfTilesPerRow
+                actionType: PocketMiddlewareActionType.retrievedUpdatedStories
             )
         )
 
-        dataSource.updateSnapshot(state: finalState)
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfItems(inSection: .topSites), 16)
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(nil)), 21)
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .pocket(nil),
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
     }
 
-    private func createSites(count: Int = 30) -> [TopSiteState] {
-        var sites = [TopSiteState]()
+    func test_updateSnapshot_withValidState_returnMessageCard() throws {
+        let dataSource = try XCTUnwrap(diffableDataSource)
+        let configuration = MessageCardConfiguration(
+            title: "Example Title",
+            description: "Example Description",
+            buttonLabel: "Example Button"
+        )
+
+        let state = HomepageState.reducer(
+            HomepageState(windowUUID: .XCTestDefaultUUID),
+            MessageCardAction(
+                messageCardConfiguration: configuration,
+                windowUUID: .XCTestDefaultUUID,
+                actionType: MessageCardMiddlewareActionType.initialize
+            )
+        )
+
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
+
+        let snapshot = dataSource.snapshot()
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .messageCard), 1)
+        XCTAssertEqual(snapshot.itemIdentifiers(inSection: .messageCard).first, HomepageItem.messageCard(configuration))
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .messageCard,
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    func test_updateSnapshot_withValidState_returnBookmarks() throws {
+        let dataSource = try XCTUnwrap(diffableDataSource)
+
+        let state = HomepageState.reducer(
+            HomepageState(windowUUID: .XCTestDefaultUUID),
+            BookmarksAction(
+                bookmarks: [BookmarkConfiguration(
+                    site: Site.createBasicSite(
+                        url: "www.mozilla.org",
+                        title: "Title 1",
+                        isBookmarked: true
+                    )
+                )],
+                windowUUID: .XCTestDefaultUUID,
+                actionType: BookmarksMiddlewareActionType.initialize
+            )
+        )
+
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
+
+        let snapshot = dataSource.snapshot()
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .bookmarks(nil)), 1)
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .bookmarks(nil),
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    func test_updateSnapshot_withValidState_returnJumpBackInSection() throws {
+        let dataSource = try XCTUnwrap(diffableDataSource)
+
+        let state = HomepageState.reducer(
+            HomepageState(windowUUID: .XCTestDefaultUUID),
+            TabManagerAction(
+                recentTabs: [createTab(urlString: "www.mozilla.org")],
+                windowUUID: .XCTestDefaultUUID,
+                actionType: TabManagerMiddlewareActionType.fetchedRecentTabs
+            )
+        )
+
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
+
+        let snapshot = dataSource.snapshot()
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .jumpBackIn(nil, mockSectionConfig)), 1)
+        let expectedSections: [HomepageSection] = [
+            .header,
+            .jumpBackIn(nil, mockSectionConfig),
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    private func createSites(count: Int = 30) -> [TopSiteConfiguration] {
+        var sites = [TopSiteConfiguration]()
         (0..<count).forEach {
-            let site = Site(url: "www.url\($0).com",
-                            title: "Title \($0)")
-            sites.append(TopSiteState(site: site))
+            let site = Site.createBasicSite(
+                url: "www.url\($0).com",
+                title: "Title \($0)"
+            )
+            sites.append(TopSiteConfiguration(site: site))
         }
         return sites
+    }
+
+    private func createStories(count: Int = 20) -> [PocketStoryConfiguration] {
+        var feedStories = [PocketFeedStory]()
+        (0..<count).forEach {
+            let story: PocketFeedStory = .make(title: "feed \($0)")
+            feedStories.append(story)
+        }
+
+        let stories = feedStories.compactMap {
+            PocketStoryConfiguration(story: PocketStory(pocketFeedStory: $0))
+        }
+        return stories
+    }
+
+    private var mockSectionConfig: JumpBackInSectionLayoutConfiguration {
+        return JumpBackInSectionLayoutConfiguration(
+            maxLocalTabsWhenSyncedTabExists: 1,
+            maxLocalTabsWhenNoSyncedTab: 2,
+            layoutType: .compact,
+            hasSyncedTab: false
+        )
+    }
+
+    private func createTab(urlString: String) -> Tab {
+        let tab = Tab(profile: MockProfile(), windowUUID: .XCTestDefaultUUID)
+        tab.url = URL(string: urlString)!
+        return tab
     }
 }

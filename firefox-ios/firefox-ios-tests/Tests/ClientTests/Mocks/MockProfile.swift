@@ -111,10 +111,10 @@ open class MockProfile: Client.Profile {
     // Read/Writeable properties for mocking
 
     public var files: FileAccessor
-    public var syncManager: ClientSyncManager!
+    public var syncManager: ClientSyncManager?
     public var firefoxSuggest: RustFirefoxSuggestProtocol?
 
-    fileprivate let name: String = "mockaccount"
+    fileprivate let name = "mockaccount"
 
     private let directory: String
     private let databasePrefix: String
@@ -267,7 +267,7 @@ open class MockProfile: Client.Profile {
     public func flushAccount() {}
 
     public func removeAccount() {
-        self.syncManager.onRemovedAccount()
+        self.syncManager?.onRemovedAccount()
     }
 
     public func getCachedClientsAndTabs() -> Deferred<Maybe<[ClientAndTabs]>> {

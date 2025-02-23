@@ -8,7 +8,7 @@ import MenuKit
 import Shared
 
 protocol MainMenuCoordinatorDelegate: AnyObject {
-    func editLatestBookmark()
+    func editBookmarkForCurrentTab()
     func openURLInNewTab(_ url: URL?)
     func openNewTab(inPrivateMode: Bool)
     func showLibraryPanel(_ panel: Route.HomepanelSection)
@@ -16,6 +16,8 @@ protocol MainMenuCoordinatorDelegate: AnyObject {
     func showFindInPage()
     func showSignInView(fxaParameters: FxASignInViewParameters?)
     func updateZoomPageBarVisibility()
+    func presentSavePDFController()
+    func showPrintSheet()
 
     /// Open the share sheet to share the currently selected `Tab`.
     func showShareSheetForCurrentlySelectedTab()
@@ -80,7 +82,7 @@ class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
                 self.navigationHandler?.showLibraryPanel(.downloads)
 
             case .editBookmark:
-                self.navigationHandler?.editLatestBookmark()
+                self.navigationHandler?.editBookmarkForCurrentTab()
 
             case .findInPage:
                 self.navigationHandler?.showFindInPage()
@@ -111,8 +113,14 @@ class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
                 )
                 self.navigationHandler?.showSignInView(fxaParameters: fxaParameters)
 
+            case .printSheet:
+                self.navigationHandler?.showPrintSheet()
+
             case .shareSheet:
                 self.navigationHandler?.showShareSheetForCurrentlySelectedTab()
+
+            case .saveAsPDF:
+                self.navigationHandler?.presentSavePDFController()
 
             case .zoom:
                 self.navigationHandler?.updateZoomPageBarVisibility()

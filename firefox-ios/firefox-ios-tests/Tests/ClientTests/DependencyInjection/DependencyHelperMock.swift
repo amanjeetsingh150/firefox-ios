@@ -10,6 +10,7 @@ import TabDataStore
 
 class DependencyHelperMock {
     func bootstrapDependencies(
+        injectedWindowManager: WindowManager? = nil,
         injectedTabManager: TabManager? = nil,
         injectedMicrosurveyManager: MicrosurveyManager? = nil,
         injectedPocketManager: PocketManagerProvider? = nil
@@ -28,7 +29,9 @@ class DependencyHelperMock {
         AppContainer.shared.register(service: diskImageStore)
 
         let windowUUID = WindowUUID.XCTestDefaultUUID
-        let windowManager: WindowManager = MockWindowManager(wrappedManager: WindowManagerImplementation())
+        let windowManager: WindowManager = injectedWindowManager ?? MockWindowManager(
+            wrappedManager: WindowManagerImplementation()
+        )
         let tabManager: TabManager =
         injectedTabManager ?? TabManagerImplementation(profile: profile,
                                                        uuid: ReservedWindowUUID(uuid: windowUUID, isNew: false),
@@ -39,9 +42,6 @@ class DependencyHelperMock {
 
         let themeManager: ThemeManager = MockThemeManager()
         AppContainer.shared.register(service: themeManager)
-
-        let ratingPromptManager = RatingPromptManager(profile: profile)
-        AppContainer.shared.register(service: ratingPromptManager)
 
         let downloadQueue = DownloadQueue()
         AppContainer.shared.register(service: downloadQueue)
@@ -54,6 +54,10 @@ class DependencyHelperMock {
 
         let pocketManager: PocketManagerProvider = injectedPocketManager ?? MockPocketManager()
         AppContainer.shared.register(service: pocketManager)
+
+        let gleanUsageReportingMetricsService: GleanUsageReportingMetricsService =
+        MockGleanUsageReportingMetricsService(profile: profile)
+        AppContainer.shared.register(service: gleanUsageReportingMetricsService)
 
         // Tell the container we are done registering
         AppContainer.shared.bootstrap()

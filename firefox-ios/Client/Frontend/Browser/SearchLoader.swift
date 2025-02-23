@@ -48,7 +48,7 @@ final class SearchLoader: Loader<Cursor<Site>, SearchViewModel>, FeatureFlaggabl
                 return
             }
 
-            let sites = bookmarkItems.map({ Site(url: $0.url, title: $0.title, bookmarked: true, guid: $0.guid) })
+            let sites = bookmarkItems.map({ Site.createBasicSite(url: $0.url, title: $0.title, isBookmarked: true) })
             completionHandler(sites)
         }
     }
@@ -74,13 +74,13 @@ final class SearchLoader: Loader<Cursor<Site>, SearchViewModel>, FeatureFlaggabl
                 // Sort descending by frecency score
                 $0.frecency > $1.frecency
             }.map({
-                return Site(url: $0.url, title: $0.title )
+                return Site.createBasicSite(url: $0.url, title: $0.title )
             }).uniqued()
             completionHandler(sites)
         }
     }
 
-    var query: String = "" {
+    var query = "" {
         didSet {
             let timerid = GleanMetrics.Awesomebar.queryTime.start()
             guard profile is BrowserProfile else {
@@ -207,7 +207,7 @@ final class SearchLoader: Loader<Cursor<Site>, SearchViewModel>, FeatureFlaggabl
     }
 
     fileprivate func completionForDomain(_ domain: String) -> String? {
-        let domainWithDotPrefix: String = ".\(domain)"
+        let domainWithDotPrefix = ".\(domain)"
         if let range = domainWithDotPrefix.range(of: ".\(query)", options: .caseInsensitive, range: nil, locale: nil) {
             // We don't actually want to match the top-level domain ("com", "org", etc.) by itself, so
             // so make sure the result includes at least one ".".

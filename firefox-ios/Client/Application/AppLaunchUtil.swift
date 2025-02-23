@@ -16,8 +16,10 @@ class AppLaunchUtil {
     private let introScreenManager: IntroScreenManager
     private let termsOfServiceManager: TermsOfServiceManager
 
-    init(logger: Logger = DefaultLogger.shared,
-         profile: Profile) {
+    init(
+        logger: Logger = DefaultLogger.shared,
+        profile: Profile
+    ) {
         self.logger = logger
         self.profile = profile
 //        self.adjustHelper = AdjustHelper(profile: profile)
@@ -51,6 +53,10 @@ class AppLaunchUtil {
             if isTermsOfServiceAccepted {
                 TelemetryWrapper.shared.setup(profile: profile)
                 TelemetryWrapper.shared.recordStartUpTelemetry()
+            } else {
+                // If ToS are not accepted, we still need to setup the Contextual Identifier for
+                // the Unified Ads Sponsored tiles
+                TelemetryContextualIdentifier.setupContextId(isGleanMetricsAllowed: false)
             }
         } else {
             logger.setup(sendCrashReports: sendCrashReports)
@@ -104,7 +110,7 @@ class AppLaunchUtil {
             AppEventQueue.signal(event: .accountManagerInitialized)
         }
 
-        // Add swizzle on UIViewControllers to automatically log when there's a new view showing
+        // Add swizzle on UIViewControllers to automatically log when there's a new view appearing or disappearing
         UIViewController.loggerSwizzle()
 
         // Add swizzle on top of UIControl to automatically log when there's an action sent

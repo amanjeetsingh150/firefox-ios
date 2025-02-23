@@ -27,7 +27,10 @@ final class TopSitesMiddlewareTests: XCTestCase, StoreTestUtility {
 
     func test_homepageInitializeAction_returnsTopSitesSection() throws {
         let subject = createSubject(topSitesManager: mockTopSitesManager)
-        let action = HomepageAction(windowUUID: .XCTestDefaultUUID, actionType: HomepageActionType.initialize)
+        let action = HomepageAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: HomepageActionType.initialize
+        )
 
         let expectation = XCTestExpectation(description: "All relevant top sites middleware actions are dispatched")
         expectation.expectedFulfillmentCount = 3
@@ -54,7 +57,10 @@ final class TopSitesMiddlewareTests: XCTestCase, StoreTestUtility {
 
     func test_fetchTopSitesAction_returnsTopSitesSection() throws {
         let subject = createSubject(topSitesManager: mockTopSitesManager)
-        let action = TopSitesAction(windowUUID: .XCTestDefaultUUID, actionType: TopSitesActionType.fetchTopSites)
+        let action = TopSitesAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: TopSitesActionType.fetchTopSites
+        )
 
         let expectation = XCTestExpectation(description: "All top sites middleware actions are dispatched")
         expectation.expectedFulfillmentCount = 3
@@ -81,7 +87,7 @@ final class TopSitesMiddlewareTests: XCTestCase, StoreTestUtility {
 
     func test_tappedOnPinTopSite_withSite_callsPinTopSite() {
         let subject = createSubject(topSitesManager: mockTopSitesManager)
-        let site = Site(url: "www.example.com", title: "Pinned Top Site")
+        let site = Site.createBasicSite(url: "www.example.com", title: "Pinned Top Site")
         let action = ContextMenuAction(
             site: site,
             windowUUID: .XCTestDefaultUUID,
@@ -107,7 +113,7 @@ final class TopSitesMiddlewareTests: XCTestCase, StoreTestUtility {
 
     func test_tappedOnUnpinTopSite_withSite_callsUnpinTopSite() {
         let subject = createSubject(topSitesManager: mockTopSitesManager)
-        let site = Site(url: "www.example.com", title: "Pinned Top Site")
+        let site = Site.createBasicSite(url: "www.example.com", title: "Pinned Top Site")
         let action = ContextMenuAction(
             site: site,
             windowUUID: .XCTestDefaultUUID,
@@ -130,7 +136,7 @@ final class TopSitesMiddlewareTests: XCTestCase, StoreTestUtility {
 
     func test_tappedOnRemoveTopSite_withSite_callsRemoveTopSite() {
         let subject = createSubject(topSitesManager: mockTopSitesManager)
-        let site = Site(url: "www.example.com", title: "Pinned Top Site")
+        let site = Site.createBasicSite(url: "www.example.com", title: "Pinned Top Site")
         let action = ContextMenuAction(
             site: site,
             windowUUID: .XCTestDefaultUUID,

@@ -19,7 +19,7 @@ func path(forTestPage page: String) -> String {
 // Extended timeout values for mozWaitForElementToExist and mozWaitForElementToNotExist
 let TIMEOUT: TimeInterval = 20
 let TIMEOUT_LONG: TimeInterval = 45
-let MAX_SWIPE: Int = 5
+let MAX_SWIPE = 5
 
 class BaseTestCase: XCTestCase {
     var navigator: MMNavigator<FxUserState>!
@@ -69,12 +69,9 @@ class BaseTestCase: XCTestCase {
         let icon = springboard.icons.containingText("Fennec").element(boundBy: 0)
         if icon.exists {
             icon.press(forDuration: 1.5)
-            mozWaitForElementToExist(springboard.buttons["Remove App"])
-            springboard.buttons["Remove App"].tap()
-            mozWaitForElementToExist(springboard.alerts.buttons["Delete App"])
-            springboard.alerts.buttons["Delete App"].tap()
-            mozWaitForElementToExist(springboard.alerts.buttons["Delete"])
-            springboard.alerts.buttons["Delete"].tap()
+            springboard.buttons["Remove App"].waitAndTap()
+            springboard.alerts.buttons["Delete App"].waitAndTap()
+            springboard.alerts.buttons["Delete"].waitAndTap()
         }
     }
 
@@ -138,7 +135,7 @@ class BaseTestCase: XCTestCase {
 
         if firstRunUI.exists {
             firstRunUI.swipeLeft()
-            XCUIApplication().buttons["Start Browsing"].tap()
+            XCUIApplication().buttons["Start Browsing"].waitAndTap()
         }
     }
 
@@ -240,15 +237,23 @@ class BaseTestCase: XCTestCase {
             app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon],
             timeout: TIMEOUT
         )
+        app.buttons["Save"].tapIfExists()
         navigator.goto(BrowserTabMenu)
         navigator.goto(SaveBrowserTabMenu)
         navigator.performAction(Action.Bookmark)
     }
 
-    func unbookmark() {
-        bookmark()
-        app.buttons["Delete Bookmark"].waitAndTap()
+    func unbookmark(url: String) {
         navigator.nowAt(BrowserTab)
+        navigator.goto(LibraryPanel_Bookmarks)
+        app.buttons["Edit"].waitAndTap()
+        if #available(iOS 17, *) {
+            app.buttons["Remove " + url].waitAndTap()
+        } else {
+            app.buttons["Delete " + url].waitAndTap()
+        }
+        app.buttons["Delete"].waitAndTap()
+        app.buttons["Done"].waitAndTap()
     }
 
     func checkBookmarks() {
@@ -294,28 +299,24 @@ class BaseTestCase: XCTestCase {
         userState.url = path(forTestPage: "test-mozilla-book.html")
         navigator.openURL(path(forTestPage: "test-mozilla-book.html"))
         waitUntilPageLoad()
-        mozWaitForElementToExist(app.buttons["Reader View"])
-        app.buttons["Reader View"].tap()
+        app.buttons["Reader View"].waitAndTap()
         waitUntilPageLoad()
-        mozWaitForElementToExist(app.buttons["Add to Reading List"])
-        app.buttons["Add to Reading List"].tap()
+        app.buttons["Add to Reading List"].waitAndTap()
     }
 
     func removeContentFromReaderView() {
-        navigator.nowAt(NewTabScreen)
-        navigator.goto(LibraryPanel_ReadingList)
+        app.segmentedControls["librarySegmentControl"].buttons.element(boundBy: 3).waitAndTap()
         let savedToReadingList = app.tables["ReadingTable"].cells.staticTexts["The Book of Mozilla"]
         mozWaitForElementToExist(savedToReadingList)
 
         // Remove the item from reading list
         savedToReadingList.swipeLeft()
         mozWaitForElementToExist(app.buttons["Remove"])
-        app.buttons["Remove"].tap()
+        app.buttons["Remove"].waitAndTap()
     }
 
      func selectOptionFromContextMenu(option: String) {
-        mozWaitForElementToExist(app.tables["Context Menu"].cells.otherElements[option])
-        app.tables["Context Menu"].cells.otherElements[option].tap()
+        app.tables["Context Menu"].cells.otherElements[option].waitAndTap()
         mozWaitForElementToNotExist(app.tables["Context Menu"])
     }
 
@@ -323,7 +324,7 @@ class BaseTestCase: XCTestCase {
         let app = XCUIApplication()
         UIPasteboard.general.string = url
         app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 2.0)
-        app.tables["Context Menu"].cells[AccessibilityIdentifiers.Photon.pasteAndGoAction].firstMatch.tap()
+        app.tables["Context Menu"].cells[AccessibilityIdentifiers.Photon.pasteAndGoAction].firstMatch.waitAndTap()
 
         if waitForLoadToFinish {
             let finishLoadingTimeout: TimeInterval = 30
@@ -358,7 +359,7 @@ class BaseTestCase: XCTestCase {
     func unlockLoginsView() {
         // Press continue button on the password onboarding if it's shown
         if app.buttons[AccessibilityIdentifiers.Settings.Passwords.onboardingContinue].exists {
-            app.buttons[AccessibilityIdentifiers.Settings.Passwords.onboardingContinue].tap()
+            app.buttons[AccessibilityIdentifiers.Settings.Passwords.onboardingContinue].waitAndTap()
         }
 
         let passcodeInput = springboard.otherElements.secureTextFields.firstMatch
@@ -379,9 +380,9 @@ class BaseTestCase: XCTestCase {
         var nrOfSwipes = 0
         while(!element.isVisible() || isHittable && !element.isHittable) && nrOfSwipes < maxNumberOfScreenSwipes {
             if swipe == "down" {
-                swipeableElement.swipeDown()
+                swipeableElement.partialSwipeDown()
             } else {
-                swipeableElement.swipeUp()
+                swipeableElement.partialSwipeUp()
             }
             usleep(1000)
             nrOfSwipes += 1
@@ -398,7 +399,7 @@ class BaseTestCase: XCTestCase {
 
     func dismissSurveyPrompt() {
         if app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists {
-            app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].tap()
+            app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
         }
     }
 
@@ -420,14 +421,28 @@ class BaseTestCase: XCTestCase {
         }
         mozWaitForElementToExist(app.cells.staticTexts["Dark"])
         if theme == "Dark" {
-            app.cells.staticTexts["Dark"].tap()
+            app.cells.staticTexts["Dark"].waitAndTap()
         } else {
-            app.cells.staticTexts["Light"].tap()
+            app.cells.staticTexts["Light"].waitAndTap()
         }
-        app.buttons["Settings"].tap()
+        app.buttons["Settings"].waitAndTap()
         navigator.nowAt(SettingsScreen)
         app.buttons["Done"].waitAndTap()
     }
+
+    func openNewTabAndValidateURLisPaste(url: String) {
+        if iPad() {
+            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
+        } else {
+            app.buttons[AccessibilityIdentifiers.Toolbar.homeButton].waitAndTap()
+        }
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 1.5)
+        mozWaitForElementToExist(app.tables["Context Menu"])
+        app.tables.otherElements[AccessibilityIdentifiers.Photon.pasteAction].waitAndTap()
+        let urlBar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        mozWaitForValueContains(urlBar, value: url)
+    }
+
     func waitForElementsToExist(_ elements: [XCUIElement], timeout: TimeInterval = TIMEOUT, message: String? = nil) {
         var elementsDict = [XCUIElement: String]()
         for element in elements {
@@ -593,6 +608,33 @@ extension XCUIElement {
             self.typeText(String(character))
             Thread.sleep(forTimeInterval: delay)
         }
+    }
+
+    // Swipe up a little less than half the element
+    func partialSwipeUp(distance: CGFloat = 0.5) {
+        let elementBounds = self.frame
+        let centerX = elementBounds.width/2
+        let centerY = elementBounds.height/2
+        // Start cooordinate about from the center of the element, end coordinate at the top
+        let startCoordinate = coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: centerX, dy: centerY))
+        let endCoordinate = coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: centerX, dy: centerY - (elementBounds.size.height/2) * distance))
+        startCoordinate.press(forDuration: 0, thenDragTo: endCoordinate)
+    }
+
+    // Swipe down a little less than half the element
+    func partialSwipeDown(distance: CGFloat = 0.5) {
+        let elementBounds = self.frame
+        let centerX = elementBounds.width/2
+        let centerY = elementBounds.height/2
+        // Start cooordinate about from the center of the element, end coordinate at the bottom
+        // Done rather than top to middle to avoid pulling down the notification bar
+        let startCoordinate = coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: centerX, dy: centerY))
+        let endCoordinate = coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: centerX, dy: centerY + (elementBounds.size.height/2) * distance))
+        startCoordinate.press(forDuration: 0, thenDragTo: endCoordinate)
     }
 }
 

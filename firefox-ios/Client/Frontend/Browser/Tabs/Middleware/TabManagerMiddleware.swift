@@ -35,8 +35,8 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
             self.resolveTabPanelViewActions(action: action, state: state)
         } else if let action = action as? MainMenuAction {
             self.resolveMainMenuActions(with: action, appState: state)
-        } else if let action = action as? HeaderAction {
-            self.resolveHomepageHeaderActions(with: action)
+        } else {
+            self.resolveHomepageActions(with: action)
         }
     }
 
@@ -352,6 +352,7 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
     /// - Parameters:
     ///   - tabUUID: UUID of the tab to be closed/removed
     /// - Returns: If is the last tab to be closed used to trigger dismissTabTray action
+    @MainActor
     private func closeTab(with tabUUID: TabUUID, uuid: WindowUUID, isPrivate: Bool) async -> Bool {
         let tabManager = tabManager(for: uuid)
         // In non-private mode, if:
@@ -412,7 +413,8 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
                                                                              withUserData: userData,
                                                                              toApplication: .shared)
 
-        let toastAction = TabPanelMiddlewareAction(toastType: .addBookmark,
+        // The Tab Tray uses a "SimpleToast", so the urlString will go unused
+        let toastAction = TabPanelMiddlewareAction(toastType: .addBookmark(urlString: shareItem.url),
                                                    windowUUID: uuid,
                                                    actionType: TabPanelMiddlewareActionType.showToast)
         store.dispatch(toastAction)
@@ -712,9 +714,10 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
             let shareItem = createShareItem(with: tabID, and: action.windowUUID)
             addToBookmarks(shareItem)
 
+            guard let shareItem else { return }
             store.dispatch(
                 GeneralBrowserAction(
-                    toastType: .addBookmark,
+                    toastType: .addBookmark(urlString: shareItem.url),
                     windowUUID: action.windowUUID,
                     actionType: GeneralBrowserActionType.showToast
                 )
@@ -875,11 +878,23 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
         }
     }
 
-    // MARK: - Homepage Header Actions
-    private func resolveHomepageHeaderActions(with action: HeaderAction) {
+    // MARK: - Homepage Related Actions
+    private func resolveHomepageActions(with action: Action) {
         switch action.actionType {
         case HeaderActionType.toggleHomepageMode:
             tabManager(for: action.windowUUID).switchPrivacyMode()
+        case HomepageActionType.initialize, JumpBackInActionType.fetchLocalTabs:
+            store.dispatch(
+                TabManagerAction(
+                    recentTabs: tabManager(for: action.windowUUID).recentlyAccessedNormalTabs,
+                    windowUUID: action.windowUUID,
+                    actionType: TabManagerMiddlewareActionType.fetchedRecentTabs
+                )
+            )
+        case JumpBackInActionType.tapOnCell:
+            guard let jumpBackInAction = action as? JumpBackInAction,
+                  let tab = jumpBackInAction.tab else { return }
+            tabManager(for: action.windowUUID).selectTab(tab)
         default:
             break
         }
@@ -905,6 +920,14 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
         Task {
             await self.bookmarksSaver.createBookmark(url: shareItem.url, title: shareItem.title, position: 0)
         }
+
+        var userData = [QuickActionInfos.tabURLKey: shareItem.url]
+        if let title = shareItem.title {
+            userData[QuickActionInfos.tabTitleKey] = title
+        }
+        QuickActionsImplementation().addDynamicApplicationShortcutItemOfType(.openLastBookmark,
+                                                                             withUserData: userData,
+                                                                             toApplication: .shared)
     }
 
     private func addToReadingList(with tabID: TabUUID?, uuid: WindowUUID) {
@@ -955,7 +978,8 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
               let url = tab.url?.displayURL?.absoluteString
         else { return }
 
-        let site = Site(url: url, title: tab.displayTitle)
+        let site = Site.createBasicSite(url: url, title: tab.displayTitle)
+
         profile.pinnedSites.addPinnedTopSite(site).uponQueue(.main) { result in
             guard result.isSuccess else { return }
 
@@ -976,7 +1000,8 @@ class TabManagerMiddleware: BookmarksRefactorFeatureFlagProvider {
               let url = tab.url?.displayURL?.absoluteString
         else { return }
 
-        let site = Site(url: url, title: tab.displayTitle)
+        let site = Site.createBasicSite(url: url, title: tab.displayTitle)
+
         profile.pinnedSites.removeFromPinnedTopSites(site).uponQueue(.main) { result in
             guard result.isSuccess else { return }
             store.dispatch(

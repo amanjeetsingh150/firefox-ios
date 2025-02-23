@@ -135,7 +135,15 @@ class HomePageSettingViewController: SettingsTableViewController, FeatureFlaggab
         let jumpBackInSetting = BoolSetting(
             with: .jumpBackIn,
             titleText: NSAttributedString(string: .Settings.Homepage.CustomizeFirefoxHome.JumpBackIn)
-        )
+        ) { value in
+            store.dispatch(
+                JumpBackInAction(
+                    isEnabled: value,
+                    windowUUID: self.windowUUID,
+                    actionType: JumpBackInActionType.toggleShowSectionSetting
+                )
+            )
+        }
 
         let historyHighlightsSetting = BoolSetting(
             with: .historyHighlights,
@@ -156,7 +164,15 @@ class HomePageSettingViewController: SettingsTableViewController, FeatureFlaggab
                 prefKey: PrefsKeys.UserFeatureFlagPrefs.BookmarksSection,
                 defaultValue: true,
                 titleText: .Settings.Homepage.CustomizeFirefoxHome.Bookmarks
-            )
+            ) { value in
+                store.dispatch(
+                    BookmarksAction(
+                        isEnabled: value,
+                        windowUUID: self.windowUUID,
+                        actionType: BookmarksActionType.toggleShowSectionSetting
+                    )
+                )
+            }
             sectionItems.append(bookmarksSetting)
         }
 
@@ -172,7 +188,15 @@ class HomePageSettingViewController: SettingsTableViewController, FeatureFlaggab
                 defaultValue: true,
                 titleText: .Settings.Homepage.CustomizeFirefoxHome.ThoughtProvokingStories,
                 statusText: pocketStatusText
-            )
+            ) { value in
+                store.dispatch(
+                    PocketAction(
+                        isEnabled: value,
+                        windowUUID: self.windowUUID,
+                        actionType: PocketActionType.toggleShowSectionSetting
+                    )
+                )
+            }
             sectionItems.append(pocketSetting)
         }
 
@@ -272,6 +296,13 @@ extension HomePageSettingViewController {
             let areShortcutsOn = profile.prefs.boolForKey(PrefsKeys.UserFeatureFlagPrefs.TopSiteSection) ?? true
             typealias Shortcuts = String.Settings.Homepage.Shortcuts
             let status: String = areShortcutsOn ? Shortcuts.ToggleOn : Shortcuts.ToggleOff
+            store.dispatch(
+                TopSitesAction(
+                    isEnabled: areShortcutsOn,
+                    windowUUID: self.windowUUID,
+                    actionType: TopSitesActionType.toggleShowSectionSetting
+                )
+            )
             return NSAttributedString(string: String(format: status))
         }
 

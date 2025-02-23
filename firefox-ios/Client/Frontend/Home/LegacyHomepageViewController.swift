@@ -543,7 +543,7 @@ class LegacyHomepageViewController:
             overlayState: overlayManager)
     }
 
-    private func prepareSyncedTabContextualHint(onCell cell: SyncedTabCell) {
+    private func prepareSyncedTabContextualHint(onCell cell: LegacySyncedTabCell) {
         guard syncTabContextualHintViewController.shouldPresentHint()
         else {
             syncTabContextualHintViewController.unconfigure()
@@ -823,7 +823,7 @@ private extension LegacyHomepageViewController {
 
     private func buildSite(from highlight: HighlightItem) -> Site {
         let itemURL = highlight.urlString ?? ""
-        return Site(url: itemURL, title: highlight.displayTitle)
+        return Site.createBasicSite(url: itemURL, title: highlight.displayTitle)
     }
 
     func openTabTray(_ sender: UIButton) {
@@ -893,8 +893,8 @@ extension LegacyHomepageViewController: HomepageContextMenuHelperDelegate {
         homePanelDelegate?.homePanelDidRequestToOpenSettings(at: settingsPage)
     }
 
-    func homePanelDidRequestBookmarkToast(url: URL?, action: BookmarkAction) {
-        homePanelDelegate?.homePanelDidRequestBookmarkToast(url: url, action: action)
+    func homePanelDidRequestBookmarkToast(urlString: String?, action: BookmarkAction) {
+        homePanelDelegate?.homePanelDidRequestBookmarkToast(urlString: urlString, action: action)
     }
 }
 

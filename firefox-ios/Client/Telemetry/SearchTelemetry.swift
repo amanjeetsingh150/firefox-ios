@@ -140,7 +140,7 @@ enum SearchTelemetryValues {
 }
 
 class SearchTelemetry {
-    var code: String = ""
+    var code = ""
     var provider: SearchEngine = .none
     var shouldSetGoogleTopSiteSearch = false
     var shouldSetUrlTypeSearch = false
@@ -159,8 +159,8 @@ class SearchTelemetry {
     var visibleSearchHighlights = [HighlightItem]()
     var visibleData = [Site]()
 
-    var searchQuery: String = ""
-    var savedQuery: String = ""
+    var searchQuery = ""
+    var savedQuery = ""
 
     init(tabManager: TabManager) {
         self.tabManager = tabManager
@@ -461,10 +461,10 @@ class SearchTelemetry {
         }
 
         for clientTab in visibleData {
-            if let isBookmarked = clientTab.bookmarked {
-                resultTypes.append(isBookmarked ?
-                                   SearchTelemetryValues.Results.bookmark.rawValue :
-                                    SearchTelemetryValues.Results.history.rawValue)
+            if let isBookmarked = clientTab.isBookmarked {
+                resultTypes.append(isBookmarked
+                                   ? SearchTelemetryValues.Results.bookmark.rawValue
+                                   : SearchTelemetryValues.Results.history.rawValue)
             }
         }
 

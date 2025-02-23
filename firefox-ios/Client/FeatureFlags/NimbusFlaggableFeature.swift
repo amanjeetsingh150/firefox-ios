@@ -15,6 +15,8 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case bottomSearchBar
     case contextualHintForToolbar
     case creditCardAutofillStatus
+    case cleanupHistoryReenabled
+    case darkReader
     case fakespotBackInStock
     case fakespotFeature
     case fakespotProductAds
@@ -25,6 +27,7 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case homepageRebuild
     case inactiveTabs
     case isToolbarCFREnabled
+    case jsAlertRefactor
     case jumpBackIn
     case loginAutofill
     case menuRefactor
@@ -34,10 +37,11 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case noInternetConnectionErrorPage
     case nightMode
     case passwordGenerator
+    case pdfRefactor
+    case downloadLiveActivities
     case preferSwitchToOpenTabOverDuplicate
-    case pullToRefreshRefactor
+    case ratingPromptFeature
     case reduxSearchSettings
-    case closeRemoteTabs
     case reportSiteIssue
     case searchHighlights
     case sentFromFirefox
@@ -45,7 +49,6 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case splashScreen
     case unifiedAds
     case unifiedSearch
-    case universalLinks
     case toolbarRefactor
     case toolbarOneTapNewTab
     case toolbarNavigationHint
@@ -57,8 +60,9 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     var debugKey: String? {
         switch self {
         case    .bookmarksRefactor,
-                .closeRemoteTabs,
                 .homepageRebuild,
+                .feltPrivacyFeltDeletion,
+                .feltPrivacySimplifiedUI,
                 .menuRefactor,
                 .microsurvey,
                 .nativeErrorPage,
@@ -67,6 +71,8 @@ enum NimbusFeatureFlagID: String, CaseIterable {
                 .toolbarRefactor,
                 .trackingProtectionRefactor,
                 .passwordGenerator,
+                .pdfRefactor,
+                .downloadLiveActivities,
                 .unifiedAds,
                 .unifiedSearch:
             return rawValue + PrefsKeys.FeatureFlags.DebugSuffixKey
@@ -108,13 +114,15 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .bookmarksRefactor,
                 .accountSettingsRedux,
                 .addressAutofillEdit,
+                .cleanupHistoryReenabled,
                 .creditCardAutofillStatus,
-                .closeRemoteTabs,
+                .darkReader,
                 .fakespotBackInStock,
                 .fakespotFeature,
                 .fakespotProductAds,
                 .homepageRebuild,
                 .isToolbarCFREnabled,
+                .jsAlertRefactor,
                 .loginAutofill,
                 .microsurvey,
                 .menuRefactor,
@@ -123,8 +131,10 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .noInternetConnectionErrorPage,
                 .nightMode,
                 .passwordGenerator,
+                .pdfRefactor,
+                .downloadLiveActivities,
                 .preferSwitchToOpenTabOverDuplicate,
-                .pullToRefreshRefactor,
+                .ratingPromptFeature,
                 .reduxSearchSettings,
                 .reportSiteIssue,
                 .feltPrivacySimplifiedUI,
@@ -134,7 +144,6 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .splashScreen,
                 .unifiedAds,
                 .unifiedSearch,
-                .universalLinks,
                 .toolbarRefactor,
                 .toolbarOneTapNewTab,
                 .toolbarNavigationHint,

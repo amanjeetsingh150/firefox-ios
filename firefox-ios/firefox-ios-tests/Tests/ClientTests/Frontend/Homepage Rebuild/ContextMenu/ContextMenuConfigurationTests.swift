@@ -10,7 +10,7 @@ import XCTest
 final class ContextMenuConfigurationTests: XCTestCase {
     func tests_initialState_forPocketItem_returnsExpectedState() {
         let pocketItem: HomepageItem = .pocket(
-            PocketStoryState(
+            PocketStoryConfiguration(
                 story: PocketStory(
                         url: URL("www.example.com/1234")!,
                         title: "Site 0",
@@ -40,7 +40,7 @@ final class ContextMenuConfigurationTests: XCTestCase {
 
     func tests_initialState_forPocketDiscoverItem_returnsExpectedState() {
         let pocketItem: HomepageItem = .pocketDiscover(
-            PocketDiscoverState(
+            PocketDiscoverConfiguration(
                 title: "Discover Site 0",
                 url: URL("www.example.com/1234")
             )
@@ -56,12 +56,12 @@ final class ContextMenuConfigurationTests: XCTestCase {
 
     func tests_initialState_forTopSitesItem_returnsExpectedState() {
         let topSiteItem: HomepageItem = .topSite(
-            TopSiteState(
-                site: Site(url: "www.example.com/1234", title: "Site 0")
+            TopSiteConfiguration(
+                site: Site.createBasicSite(url: "www.example.com/1234", title: "Site 0")
             ), nil
         )
         let subject = ContextMenuConfiguration(
-            homepageSection: .topSites,
+            homepageSection: .topSites(4),
             item: topSiteItem,
             toastContainer: UIView()
         )
@@ -71,7 +71,7 @@ final class ContextMenuConfigurationTests: XCTestCase {
 
     func tests_initialState_forNoItem_returnsExpectedState() {
         let subject = ContextMenuConfiguration(
-            homepageSection: .topSites,
+            homepageSection: .topSites(4),
             item: nil,
             toastContainer: UIView()
         )

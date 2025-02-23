@@ -45,10 +45,9 @@ class OnboardingTests: BaseTestCase {
                 app.pageIndicators["\(AccessibilityIdentifiers.Onboarding.pageControl)"]
             ]
         )
-        try app.performAccessibilityAudit()
 
         // Swipe to the second screen
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         waitForElementsToExist(
             [
@@ -58,7 +57,6 @@ class OnboardingTests: BaseTestCase {
                 app.buttons["\(rootA11yId)PrimaryButton"],
             ]
         )
-        try app.performAccessibilityAudit()
 
         // Swipe to the third screen
         app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
@@ -69,10 +67,9 @@ class OnboardingTests: BaseTestCase {
         XCTAssertTrue(app.staticTexts["\(rootA11yId)DescriptionLabel"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)PrimaryButton"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)SecondaryButton"].exists)
-        try app.performAccessibilityAudit()
 
         // Swipe to the fourth screen
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         XCTAssertTrue(app.images["\(rootA11yId)ImageView"].exists)
@@ -80,10 +77,9 @@ class OnboardingTests: BaseTestCase {
         XCTAssertTrue(app.staticTexts["\(rootA11yId)DescriptionLabel"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)PrimaryButton"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)SecondaryButton"].exists)
-        try app.performAccessibilityAudit()
 
         // Swipe to the fifth screen
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         XCTAssertTrue(app.images["\(rootA11yId)ImageView"].exists)
@@ -91,17 +87,16 @@ class OnboardingTests: BaseTestCase {
         XCTAssertTrue(app.staticTexts["\(rootA11yId)DescriptionLabel"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)PrimaryButton"].exists)
         XCTAssertTrue(app.buttons["\(rootA11yId)SecondaryButton"].exists)
-        try app.performAccessibilityAudit()
 
         // Finish onboarding
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         let topSites = app.collectionViews.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
         mozWaitForElementToExist(topSites)
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2793818
     func testFirstRunTourDarkMode() {
-        app.buttons["CloseButton"].tap()
+        app.buttons["CloseButton"].waitAndTap()
         switchThemeToDarkOrLight(theme: "Dark")
         app.terminate()
         app.launch()
@@ -120,7 +115,7 @@ class OnboardingTests: BaseTestCase {
         )
 
         // Swipe to the second screen
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         waitForElementsToExist(
             [
@@ -142,7 +137,7 @@ class OnboardingTests: BaseTestCase {
         XCTAssertTrue(app.buttons["\(rootA11yId)SecondaryButton"].exists)
 
         // Swipe to the fourth screen
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         XCTAssertTrue(app.images["\(rootA11yId)ImageView"].exists)
@@ -152,7 +147,7 @@ class OnboardingTests: BaseTestCase {
         XCTAssertTrue(app.buttons["\(rootA11yId)SecondaryButton"].exists)
 
         // Swipe to the fifth screen
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         XCTAssertTrue(app.images["\(rootA11yId)ImageView"].exists)
@@ -163,7 +158,7 @@ class OnboardingTests: BaseTestCase {
 
         // Finish onboarding
         let topSites = app.collectionViews.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         mozWaitForElementToExist(topSites)
     }
 
@@ -172,7 +167,7 @@ class OnboardingTests: BaseTestCase {
     func testOnboardingSignIn() {
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
         // Swipe to the second screen
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
         XCTAssertEqual("Stay encrypted when you hop between devices", app.staticTexts["\(rootA11yId)TitleLabel"].label)
@@ -181,31 +176,31 @@ class OnboardingTests: BaseTestCase {
         XCTAssertEqual("Sign In", app.buttons["\(rootA11yId)PrimaryButton"].label)
         XCTAssertEqual("Skip", app.buttons["\(rootA11yId)SecondaryButton"].label)
         // Tap on Sign In
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         mozWaitForElementToExist(app.navigationBars["Sync and Save Data"])
         XCTAssertTrue(app.buttons["QRCodeSignIn.button"].exists)
         XCTAssertEqual("Ready to Scan", app.buttons["QRCodeSignIn.button"].label)
         XCTAssertTrue(app.buttons["EmailSignIn.button"].exists)
         XCTAssertEqual("Use Email Instead", app.buttons["EmailSignIn.button"].label)
-        app.buttons["Done"].tap()
-        app.buttons["CloseButton"].tap()
+        app.buttons["Done"].waitAndTap()
+        app.buttons["CloseButton"].waitAndTap()
     }
 
     // Smoketest
     // https://mozilla.testrail.io/index.php?/cases/view/2306816
     func testCloseTour() {
-        app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].tap()
+        app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].waitAndTap()
         let topSites = app.collectionViews.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
         mozWaitForElementToExist(topSites)
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2306815
     func testWhatsNewPage() {
-        app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].tap()
+        app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].waitAndTap()
         navigator.goto(BrowserTabMenu)
         navigator.performAction(Action.OpenWhatsNewPage)
         waitUntilPageLoad()
-        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].tap()
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].waitAndTap()
 
         // Extract version number from url
         let url = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].value
@@ -221,7 +216,7 @@ class OnboardingTests: BaseTestCase {
             app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
             value: "https://www.mozilla.org/en-US/firefox/ios/" + releaseVersion + "/releasenotes/"
         )
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].tap()
+        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].waitAndTap()
         waitForElementsToExist(
             [
                 app.staticTexts["Release Notes"],
@@ -240,23 +235,23 @@ class OnboardingTests: BaseTestCase {
         // Wait for the initial title label to appear
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
 
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         currentScreen += 1
 
         let buttons = app.buttons.matching(identifier: "\(rootA11yId)MultipleChoiceButton")
         for i in 0..<buttons.count {
             let button = buttons.element(boundBy: i)
             if button.label == "Top" {
-                button.tap()
+                button.waitAndTap()
                 break
             }
         }
@@ -284,23 +279,23 @@ class OnboardingTests: BaseTestCase {
         // Wait for the initial title label to appear
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
 
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         currentScreen += 1
 
         let buttons = app.buttons.matching(identifier: "\(rootA11yId)MultipleChoiceButton")
         for i in 0..<buttons.count {
             let button = buttons.element(boundBy: i)
             if button.label == "Bottom" {
-                button.tap()
+                button.waitAndTap()
                 break
             }
         }
@@ -323,16 +318,16 @@ class OnboardingTests: BaseTestCase {
         // Wait for the initial title label to appear
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
 
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)SecondaryButton"].tap()
+        app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
-        app.buttons["\(rootA11yId)PrimaryButton"].tap()
+        app.buttons["\(rootA11yId)PrimaryButton"].waitAndTap()
         app.buttons["CloseButton"].waitAndTap()
         let topSites = app.collectionViews.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
         mozWaitForElementToExist(topSites)

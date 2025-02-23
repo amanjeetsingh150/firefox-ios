@@ -45,25 +45,39 @@ final class HomepageViewControllerTests: XCTestCase, StoreTestUtility {
         let sut = createSubject()
 
         XCTAssertEqual(mockThemeManager?.getCurrentThemeCallCount, 0)
-        XCTAssertEqual(mockNotificationCenter?.addObserverCallCount, 6)
-        XCTAssertEqual(mockNotificationCenter?.observers, [UIApplication.didBecomeActiveNotification,
-                                                           .FirefoxAccountChanged,
-                                                           .PrivateDataClearedHistory,
-                                                           .ProfileDidFinishSyncing,
-                                                           .TopSitesUpdated,
-                                                           .DefaultSearchEngineUpdated])
-
-        sut.loadViewIfNeeded()
-
-        XCTAssertEqual(mockThemeManager?.getCurrentThemeCallCount, 1)
-        XCTAssertEqual(mockNotificationCenter?.addObserverCallCount, 7)
+        XCTAssertEqual(mockNotificationCenter?.addObserverCallCount, 12)
         XCTAssertEqual(mockNotificationCenter?.observers, [UIApplication.didBecomeActiveNotification,
                                                            .FirefoxAccountChanged,
                                                            .PrivateDataClearedHistory,
                                                            .ProfileDidFinishSyncing,
                                                            .TopSitesUpdated,
                                                            .DefaultSearchEngineUpdated,
-                                                           .ThemeDidChange])
+                                                           .BookmarksUpdated,
+                                                           .RustPlacesOpened,
+                                                           .TabDataUpdated,
+                                                           .TabsTrayDidClose,
+                                                           .TabsTrayDidSelectHomeTab,
+                                                           .TopTabsTabClosed
+        ])
+
+        sut.loadViewIfNeeded()
+
+        XCTAssertEqual(mockThemeManager?.getCurrentThemeCallCount, 1)
+        XCTAssertEqual(mockNotificationCenter?.addObserverCallCount, 13)
+        XCTAssertEqual(mockNotificationCenter?.observers, [UIApplication.didBecomeActiveNotification,
+                                                           .FirefoxAccountChanged,
+                                                           .PrivateDataClearedHistory,
+                                                           .ProfileDidFinishSyncing,
+                                                           .TopSitesUpdated,
+                                                           .DefaultSearchEngineUpdated,
+                                                           .BookmarksUpdated,
+                                                           .RustPlacesOpened,
+                                                           .TabDataUpdated,
+                                                           .TabsTrayDidClose,
+                                                           .TabsTrayDidSelectHomeTab,
+                                                           .TopTabsTabClosed,
+                                                           .ThemeDidChange
+        ])
     }
 
     // MARK: - Deinit State
@@ -145,7 +159,7 @@ final class HomepageViewControllerTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(actionType, GeneralBrowserMiddlewareActionType.websiteDidScroll)
     }
 
-    func test_scrollViewWillBeginDragging_triggersHomepageAction() throws {
+    func test_scrollViewWillBeginDragging_triggersToolbarAction() throws {
         let homepageVC = createSubject()
         let scrollView = UIScrollView()
         scrollView.contentOffset.y = 10
@@ -160,6 +174,19 @@ final class HomepageViewControllerTests: XCTestCase, StoreTestUtility {
         )
         let actionType = try XCTUnwrap(actionCalled.actionType as? ToolbarActionType)
         XCTAssertEqual(actionType, ToolbarActionType.cancelEditOnHomepage)
+    }
+
+    func test_traitCollectionDidChange_triggersHomepageAction() throws {
+        let subject = createSubject()
+        subject.traitCollectionDidChange(nil)
+
+        let actionCalled = try XCTUnwrap(
+            mockStore.dispatchedActions.first(where: { $0 is HomepageAction }) as? HomepageAction
+        )
+        let actionType = try XCTUnwrap(actionCalled.actionType as? HomepageActionType)
+        XCTAssertEqual(actionType, HomepageActionType.traitCollectionDidChange)
+        XCTAssertEqual(actionCalled.windowUUID, .XCTestDefaultUUID)
+        XCTAssertFalse(actionCalled.showiPadSetup ?? true)
     }
 
     private func createSubject(statusBarScrollDelegate: StatusBarScrollDelegate? = nil) -> HomepageViewController {

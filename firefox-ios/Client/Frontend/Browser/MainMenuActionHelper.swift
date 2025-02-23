@@ -12,7 +12,7 @@ import Common
 
 protocol ToolBarActionMenuDelegate: AnyObject {
     func updateToolbarState()
-    func addBookmark(url: String, title: String?, site: Site?)
+    func addBookmark(urlString: String, title: String?, site: Site?)
 
     @discardableResult
     func openURLInNewTab(_ url: URL?, isPrivate: Bool) -> Tab
@@ -20,7 +20,7 @@ protocol ToolBarActionMenuDelegate: AnyObject {
 
     func showLibrary(panel: LibraryPanelType)
     func showViewController(viewController: UIViewController)
-    func showToast(_ bookmarkURL: URL?, _ title: String?, message: String, toastAction: MenuButtonToastAction)
+    func showToast(_ bookmarkURL: String?, _ title: String?, message: String, toastAction: MenuButtonToastAction)
     func showFindInPage()
     func showCustomizeHomePage()
     func showZoomPage(tab: Tab)
@@ -31,8 +31,8 @@ protocol ToolBarActionMenuDelegate: AnyObject {
 }
 
 extension ToolBarActionMenuDelegate {
-    func showToast(_ bookmarkURL: URL? = nil, _ title: String? = nil, message: String, toastAction: MenuButtonToastAction) {
-        showToast(bookmarkURL, title, message: message, toastAction: toastAction)
+    func showToast(_ urlString: String? = nil, _ title: String? = nil, message: String, toastAction: MenuButtonToastAction) {
+        showToast(urlString, title, message: message, toastAction: toastAction)
     }
 }
 
@@ -611,12 +611,12 @@ class MainMenuActionHelper: PhotonActionSheetProtocol,
         return SingleActionViewModel(title: .LegacyAppMenu.AppMenuDownloadPDF,
                                      iconString: StandardImageIdentifiers.Large.folder) { _ in
             guard let tab = self.selectedTab, let temporaryDocument = tab.temporaryDocument else { return }
-                temporaryDocument.getURL { fileURL in
-                    DispatchQueue.main.async {
-                        guard let fileURL = fileURL else {return}
-                        self.delegate?.showFilePicker(fileURL: fileURL)
-                    }
+            temporaryDocument.download { fileURL in
+                DispatchQueue.main.async {
+                    guard let fileURL = fileURL else {return}
+                    self.delegate?.showFilePicker(fileURL: fileURL)
                 }
+            }
         }.items
     }
 
@@ -734,13 +734,9 @@ class MainMenuActionHelper: PhotonActionSheetProtocol,
             else { return }
 
             // The method in BVC also handles the toast for this use case
-            self.delegate?.addBookmark(url: url.absoluteString, title: tab.title, site: nil)
-            TelemetryWrapper.recordEvent(
-                category: .action,
-                method: .add,
-                object: .bookmark,
-                value: .pageActionMenu
-            )
+            self.delegate?.addBookmark(urlString: url.absoluteString, title: tab.title, site: nil)
+            let bookmarksTelemetry = BookmarksTelemetry()
+            bookmarksTelemetry.addBookmark(eventLabel: .pageActionMenu)
         }
     }
 
@@ -757,13 +753,8 @@ class MainMenuActionHelper: PhotonActionSheetProtocol,
                 )
                 self.removeBookmarkShortcut()
             }
-
-            TelemetryWrapper.recordEvent(
-                category: .action,
-                method: .delete,
-                object: .bookmark,
-                value: .pageActionMenu
-            )
+            let bookmarksTelemetry = BookmarksTelemetry()
+            bookmarksTelemetry.deleteBookmark(eventLabel: .pageActionMenu)
         }
     }
 
@@ -785,7 +776,9 @@ class MainMenuActionHelper: PhotonActionSheetProtocol,
                                      iconString: StandardImageIdentifiers.Large.pin) { _ in
             guard let url = self.selectedTab?.url?.displayURL,
                   let title = self.selectedTab?.displayTitle else { return }
-            let site = Site(url: url.absoluteString, title: title)
+
+            let site = Site.createBasicSite(url: url.absoluteString, title: title)
+
             self.profile.pinnedSites.addPinnedTopSite(site).uponQueue(.main) { result in
                 guard result.isSuccess else { return }
                 self.delegate?.showToast(message: .LegacyAppMenu.AddPinToShortcutsConfirmMessage, toastAction: .pinPage)
@@ -800,7 +793,9 @@ class MainMenuActionHelper: PhotonActionSheetProtocol,
                                      iconString: StandardImageIdentifiers.Large.pinSlash) { _ in
             guard let url = self.selectedTab?.url?.displayURL,
                   let title = self.selectedTab?.displayTitle else { return }
-            let site = Site(url: url.absoluteString, title: title)
+
+            let site = Site.createBasicSite(url: url.absoluteString, title: title)
+
             self.profile.pinnedSites.removeFromPinnedTopSites(site).uponQueue(.main) { result in
                 if result.isSuccess {
                     self.delegate?.showToast(

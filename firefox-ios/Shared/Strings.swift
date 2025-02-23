@@ -172,6 +172,11 @@ extension String {
                 tableName: "Bookmarks",
                 value: "Edit Bookmark",
                 comment: "Label on the top of the `Edit Bookmarks` screen.")
+            public static let EditBookmarkDesktopBookmarksLabel = MZLocalizedString(
+                key: "Bookmarks.Menu.EditBookmarkDesktopBookmarksLabel.v136",
+                tableName: "Bookmarks",
+                value: "DESKTOP BOOKMARKS",
+                comment: "Header denoting that the proceeding folders in the parent folder selector table of the Edit Bookmarks Screen are folders shared with desktop.")
             public static let DeletedBookmark = MZLocalizedString(
                 key: "Bookmarks.Menu.DeletedBookmark.v131",
                 tableName: "Bookmarks",
@@ -182,6 +187,21 @@ extension String {
                 tableName: "Bookmarks",
                 value: "Delete Bookmark",
                 comment: "The title for the Delete Bookmark button, in the Edit Bookmark popup screen which is summoned from the main menu's Save submenu, which will delete the currently bookmarked site from the user's bookmarks.")
+            public static let SavedBookmarkToastLabel = MZLocalizedString(
+                key: "Bookmarks.Menu.SavedBookmarkToastLabel.v136",
+                tableName: "Bookmarks",
+                value: "Saved in “%@”",
+                comment: "The label displayed in the toast notification when saving a bookmark via the menu to a custom folder. The placeholder represents the custom name of the folder, created by the user, where the bookmark will be saved to")
+            public static let SavedBookmarkToastDefaultFolderLabel = MZLocalizedString(
+                key: "Bookmarks.Menu.SavedBookmarkToastDefaultFolderLabel.v136",
+                tableName: "Bookmarks",
+                value: "Saved in “Bookmarks”",
+                comment: "The label displayed in the toast notification when saving a bookmark via the menu to the default folder. \"Bookmarks\" is the name of the default folder where the bookmark will be saved to.")
+            public static let MoreOptionsA11yLabel = MZLocalizedString(
+                key: "Bookmarks.Menu.MoreOptionsA11yLabel.v136",
+                tableName: "Bookmarks",
+                value: "More options",
+                comment: "Accessibility label for the \"...\" disclosure button located within every bookmark site cell in the bookmarks panel. Pressing this button opens a modal with more actions.")
         }
 
         public struct EmptyState {
@@ -191,16 +211,21 @@ extension String {
                     tableName: "Bookmarks",
                     value: "No bookmarks yet",
                     comment: "The title for the placeholder screen shown when there are no saved bookmarks, located at the root level of the bookmarks panel within the libray modal")
-                public static let Body = MZLocalizedString(
+                public static let BodySignedIn = MZLocalizedString(
                     key: "Bookmarks.EmptyState.Root.Body.v135",
                     tableName: "Bookmarks",
                     value: "Save sites as you browse. We’ll also grab bookmarks from other synced devices.",
-                    comment: "The body text for the placeholder screen shown when there are no saved bookmarks, located at the root level of the bookmarks panel within the libray modal")
+                    comment: "The body text for the placeholder screen shown when the user is signed in and there are no saved bookmarks, located at the root level of the bookmarks panel within the libray modal")
+                public static let BodySignedOut = MZLocalizedString(
+                    key: "Bookmarks.EmptyState.Root.BodySignedOut.v135",
+                    tableName: "Bookmarks",
+                    value: "Save sites as you browse. Sign in to grab bookmarks from other synced devices.",
+                    comment: "The body text for the placeholder screen shown when the user is signed out and there are no saved bookmarks, located at the root level of the bookmarks panel within the libray modal")
                 public static let ButtonTitle = MZLocalizedString(
-                    key: "Bookmarks.EmptyState.Root.ButtonTitle.v135",
+                    key: "Bookmarks.EmptyState.Root.ButtonTitle.v136",
                     tableName: "Bookmarks",
                     value: "Sign in to Sync",
-                    comment: "The button title for the sign in button on the placeholder screen shown when there are no saved bookmarks, located at the root level of the bookmarks panel within the library modal. This button triggers the sign in flow, allowing users to sign in to their Mozilla Account to sync data")
+                    comment: "The button title for the sign in button on the placeholder screen shown when there are no saved bookmarks, located at the root level of the bookmarks panel within the library modal. This button triggers the sign in flow, allowing users to sign in to their Mozilla Account to sync data. In this string, \"Sync\" is used as a verb, and is capitalized as per convention to title case text for buttons in iOS")
             }
             public struct Nested {
                 public static let Title = MZLocalizedString(
@@ -1644,10 +1669,10 @@ extension String {
                 tableName: "Onboarding",
                 value: "Fast and secure web browsing",
                 comment: "Subtitle for the Terms of Service screen in the onboarding process.")
-            public static let AgreementButtonTitle = MZLocalizedString(
-                key: "Onboarding.TermsOfService.AgreementButtonTitle.v135",
+            public static let AgreementButtonTitleV2 = MZLocalizedString(
+                key: "Onboarding.TermsOfService.AgreementButtonTitle.v136",
                 tableName: "Onboarding",
-                value: "Agree and continue",
+                value: "Agree and Continue",
                 comment: "Title for the confirmation button for Terms of Service agreement, in the Terms of Service screen.")
             public static let TermsOfServiceAgreement = MZLocalizedString(
                 key: "Onboarding.TermsOfService.TermsOfServiceAgreement.v135",
@@ -1664,11 +1689,11 @@ extension String {
                 tableName: "Onboarding",
                 value: "To help improve the browser, %@ sends diagnostic and interaction data to %@. %@",
                 comment: "Agreement text for sends diagnostic and interaction data to Mozilla in the Terms of Service screen. First placeholder is for the app name. The second placeholder will be replaced the company name of Mozilla. The last placeholder is for for the Manage link button which redirect the user to another screen in order to manage the data collection preferences.")
-            public static let TermsOfServiceLink = MZLocalizedString(
-                key: "Onboarding.TermsOfService.TermsOfServiceLink.v135",
+            public static let TermsOfUseLink = MZLocalizedString(
+                key: "Onboarding.TermsOfUse.TermsOfUseLink.v136",
                 tableName: "Onboarding",
-                value: "%@ Terms of Service.",
-                comment: "Title for the Terms of Service button link, in the Terms of Service screen for redirecting the user to the Terms of Service page. Placeholder is for the app name.")
+                value: "%@ Terms of Use.",
+                comment: "Title for the Terms of Use button link, in the Terms of Use screen for redirecting the user to the Terms of Use page. Placeholder is for the app name.")
             public static let PrivacyNoticeLink = MZLocalizedString(
                 key: "Onboarding.TermsOfService.PrivacyNoticeLink.v135",
                 tableName: "Onboarding",
@@ -2681,6 +2706,22 @@ extension String {
             tableName: nil,
             value: "Start Browsing",
             comment: "On the onboarding card letting users know what's new in this version of Firefox, this is the title for the button, on the bottom of the card, used to get back to browsing on Firefox by dismissing the onboarding card")
+    }
+
+    /// The localizations for the custom implemented content on the WebView
+    public struct WebView {
+        public static let DocumentLoadingLabel = MZLocalizedString(
+            key: "WebView.DocumentLoadingLabel.v137",
+            tableName: "WebView",
+            value: "Loading…",
+            comment: "The label shown while loading a document in the web view's custom document loading UI"
+        )
+        public static let DocumentLoadingAccessibilityLabel = MZLocalizedString(
+            key: "WebView.DocumentLoadingAccessibilityLabel.v137",
+            tableName: "WebView",
+            value: "Loading Document",
+            comment: "The accessibility label read when loading a document in the web view's custom document loading UI."
+        )
     }
 }
 
@@ -4591,16 +4632,16 @@ extension String {
 
         public struct SocialShare {
             public static let ShareMessageA = MZLocalizedString(
-                key: "SentFromFirefox.SocialShare.ShareMessageA.Title.v134",
+                key: "SentFromFirefox.SocialShare.ShareMessageA.Title.v137",
                 tableName: "SocialShare",
-                value: "%1$@ Sent from %2$@ 🦊 Try the mobile browser: %3$@",
-                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app.")
+                value: "%1$@\n\nSent from %2$@ 🦊 Try the mobile browser: %3$@",
+                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app. The '\n' symbols denote empty lines separating the first link parameter from the rest of the text. ")
 
             public static let ShareMessageB = MZLocalizedString(
-                key: "SentFromFirefox.SocialShare.ShareMessageB.Title.v134",
+                key: "SentFromFirefox.SocialShare.ShareMessageB.Title.v137",
                 tableName: "SocialShare",
-                value: "%1$@ Sent from %2$@ 🦊 %3$@",
-                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app.")
+                value: "%1$@\n\nSent from %2$@ 🦊 %3$@",
+                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app. The '\n' symbols denote empty lines separating the first link parameter from the rest of the text.")
 
             public static let SocialSettingsToggleTitle = MZLocalizedString(
                 key: "SentFromFirefox.SocialShare.SettingsToggle.Title.v134",
@@ -4919,24 +4960,56 @@ extension String {
     }
 }
 
-// MARK: - Snackbar shown when tapping app store link
+// MARK: - Alert controller shown when tapping sms, email or app store links
 extension String {
     public static let ExternalLinkAppStoreConfirmationTitle = MZLocalizedString(
         key: "ExternalLink.AppStore.ConfirmationTitle",
         tableName: nil,
         value: "Open this link in the App Store?",
         comment: "Question shown to user when tapping a link that opens the App Store app")
-    public static let ExternalLinkGenericConfirmation = MZLocalizedString(
-        key: "ExternalLink.AppStore.GenericConfirmationTitle",
-        tableName: nil,
-        value: "Open this link in external app?",
-        comment: "Question shown to user when tapping an SMS or MailTo link that opens the external app for those.")
+    public static let ExternalSmsLinkConfirmation = MZLocalizedString(
+        key: "ExternalLink.ExternalSmsLinkConfirmation.v136",
+        tableName: "ExternalLink",
+        value: "Open sms in an external application?",
+        comment: "Question shown to user when tapping an SMS link that opens the external app for those."
+    )
+    public static let ExternalMailLinkConfirmation = MZLocalizedString(
+        key: "ExternalLink.ExternalMailLinkConfirmation.v136",
+        tableName: "ExternalLink",
+        value: "Open email in the default mail application?",
+        comment: "Question shown to user when tapping a mail link that opens the external app for those."
+    )
+    public static let ExternalInvalidLinkMessage = MZLocalizedString(
+        key: "ExternalLink.ExternalInvalidLinkMessage.v136",
+        tableName: "ExternalLink",
+        value: "The application required to open that link can’t be found.",
+        comment: "A statement shown to user when tapping an external link and the link doesn't work."
+    )
+    public static let ExternalOpenMessage = MZLocalizedString(
+        key: "ExternalLink.ExternalOpenMessage.v136",
+        tableName: "ExternalLink",
+        value: "Open",
+        comment: "The call to action button for a user to open an external link."
+    )
 }
 
 // MARK: Enhanced Tracking Protection/Unified Trust Panel
 extension String {
     public struct Menu {
         public struct EnhancedTrackingProtection {
+            public struct AccessibilityLabels {
+                public static let CloseButton = MZLocalizedString(
+                    key: "MainMenu.Account.AccessibilityLabels.CloseButton.v137",
+                    tableName: "EnhancedTrackingProtection",
+                    value: "Close",
+                    comment: "The accessibility label for the close button in the EnhancedTrackingProtection screen header navigation view.")
+                public static let BackButton = MZLocalizedString(
+                    key: "MainMenu.Account.AccessibilityLabels.BackButton.v137",
+                    tableName: "EnhancedTrackingProtection",
+                    value: "Back",
+                    comment: "The accessibility label for the back button in the EnhancedTrackingProtection screen header navigation view.")
+            }
+
             public static let onTitle = MZLocalizedString(
                 key: "Menu.EnhancedTrackingProtection.On.Title.v128",
                 tableName: "EnhancedTrackingProtection",
@@ -5349,40 +5422,20 @@ extension String {
 
 // MARK: - Settings Home
 extension String {
-    public static let SendUsageSettingTitle = MZLocalizedString(
-        key: "Settings.SendUsage.Title",
-        tableName: nil,
-        value: "Send Usage Data",
-        comment: "The title for the setting to send usage data.")
-    public static let SendUsageSettingLink = MZLocalizedString(
-        key: "Settings.SendUsage.Link",
-        tableName: nil,
-        value: "Learn More.",
-        comment: "title for a link that explains how mozilla collects telemetry")
-    public static let SendUsageSettingMessage = MZLocalizedString(
-        key: "Settings.SendUsage.Message",
-        tableName: nil,
-        value: "Mozilla strives to only collect what we need to provide and improve Firefox for everyone.",
-        comment: "A short description that explains why mozilla collects usage data.")
     public static let SendCrashReportsSettingTitle = MZLocalizedString(
         key: "Settings.CrashReports.Title.v135",
         tableName: "Settings",
         value: "Automatically Send Crash Reports",
         comment: "On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports.")
-    public static let SendCrashReportsSettingLink = MZLocalizedString(
-        key: "Settings.CrashReports.Link.v135",
-        tableName: "Settings",
-        value: "Learn More.",
-        comment: "Title for a link that explains how Mozilla send crash reports.")
     public static let SendCrashReportsSettingLinkV2 = MZLocalizedString(
         key: "Settings.CrashReports.Link.v136",
         tableName: "Settings",
         value: "Learn More",
         comment: "Title for a link that explains how Mozilla send crash reports.")
-    public static let SendCrashReportsSettingMessage = MZLocalizedString(
-        key: "Settings.CrashReports.Message.v135",
+    public static let SendCrashReportsSettingMessageV2 = MZLocalizedString(
+        key: "Settings.CrashReports.Message.v136",
         tableName: "Settings",
-        value: "Crash reports allow us diagnose and fix issues with the browser.",
+        value: "This helps us diagnose and fix issues with the browser.",
         comment: "On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports.")
     public static let SendDailyUsagePingSettingTitle = MZLocalizedString(
         key: "Settings.DailyUsagePing.Title.v135",
@@ -5444,25 +5497,6 @@ extension String {
         tableName: nil,
         value: "Open New Tab",
         comment: "The description of the open new tab siri shortcut")
-}
-
-// MARK: - Nimbus settings
-extension String {
-    public static let SettingsStudiesToggleTitle = MZLocalizedString(
-        key: "Settings.Studies.Toggle.Title",
-        tableName: nil,
-        value: "Studies",
-        comment: "Label used as a toggle item in Settings. When this is off, the user is opting out of all studies.")
-    public static let SettingsStudiesToggleLink = MZLocalizedString(
-        key: "Settings.Studies.Toggle.Link",
-        tableName: nil,
-        value: "Learn More.",
-        comment: "Title for a link that explains what Mozilla means by Studies")
-    public static let SettingsStudiesToggleMessage = MZLocalizedString(
-        key: "Settings.Studies.Toggle.Message",
-        tableName: nil,
-        value: "Firefox may install and run studies from time to time.",
-        comment: "A short description that explains that Mozilla is running studies")
 }
 
 // MARK: - Share extension
@@ -7086,11 +7120,11 @@ extension String {
         tableName: nil,
         value: nil,
         comment: "Settings item that opens a tab containing the licenses. See http://mzl.la/1NSAWCG")
-    public static let AppSettingsYourRights = MZLocalizedString(
-        key: "Your Rights",
-        tableName: nil,
-        value: nil,
-        comment: "Your Rights settings section title")
+    public static let AppSettingsTermsOfUse = MZLocalizedString(
+        key: "Settings.TermsOfUse.Title.v137",
+        tableName: "Settings",
+        value: "Terms of Use",
+        comment: "Terms of Use settings section title")
     public static let AppSettingsShowTour = MZLocalizedString(
         key: "Show Tour",
         tableName: nil,
@@ -7111,11 +7145,11 @@ extension String {
         tableName: nil,
         value: nil,
         comment: "Open search section of settings")
-    public static let AppSettingsPrivacyPolicy = MZLocalizedString(
-        key: "Privacy Policy",
-        tableName: nil,
-        value: nil,
-        comment: "Show Firefox Browser Privacy Policy page from the Privacy section in the settings. See https://www.mozilla.org/privacy/firefox/")
+    public static let AppSettingsPrivacyNotice = MZLocalizedString(
+        key: "Settings.PrivacyNotice.Title.v137",
+        tableName: "Settings",
+        value: "Privacy Notice",
+        comment: "Show Firefox Browser Privacy Notice page from the Privacy section in the settings. See https://www.mozilla.org/privacy/firefox/")
     public static let AppSettingsTitle = MZLocalizedString(
         key: "Settings",
         tableName: nil,
@@ -7442,6 +7476,26 @@ extension String {
         tableName: nil,
         value: "To use the AutoFill feature for Firefox, you must have a device passcode enabled.",
         comment: "Warning message shown when you try to enable or use native AutoFill without a device passcode setup")
+    public static let CredentialProviderRetryAlertTitle = MZLocalizedString(
+        key: "CredentialProvider.RetryAllert.Title.v137",
+        tableName: "CredentialProvider",
+        value: "Autofill Error",
+        comment: "Title label displayed for an alert when the password autofill fails and needs user interaction.")
+    public static let CredentialProviderRetryAlertMessage = MZLocalizedString(
+        key: "CredentialProvider.RetryAllert.Message.v137",
+        tableName: "CredentialProvider",
+        value: "There was an issue with autofill. Please try again.",
+        comment: "Message label displayed for an alert when the password autofill fails and needs user interaction.")
+    public static let CredentialProviderRetryAlertRetryActionTitle = MZLocalizedString(
+        key: "CredentialProvider.RetryAllert.RetryAction.Title.v137",
+        tableName: "CredentialProvider",
+        value: "Retry",
+        comment: "Title label displayed for the retry action in an alert when the password autofill fails and needs user interaction.")
+    public static let CredentialProviderRetryAlertCancelActionTitle = MZLocalizedString(
+        key: "CredentialProvider.RetryAllert.CancelAction.Title.v137",
+        tableName: "CredentialProvider",
+        value: "Cancel",
+        comment: "Title label displayed for the cancel action in an alert when the password autofill fails and needs user interaction.")
 }
 
 // MARK: - Password autofill
@@ -7651,6 +7705,85 @@ extension String {
                 tableName: "Settings",
                 value: "Learn More.",
                 comment: "Title for a link that explains how Mozilla send daily usage ping.")
+            public static let TermsOfServiceLink = MZLocalizedString(
+                key: "Onboarding.TermsOfService.TermsOfServiceLink.v135",
+                tableName: "Onboarding",
+                value: "%@ Terms of Service.",
+                comment: "Title for the Terms of Service button link, in the Terms of Service screen for redirecting the user to the Terms of Service page. Placeholder is for the app name.")
+            public static let SendCrashReportsSettingMessage = MZLocalizedString(
+                key: "Settings.CrashReports.Message.v135",
+                tableName: "Settings",
+                value: "Crash reports allow us to diagnose and fix issues with the browser.",
+                comment: "On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports.")
+            public static let AgreementButtonTitle = MZLocalizedString(
+                key: "Onboarding.TermsOfService.AgreementButtonTitle.v135",
+                tableName: "Onboarding",
+                value: "Agree and continue",
+                comment: "Title for the confirmation button for Terms of Service agreement, in the Terms of Service screen.")
+            public static let SendUsageSettingTitle = MZLocalizedString(
+                key: "Settings.SendUsage.Title",
+                tableName: nil,
+                value: "Send Usage Data",
+                comment: "The title for the setting to send usage data.")
+            public static let SendUsageSettingLink = MZLocalizedString(
+                key: "Settings.SendUsage.Link",
+                tableName: nil,
+                value: "Learn More.",
+                comment: "title for a link that explains how mozilla collects telemetry")
+            public static let SendUsageSettingMessage = MZLocalizedString(
+                key: "Settings.SendUsage.Message",
+                tableName: nil,
+                value: "Mozilla strives to only collect what we need to provide and improve Firefox for everyone.",
+                comment: "A short description that explains why mozilla collects usage data.")
+            public static let SettingsStudiesToggleTitle = MZLocalizedString(
+                key: "Settings.Studies.Toggle.Title",
+                tableName: nil,
+                value: "Studies",
+                comment: "Label used as a toggle item in Settings. When this is off, the user is opting out of all studies.")
+            public static let SettingsStudiesToggleLink = MZLocalizedString(
+                key: "Settings.Studies.Toggle.Link",
+                tableName: nil,
+                value: "Learn More.",
+                comment: "Title for a link that explains what Mozilla means by Studies")
+            public static let SettingsStudiesToggleMessage = MZLocalizedString(
+                key: "Settings.Studies.Toggle.Message",
+                tableName: nil,
+                value: "Firefox may install and run studies from time to time.",
+                comment: "A short description that explains that Mozilla is running studies")
+            public static let SendCrashReportsSettingLink = MZLocalizedString(
+                key: "Settings.CrashReports.Link.v135",
+                tableName: "Settings",
+                value: "Learn More.",
+                comment: "Title for a link that explains how Mozilla send crash reports.")
+        }
+        struct v136 {
+            public static let ExternalLinkGenericConfirmation = MZLocalizedString(
+                key: "ExternalLink.AppStore.GenericConfirmationTitle",
+                tableName: nil,
+                value: "Open this link in external app?",
+                comment: "Question shown to user when tapping an SMS or MailTo link that opens the external app for those.")
+            public static let AppSettingsPrivacyPolicy = MZLocalizedString(
+                key: "Privacy Policy",
+                tableName: nil,
+                value: nil,
+                comment: "Show Firefox Browser Privacy Policy page from the Privacy section in the settings. See https://www.mozilla.org/privacy/firefox/")
+            public static let AppSettingsYourRights = MZLocalizedString(
+                key: "Your Rights",
+                tableName: nil,
+                value: nil,
+                comment: "Your Rights settings section title")
+        }
+        struct v137 {
+            public static let ShareMessageA = MZLocalizedString(
+                key: "SentFromFirefox.SocialShare.ShareMessageA.Title.v134",
+                tableName: "SocialShare",
+                value: "%1$@ Sent from %2$@ 🦊 Try the mobile browser: %3$@",
+                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app.")
+            public static let ShareMessageB = MZLocalizedString(
+                key: "SentFromFirefox.SocialShare.ShareMessageB.Title.v134",
+                tableName: "SocialShare",
+                value: "%1$@ Sent from %2$@ 🦊 %3$@",
+                comment: "When a user shares a link to social media, this is the shared text they'll see in the social media app. The first parameter is the shared website's URL. The second parameter is the Firefox app name. The third parameter is the link to download the Firefox app.")
         }
     }
 }

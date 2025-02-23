@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import Common
 @testable import Client
 
 class RouteBuilderTests: XCTestCase {
@@ -18,9 +19,8 @@ class RouteBuilderTests: XCTestCase {
         universalLinkUserActivity.webpageURL = testURL
         randomActivity.webpageURL = testURL
     }
-    func test_makeRoute_whenUniversalLinkIsDisabled_HandlesAnyACtivityType() {
-        setupNimbusUniversalLinksTesting(isEnabled: false)
-        let routeBuilder = createSubject()
+    func test_makeRoute_HandlesAnyActivityType() {
+        let routeBuilder = createSubject(mainQueue: MockDispatchQueue())
 
         let route = routeBuilder.makeRoute(
             userActivity: handoffUserActivity
@@ -39,38 +39,19 @@ class RouteBuilderTests: XCTestCase {
         XCTAssertEqual(randomRoute, .search(url: testURL, isPrivate: false))
     }
 
-    func test_makeRoute_whenUniversalLinkIsEnabled_handlesWebpageURLForActivityTypeBrowsingActivityAndBrowsingWeb() {
-        setupNimbusUniversalLinksTesting(isEnabled: true)
-        let routeBuilder = createSubject()
+    func test_makeRoute_ResetsShouldOpenNewTabAfterDelay() {
+        let routeBuilder = createSubject(mainQueue: MockDispatchQueue())
+        routeBuilder.shouldOpenNewTab = true
+        let userActivity = NSUserActivity(activityType: SiriShortcuts.activityType.openURL.rawValue)
 
-        let route = routeBuilder.makeRoute(
-            userActivity: handoffUserActivity
-        )
+        _ = routeBuilder.makeRoute(userActivity: userActivity)
 
-        let universalLinkRoute = routeBuilder.makeRoute(
-            userActivity: universalLinkUserActivity
-        )
+        XCTAssertTrue(routeBuilder.shouldOpenNewTab)
+     }
 
-        let randomRoute = routeBuilder.makeRoute(
-            userActivity: randomActivity
-        )
-
-        XCTAssertEqual(route, .search(url: testURL, isPrivate: false))
-        XCTAssertEqual(universalLinkRoute, .search(url: testURL, isPrivate: false))
-        XCTAssertNil(randomRoute)
-    }
-
-    private func createSubject() -> RouteBuilder {
-        let subject = RouteBuilder()
+    private func createSubject(mainQueue: MockDispatchQueue) -> RouteBuilder {
+        let subject = RouteBuilder(mainQueue: mainQueue)
         trackForMemoryLeaks(subject)
         return subject
-    }
-
-    private func setupNimbusUniversalLinksTesting(isEnabled: Bool) {
-        FxNimbus.shared.features.universalLinks.with { _, _ in
-            return UniversalLinks(
-                enabled: isEnabled
-            )
-        }
     }
 }

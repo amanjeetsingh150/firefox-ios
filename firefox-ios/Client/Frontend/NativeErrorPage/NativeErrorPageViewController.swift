@@ -16,9 +16,9 @@ final class NativeErrorPageViewController: UIViewController,
     private let windowUUID: WindowUUID
 
     // MARK: Themable Variables
-    var themeManager: Common.ThemeManager
+    var themeManager: ThemeManager
     var themeObserver: NSObjectProtocol?
-    var notificationCenter: Common.NotificationProtocol
+    var notificationCenter: NotificationProtocol
     var currentWindowUUID: UUID? {
         windowUUID
     }
@@ -186,10 +186,8 @@ final class NativeErrorPageViewController: UIViewController,
         super.viewDidLoad()
         listenForThemeChange(view)
         applyTheme()
-        store.dispatch(NativeErrorPageAction( windowUUID: windowUUID,
-                                              actionType: NativeErrorPageActionType.errorPageLoaded
-                                            )
-        )
+        store.dispatch(NativeErrorPageAction(windowUUID: windowUUID,
+                                             actionType: NativeErrorPageActionType.errorPageLoaded))
     }
 
     override func viewWillTransition(

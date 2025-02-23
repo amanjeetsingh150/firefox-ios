@@ -14,6 +14,11 @@
   "testTargets" : [
     {
       "skippedTests" : [
+        "A11yOnboardingTests",
+        "A11yOnboardingTests\/testA11yFirstRunTour()",
+        "A11ySearchTest",
+        "A11ySearchTest\/testA11ySearchSuggestions()",
+        "A11yUtils",
         "ActivityStreamTest",
         "AddressesTests",
         "AddressesTests\/testAddNewAddressAllFieldsFilled()",
@@ -80,6 +85,9 @@
         "SearchSettingsUITests",
         "SearchTests",
         "SettingsTests",
+        "ShareLongPressTests",
+        "ShareMenuTests",
+        "ShareToolbarTests",
         "SiteLoadTest",
         "SyncUITests",
         "TabCounterTests",

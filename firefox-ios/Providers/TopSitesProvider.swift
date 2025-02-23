@@ -82,20 +82,21 @@ private extension TopSitesProviderImplementation {
     func getFrecencySites(group: DispatchGroup, numberOfMaxItems: Int) {
         group.enter()
         DispatchQueue.global().async { [weak self] in
+            guard let strongSelf = self else { return }
             // It's possible that the top sites fetch is the
             // very first use of places, lets make sure that
             // our connection is open
-            guard let placesFetcher = self?.placesFetcher else {
-                group.leave()
-                return
-            }
-            if !placesFetcher.isOpen {
+            let placesFetcher = strongSelf.placesFetcher
+            if !strongSelf.placesFetcher.isOpen {
                 _ = placesFetcher.reopenIfClosed()
             }
-            placesFetcher.getTopFrecentSiteInfos(limit: numberOfMaxItems, thresholdOption: FrecencyThresholdOption.none)
+            placesFetcher.getTopFrecentSiteInfos(limit: numberOfMaxItems,
+                                                 thresholdOption: FrecencyThresholdOption.none)
                 .uponQueue(.global()) { [weak self] result in
+                    guard let strongSelf = self else { return }
+
                     if let sites = result.successValue {
-                        self?.frecencySites = sites
+                        strongSelf.frecencySites = sites
                     }
 
                     group.leave()
@@ -108,8 +109,10 @@ private extension TopSitesProviderImplementation {
         pinnedSiteFetcher
             .getPinnedTopSites()
             .uponQueue(.global()) { [weak self] result in
+                guard let strongSelf = self else { return }
+
                 if let sites = result.successValue?.asArray() {
-                    self?.pinnedSites = sites
+                    strongSelf.pinnedSites = sites
                 }
 
                 group.leave()
@@ -129,16 +132,16 @@ private extension TopSitesProviderImplementation {
         // Fetch the default sites
         let defaultSites = defaultTopSites(prefs)
         // Create PinnedSite objects. Used by the view layer to tell topsites apart
-        let pinnedSites: [Site] = pinnedSites.map({ PinnedSite(site: $0, faviconResource: nil) })
+        let pinnedSites: [Site] = pinnedSites.map({ Site.createPinnedSite(fromSite: $0) })
         // Merge default topsites with a user's topsites.
         let mergedSites = sites.union(defaultSites, f: unionOnURL)
         // Filter out duplicates in merged sites, but do not remove duplicates within pinned sites
-        let duplicateFreeList = pinnedSites.union(mergedSites, f: unionOnURL).filter { $0 as? PinnedSite == nil }
+        let duplicateFreeList = pinnedSites.union(mergedSites, f: unionOnURL).filter { !$0.isPinnedSite }
         let allSites = pinnedSites + duplicateFreeList
 
         // Favour topsites from defaultSites as they have better favicons. But keep PinnedSites
         let newSites = allSites.map { site -> Site in
-            if let site = site as? PinnedSite {
+            if case SiteType.pinnedSite = site.type {
                 return site
             }
             let domain = URL(string: site.url, invalidCharacters: false)?.shortDisplayString

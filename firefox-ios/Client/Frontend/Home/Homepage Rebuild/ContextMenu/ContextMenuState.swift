@@ -12,8 +12,8 @@ import Redux
 /// Classes conforming to this protocol can manage adding and removing bookmarks.
 /// Since bookmarks are not using Redux, we use this instead of dispatching an action.
 protocol BookmarksHandlerDelegate: AnyObject {
-    func addBookmark(url: String, title: String?, site: Site?)
-    func removeBookmark(url: URL, title: String?, site: Site?)
+    func addBookmark(urlString: String, title: String?, site: Site?)
+    func removeBookmark(urlString: String, title: String?, site: Site?)
 }
 
 /// State to populate actions for the `PhotonActionSheet` view
@@ -52,6 +52,10 @@ struct ContextMenuState {
         switch configuration.homepageSection {
         case .topSites:
             actions = [getTopSitesActions(site: site)]
+        case .jumpBackIn:
+            actions = [getJumpBackInActions(site: site)]
+        case .bookmarks:
+            actions = [getBookmarksActions(site: site)]
         case .pocket:
             actions = [getPocketActions(site: site)]
         default:
@@ -62,13 +66,16 @@ struct ContextMenuState {
     // MARK: - Top sites item's context menu actions
     private func getTopSitesActions(site: Site) -> [PhotonRowActions] {
         let topSiteActions: [PhotonRowActions]
-        if site is PinnedSite {
-            topSiteActions = getPinnedTileActions(site: site)
-        } else if site as? SponsoredTile != nil {
+
+        switch site.type {
+        case .sponsoredSite:
             topSiteActions = getSponsoredTileActions(site: site)
-        } else {
+        case .pinnedSite:
+            topSiteActions = getPinnedTileActions(site: site)
+        default:
             topSiteActions = getOtherTopSitesActions(site: site)
         }
+
         return topSiteActions
     }
 
@@ -161,6 +168,30 @@ struct ContextMenuState {
         }).items
     }
 
+    // MARK: - JumpBack In section item's context menu actions
+    private func getJumpBackInActions(site: Site) -> [PhotonRowActions] {
+        guard let siteURL = site.url.asURL else { return [] }
+
+        let openInNewTabAction = getOpenInNewTabAction(siteURL: siteURL)
+        let openInNewPrivateTabAction = getOpenInNewPrivateTabAction(siteURL: siteURL)
+        let shareAction = getShareAction(siteURL: site.url)
+        let bookmarkAction = getBookmarkAction(site: site)
+
+        return [openInNewTabAction, openInNewPrivateTabAction, bookmarkAction, shareAction]
+    }
+
+    // MARK: - Homepage Bookmarks section item's context menu actions
+    private func getBookmarksActions(site: Site) -> [PhotonRowActions] {
+        guard let siteURL = site.url.asURL else { return [] }
+
+        let openInNewTabAction = getOpenInNewTabAction(siteURL: siteURL)
+        let openInNewPrivateTabAction = getOpenInNewPrivateTabAction(siteURL: siteURL)
+        let shareAction = getShareAction(siteURL: site.url)
+        let bookmarkAction = getBookmarkAction(site: site)
+
+        return [openInNewTabAction, openInNewPrivateTabAction, bookmarkAction, shareAction]
+    }
+
     // MARK: - Pocket item's context menu actions
     private func getPocketActions(site: Site) -> [PhotonRowActions] {
         guard let siteURL = site.url.asURL else { return [] }
@@ -211,15 +242,7 @@ struct ContextMenuState {
                                      iconString: StandardImageIdentifiers.Large.bookmarkSlash,
                                      allowIconScaling: true,
                                      tapHandler: { _ in
-            guard let siteURL = site.url.asURL else {
-                self.logger.log(
-                    "Unable to retrieve URL for \(site.url), unable to remove bookmarks",
-                    level: .warning,
-                    category: .homepage
-                )
-                return
-            }
-            bookmarkDelegate.removeBookmark(url: siteURL, title: site.title, site: site)
+            bookmarkDelegate.removeBookmark(urlString: site.url, title: site.title, site: site)
             // TODO: FXIOS-10171 - Add telemetry
         })
     }
@@ -230,7 +253,7 @@ struct ContextMenuState {
                                      allowIconScaling: true,
                                      tapHandler: { _ in
             // The method in BVC also handles the toast for this use case
-            bookmarkDelegate.addBookmark(url: site.url, title: site.title, site: site)
+            bookmarkDelegate.addBookmark(urlString: site.url, title: site.title, site: site)
             // TODO: FXIOS-10171 - Add telemetry
         })
     }

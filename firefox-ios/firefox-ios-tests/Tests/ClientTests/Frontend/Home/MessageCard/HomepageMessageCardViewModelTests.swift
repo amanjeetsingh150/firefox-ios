@@ -167,8 +167,8 @@ class MockMessageDataProtocol: MessageDataProtocol {
     var surface: MessageSurfaceId = .newTabCard
     var isControl = true
     var title: String? = "Test"
-    var text: String = "This is a test"
-    var buttonLabel: String?
+    var text = "This is a test"
+    var buttonLabel: String? = "This is a test button label"
     var experiment: String?
     var actionParams: [String: String] = [:]
     var microsurveyConfig: MicrosurveyConfig?
@@ -176,8 +176,8 @@ class MockMessageDataProtocol: MessageDataProtocol {
 
 // MARK: - MockStyleDataProtocol
 class MockStyleDataProtocol: StyleDataProtocol {
-    var priority: Int = 0
-    var maxDisplayCount: Int = 3
+    var priority = 0
+    var maxDisplayCount = 3
 }
 
 // MARK: - MockGleanPlumbMessageManagerProtocol
@@ -218,7 +218,7 @@ class MockGleanPlumbMessageManagerProtocol: GleanPlumbMessageManagerProtocol {
 }
 
 // MARK: SpyHomepageMessageCardCell
-class SpyHomepageMessageCardCell: HomepageMessageCardCell {
+class SpyHomepageMessageCardCell: LegacyHomepageMessageCardCell {
     var configureCalled = 0
     override func configure(viewModel: HomepageMessageCardViewModel, theme: Theme) {
         configureCalled += 1

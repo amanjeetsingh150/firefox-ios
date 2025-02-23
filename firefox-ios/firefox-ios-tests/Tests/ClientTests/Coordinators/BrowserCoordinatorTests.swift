@@ -150,7 +150,6 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
 
         XCTAssertNotNil(subject.homepageViewController)
         XCTAssertNil(subject.webviewController)
-        XCTAssertNil(subject.privateViewController)
     }
 
     func testShowNewHomepage_hasSameInstance() {
@@ -322,7 +321,7 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         XCTAssertTrue(mockRouter.presentedViewController is UIActivityViewController)
         // Right now we have no interface to check the ShareType passed in to ShareSheetCoordinator's start() call, but this
         // can tell us that there was an attempt to download a TemporaryDocument for a tab type share, which is sufficient.
-        XCTAssertEqual(mockTemporaryDocument.getDownloadedURLCalled, 1)
+        XCTAssertEqual(mockTemporaryDocument.downloadAsyncCalled, 1)
     }
 
     func testShowCreditCardAutofill_addsCredentialAutofillCoordinator() {
@@ -445,6 +444,34 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
         XCTAssertTrue(subject.childCoordinators.first is ContextMenuCoordinator)
         XCTAssertEqual(mockRouter.presentCalled, 1)
         XCTAssertTrue(mockRouter.presentedViewController is PhotonActionSheet)
+    }
+
+    func testShowLoadingDocument() {
+        let subject = createSubject()
+
+        subject.show(webView: WKWebView())
+        subject.showDocumentLoading()
+
+        let loadingView = subject.webviewController?.view.subviews.first {
+            $0 is TemporaryDocumentLoadingView
+        }
+        XCTAssertNotNil(loadingView)
+    }
+
+    func testRemoveDocumentLoading() {
+        let subject = createSubject()
+
+        subject.show(webView: WKWebView())
+        subject.showDocumentLoading()
+        subject.removeDocumentLoading()
+
+        // It shouldn't cause any flaky tests, it is just for the completion on the WebViewController to be called
+        wait(0.1)
+
+        let loadingView = subject.webviewController?.view.subviews.first {
+            $0 is TemporaryDocumentLoadingView
+        }
+        XCTAssertNil(loadingView)
     }
 
     // MARK: - ParentCoordinatorDelegate

@@ -32,20 +32,20 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
 
     var bookmarkSites: [Site] {
         delegate?.searchData.compactMap { $0 }
-            .filter { $0.bookmarked == true } ?? []
+            .filter { $0.isBookmarked == true } ?? []
     }
 
     var historySites: [Site] {
         delegate?.searchData.compactMap { $0 }
-            .filter { $0.bookmarked == false } ?? []
+            .filter { $0.isBookmarked == false } ?? []
     }
 
     private let maxNumOfFirefoxSuggestions: Int32 = 1
     weak var delegate: SearchViewDelegate?
     private let isPrivate: Bool
     let isBottomSearchBar: Bool
-    var savedQuery: String = ""
-    var searchQuery: String = "" {
+    var savedQuery = ""
+    var searchQuery = "" {
         didSet {
             querySuggestClient()
         }
@@ -129,8 +129,8 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
     private var hasHistoryAndBookmarksSuggestions: Bool {
         let dataCount = delegate?.searchData.count
         return dataCount != 0 &&
-        shouldShowBookmarksSuggestions &&
-        shouldShowBrowsingHistorySuggestions
+        hasBookmarksSuggestions &&
+        hasHistorySuggestions
     }
 
     var hasFirefoxSuggestions: Bool {

@@ -31,6 +31,8 @@ extension BrowserViewController: WKUIDelegate {
             return nil
         }
 
+        guard !isPayPalPopUp(navigationAction) else { return nil }
+
         if navigationAction.canOpenExternalApp, let url = navigationAction.request.url {
             UIApplication.shared.open(url)
             return nil
@@ -70,21 +72,36 @@ extension BrowserViewController: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping () -> Void
     ) {
-        let messageAlert = MessageAlert(message: message, frame: frame)
-        if shouldDisplayJSAlertForWebView(webView) {
-            logger.log("Javascript message alert will be presented.", level: .info, category: .webview)
+        if isJSAlertRefactorEnabled {
+            let messageAlert = NewMessageAlert(message: message,
+                                               frame: frame,
+                                               completionHandler: completionHandler)
 
-            present(messageAlert.alertController(), animated: true) {
-                // TODO: [FXIOS-10334] This should be called when the alert is dismissed, not presented
-                completionHandler()
-                self.logger.log("Javascript message alert was completed.", level: .info, category: .webview)
+            if shouldDisplayJSAlertForWebView(webView) {
+                logger.log("JavaScript alert panel will be presented.", level: .info, category: .webview)
+
+                let alertController = messageAlert.alertController()
+                alertController.delegate = self
+                present(alertController, animated: true)
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("JavaScript alert panel is queued.", level: .info, category: .webview)
+                promptingTab.newQueueJavascriptAlertPrompt(messageAlert)
             }
-        } else if let promptingTab = tabManager[webView] {
-            logger.log("Javascript message alert is queued.", level: .info, category: .webview)
+        } else {
+            let messageAlert = MessageAlert(message: message, frame: frame)
+            if shouldDisplayJSAlertForWebView(webView) {
+                logger.log("Javascript message alert will be presented.", level: .info, category: .webview)
 
-            promptingTab.queueJavascriptAlertPrompt(messageAlert)
-            // TODO: [FXIOS-10334] This should be called when the alert is dismissed, not enqueued
-            completionHandler()
+                present(messageAlert.alertController(), animated: true) {
+                    completionHandler()
+                    self.logger.log("Javascript message alert was completed.", level: .info, category: .webview)
+                }
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("Javascript message alert is queued.", level: .info, category: .webview)
+
+                promptingTab.queueJavascriptAlertPrompt(messageAlert)
+                completionHandler()
+            }
         }
     }
 
@@ -94,19 +111,37 @@ extension BrowserViewController: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping (Bool) -> Void
     ) {
-        let confirmAlert = ConfirmPanelAlert(message: message,
-                                             frame: frame) { confirm in
-            self.logger.log("Javascript confirm panel was completed.", level: .info, category: .webview)
-            completionHandler(confirm)
-        }
-        if shouldDisplayJSAlertForWebView(webView) {
-            logger.log("Javascript confirm panel alert will be presented.", level: .info, category: .webview)
+        if isJSAlertRefactorEnabled {
+            let confirmAlert = NewConfirmPanelAlert(message: message, frame: frame) { confirm in
+                self.logger.log("JavaScript confirm panel was completed with result: \(confirm)", level: .info, category: .webview)
+                completionHandler(confirm)
+            }
 
-            present(confirmAlert.alertController(), animated: true)
-        } else if let promptingTab = tabManager[webView] {
-            logger.log("Javascript confirm panel alert is queued.", level: .info, category: .webview)
+            if shouldDisplayJSAlertForWebView(webView) {
+                self.logger.log("JavaScript confirm panel will be presented.", level: .info, category: .webview)
 
-            promptingTab.queueJavascriptAlertPrompt(confirmAlert)
+                let alertController = confirmAlert.alertController()
+                alertController.delegate = self
+                present(alertController, animated: true)
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("JavaScript confirm panel is queued.", level: .info, category: .webview)
+                promptingTab.newQueueJavascriptAlertPrompt(confirmAlert)
+            }
+        } else {
+            let confirmAlert = ConfirmPanelAlert(message: message,
+                                                 frame: frame) { confirm in
+                self.logger.log("Javascript confirm panel was completed.", level: .info, category: .webview)
+                completionHandler(confirm)
+            }
+            if shouldDisplayJSAlertForWebView(webView) {
+                logger.log("Javascript confirm panel alert will be presented.", level: .info, category: .webview)
+
+                present(confirmAlert.alertController(), animated: true)
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("Javascript confirm panel alert is queued.", level: .info, category: .webview)
+
+                promptingTab.queueJavascriptAlertPrompt(confirmAlert)
+            }
         }
     }
 
@@ -117,28 +152,47 @@ extension BrowserViewController: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping (String?) -> Void
     ) {
-        let textInputAlert = TextInputAlert(message: prompt,
-                                            frame: frame,
-                                            defaultText: defaultText) { confirm in
-            self.logger.log("Javascript text input alert was completed.", level: .info, category: .webview)
-            completionHandler(confirm)
-        }
-        if shouldDisplayJSAlertForWebView(webView) {
-            logger.log("Javascript text input alert will be presented.", level: .info, category: .webview)
+        if isJSAlertRefactorEnabled {
+            let textInputAlert = NewTextInputAlert(message: prompt, frame: frame, defaultText: defaultText) { input in
+                self.logger.log("JavaScript text input panel was completed with input", level: .info, category: .webview)
+                completionHandler(input)
+            }
 
-            present(textInputAlert.alertController(), animated: true)
-        } else if let promptingTab = tabManager[webView] {
-            logger.log("Javascript text input alert is queued.", level: .info, category: .webview)
+            if shouldDisplayJSAlertForWebView(webView) {
+                logger.log("JavaScript text input panel will be presented.", level: .info, category: .webview)
 
-            promptingTab.queueJavascriptAlertPrompt(textInputAlert)
+                let alertController = textInputAlert.alertController()
+                alertController.delegate = self
+                present(alertController, animated: true)
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("JavaScript text input panel is queued.", level: .info, category: .webview)
+                promptingTab.newQueueJavascriptAlertPrompt(textInputAlert)
+            }
+        } else {
+            let textInputAlert = TextInputAlert(message: prompt,
+                                                frame: frame,
+                                                defaultText: defaultText) { confirm in
+                self.logger.log("Javascript text input alert was completed.", level: .info, category: .webview)
+                completionHandler(confirm)
+            }
+            if shouldDisplayJSAlertForWebView(webView) {
+                logger.log("Javascript text input alert will be presented.", level: .info, category: .webview)
+
+                present(textInputAlert.alertController(), animated: true)
+            } else if let promptingTab = tabManager[webView] {
+                logger.log("Javascript text input alert is queued.", level: .info, category: .webview)
+
+                promptingTab.queueJavascriptAlertPrompt(textInputAlert)
+            }
         }
     }
 
     func webViewDidClose(_ webView: WKWebView) {
-        if let tab = tabManager[webView] {
-            // Need to wait here in case we're waiting for a pending `window.open()`.
-            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(100)) {
-                self.tabManager.removeTab(tab)
+        Task {
+            if let tab = tabManager[webView] {
+                // Need to wait here in case we're waiting for a pending `window.open()`.
+                try await Task.sleep(nanoseconds: NSEC_PER_MSEC * 100)
+                await tabManager.removeTab(tab.tabUUID)
             }
         }
     }
@@ -152,6 +206,21 @@ extension BrowserViewController: WKUIDelegate {
         completionHandler(contextMenuConfiguration(for: url, webView: webView))
     }
 
+    func webView(_ webView: WKWebView,
+                 requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                 initiatedByFrame frame: WKFrameInfo,
+                 type: WKMediaCaptureType,
+                 decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        // If the tab isn't the selected one or we're on the homepage, do not show the media capture prompt
+        guard tabManager.selectedTab?.webView === webView, !contentContainer.hasAnyHomepage else {
+            decisionHandler(.deny)
+            return
+        }
+
+        decisionHandler(.prompt)
+    }
+
+    // MARK: - Helpers
     private func contextMenuConfiguration(for url: URL, webView: WKWebView) -> UIContextMenuConfiguration {
         return UIContextMenuConfiguration(identifier: nil,
                                           previewProvider: contextMenuPreviewProvider(for: url, webView: webView),
@@ -301,7 +370,7 @@ extension BrowserViewController: WKUIDelegate {
             .value
             .successValue ?? false
         if isBookmarkedSite {
-            actionBuilder.addRemoveBookmarkLink(url: url,
+            actionBuilder.addRemoveBookmarkLink(urlString: url.absoluteString,
                                                 title: title,
                                                 removeBookmark: self.removeBookmark)
         } else {
@@ -336,21 +405,6 @@ extension BrowserViewController: WKUIDelegate {
 
     func assignWebView(_ webView: WKWebView?) {
         pendingDownloadWebView = webView
-    }
-
-    @available(iOS 15, *)
-    func webView(_ webView: WKWebView,
-                 requestMediaCapturePermissionFor origin: WKSecurityOrigin,
-                 initiatedByFrame frame: WKFrameInfo,
-                 type: WKMediaCaptureType,
-                 decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-        // If the tab isn't the selected one or we're on the homepage, do not show the media capture prompt
-        guard tabManager.selectedTab?.webView == webView, !contentContainer.hasLegacyHomepage else {
-            decisionHandler(.deny)
-            return
-        }
-
-        decisionHandler(.prompt)
     }
 
     func writeToPhotoAlbum(image: UIImage) {
@@ -456,8 +510,7 @@ extension BrowserViewController: WKNavigationDelegate {
         // gives us the exact same behaviour as Safari.
         if ["sms", "tel", "facetime", "facetime-audio"].contains(url.scheme) {
             if url.scheme == "sms" { // All the other types show a native prompt
-                showSnackbar(forExternalUrl: url, tab: tab) { isOk in
-                    guard isOk else { return }
+                showExternalAlert(withText: .ExternalSmsLinkConfirmation) { _ in
                     UIApplication.shared.open(url, options: [:])
                 }
             } else {
@@ -489,17 +542,18 @@ extension BrowserViewController: WKNavigationDelegate {
             decisionHandler(.cancel)
 
             // Make sure to wait longer than delaySelectingNewPopupTab to ensure selectedTab is correct
-            DispatchQueue.main.asyncAfter(deadline: .now() + tabManager.delaySelectingNewPopupTab + 0.1) {
-                // Show only if no other snack bar
-                guard let tab = self.tabManager.selectedTab, tab.bars.isEmpty else { return }
-                TimerSnackBar.showAppStoreConfirmationBar(
-                    forTab: tab,
-                    appStoreURL: url,
-                    theme: self.currentTheme()
-                ) { _ in
-                    // If a new window was opened for this URL (it will have no history), close it.
-                    if tab.historyList.isEmpty {
-                        self.tabManager.removeTab(tab)
+            // Otherwise the AppStoreAlert is shown on the wrong tab
+            let delay: DispatchTime = .now() + tabManager.delaySelectingNewPopupTab + 0.1
+            DispatchQueue.main.asyncAfter(deadline: delay) { [weak self] in
+                self?.showAppStoreAlert { isOpened in
+                    if isOpened {
+                        UIApplication.shared.open(url, options: [:])
+                    }
+                    // If a new window was opened for this URL, close it
+                    if let currentTab = self?.tabManager.selectedTab,
+                       currentTab.historyList.count == 1,
+                       self?.isStoreURL(currentTab.historyList[0]) ?? false {
+                        self?.tabManager.removeTabWithCompletion(tab.tabUUID, completion: nil)
                     }
                 }
             }
@@ -508,9 +562,7 @@ extension BrowserViewController: WKNavigationDelegate {
 
         // Handles custom mailto URL schemes.
         if url.scheme == "mailto" {
-            showSnackbar(forExternalUrl: url, tab: tab) { isOk in
-                guard isOk else { return }
-
+            showExternalAlert(withText: .ExternalMailLinkConfirmation) { _ in
                 if let mailToMetadata = url.mailToMetadata(),
                    let mailScheme = self.profile.prefs.stringForKey(PrefsKeys.KeyMailToOption),
                    mailScheme != "mailto" {
@@ -576,20 +628,18 @@ extension BrowserViewController: WKNavigationDelegate {
         }
 
         if !(url.scheme?.contains("firefox") ?? true) {
-            showSnackbar(forExternalUrl: url, tab: tab) { isOk in
-                guard isOk else { return }
-                UIApplication.shared.open(url, options: [:]) { openedURL in
-                    // Do not show error message for JS navigated links or 
-                    // redirect as it's not the result of a user action.
-                    if !openedURL, navigationAction.navigationType == .linkActivated {
-                        let alert = UIAlertController(
-                            title: .UnableToOpenURLErrorTitle,
-                            message: .UnableToOpenURLError,
-                            preferredStyle: .alert
-                        )
-                        alert.addAction(UIAlertAction(title: .OKString, style: .default, handler: nil))
-                        self.present(alert, animated: true, completion: nil)
-                    }
+            // Try to open the custom scheme URL, if it doesn't work we show an error alert
+            UIApplication.shared.open(url, options: [:]) { openedURL in
+                // Do not show error message for JS navigated links or
+                // redirect as it's not the result of a user action.
+                if !openedURL, navigationAction.navigationType == .linkActivated {
+                    let alert = UIAlertController(
+                        title: nil,
+                        message: .ExternalInvalidLinkMessage,
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: .OKString, style: .default, handler: nil))
+                    self.present(alert, animated: true, completion: nil)
                 }
             }
         }
@@ -643,10 +693,10 @@ extension BrowserViewController: WKNavigationDelegate {
             var url: URL?
             group.enter()
             let temporaryDocument = DefaultTemporaryDocument(preflightResponse: response, request: request)
-            temporaryDocument.getURL(completionHandler: { docURL in
+            temporaryDocument.download { docURL in
                 url = docURL
                 group.leave()
-            })
+            }
             _ = group.wait(timeout: .distantFuture)
 
             let previewHelper = OpenQLPreviewHelper(presenter: self, withTemporaryDocument: temporaryDocument)
@@ -686,25 +736,12 @@ extension BrowserViewController: WKNavigationDelegate {
             present(alert, animated: true)
         }
 
-        // Check if this response should be downloaded.
-        if let downloadHelper = DownloadHelper(request: request,
-                                               response: response,
-                                               cookieStore: cookieStore,
-                                               canShowInWebView: canShowInWebView,
-                                               forceDownload: forceDownload) {
-            // Clear the pending download web view so that subsequent navigations from the same
-            // web view don't invoke another download.
-            pendingDownloadWebView = nil
-
-            let downloadAction: (HTTPDownload) -> Void = { [weak self] download in
-                self?.downloadQueue.enqueue(download)
-            }
-
-            // Open our helper and cancel this response from the webview.
-            if let downloadViewModel = downloadHelper.downloadViewModel(windowUUID: windowUUID,
-                                                                        okAction: downloadAction) {
-                presentSheetWith(viewModel: downloadViewModel, on: self, from: urlBarView)
-            }
+        // Check if this response should be downloaded
+        if let downloadHelper = DownloadHelper(request: request, response: response, cookieStore: cookieStore),
+            downloadHelper.shouldDownloadFile(canShowInWebView: canShowInWebView,
+                                              forceDownload: forceDownload,
+                                              isForMainFrame: navigationResponse.isForMainFrame) {
+            handleDownloadFiles(downloadHelper: downloadHelper)
             decisionHandler(.cancel)
             return
         }
@@ -715,7 +752,16 @@ extension BrowserViewController: WKNavigationDelegate {
         // we may end up overriding the "Share Page With..." action to share a temp file that is not
         // representative of the contents of the web view.
         if navigationResponse.isForMainFrame, let tab = tabManager[webView] {
-            if response.mimeType != MIMEType.HTML, let request = request {
+            if isPDFRefactorEnabled, response.mimeType == MIMEType.PDF, let request {
+                if !tab.canLoadDocumentRequest(request) {
+                    decisionHandler(.allow)
+                    return
+                }
+                handlePDFResponse(webView, tab: tab, response: response, request: request)
+                decisionHandler(.cancel)
+                return
+            }
+            if response.mimeType != MIMEType.HTML, let request {
                 tab.temporaryDocument = DefaultTemporaryDocument(preflightResponse: response, request: request)
             } else {
                 tab.temporaryDocument = nil
@@ -727,6 +773,51 @@ extension BrowserViewController: WKNavigationDelegate {
         // If none of our helpers are responsible for handling this response,
         // just let the webview handle it as normal.
         decisionHandler(.allow)
+    }
+
+    func handlePDFResponse(_ webView: WKWebView,
+                           tab: Tab,
+                           response: URLResponse,
+                           request: URLRequest) {
+        navigationHandler?.showDocumentLoading()
+        let cookieStore = webView.configuration.websiteDataStore.httpCookieStore
+        cookieStore.getAllCookies { [weak tab, weak webView, weak self] cookies in
+            let tempPDF = DefaultTemporaryDocument(
+                filename: response.suggestedFilename,
+                request: request,
+                mimeType: MIMEType.PDF,
+                cookies: cookies
+            )
+            tempPDF.onDownloadProgressUpdate = { progress in
+                self?.observeValue(forKeyPath: KVOConstants.estimatedProgress.rawValue,
+                                   of: webView,
+                                   change: [.newKey: progress],
+                                   context: nil)
+            }
+            tempPDF.onDownloadStarted = {
+                self?.observeValue(forKeyPath: KVOConstants.loading.rawValue,
+                                   of: webView,
+                                   change: [.newKey: true],
+                                   context: nil)
+            }
+            tab?.enqueueDocument(tempPDF)
+        }
+    }
+
+    func handleDownloadFiles(downloadHelper: DownloadHelper) {
+        // Clear the pending download web view so that subsequent navigations from the same
+        // web view don't invoke another download.
+        pendingDownloadWebView = nil
+
+        let downloadAction: (HTTPDownload) -> Void = { [weak self] download in
+            self?.downloadQueue.enqueue(download)
+        }
+
+        // Open our helper and cancel this response from the webview.
+        if let downloadViewModel = downloadHelper.downloadViewModel(windowUUID: windowUUID,
+                                                                    okAction: downloadAction) {
+            presentSheetWith(viewModel: downloadViewModel, on: self, from: urlBarView)
+        }
     }
 
     /// Tells the delegate that an error occurred during navigation.
@@ -827,13 +918,7 @@ extension BrowserViewController: WKNavigationDelegate {
                 )
 
                 if isNativeErrorPageEnabled {
-                    let action = NativeErrorPageAction(networkError: error,
-                                                       windowUUID: windowUUID,
-                                                       actionType: NativeErrorPageActionType.receivedError
-                    )
-                    store.dispatch(action)
-                    webView.load(PrivilegedRequest(url: errorPageURL) as URLRequest)
-                } else if isNICErrorPageEnabled && (error.code == noInternetErrorCode) {
+                    guard isNICErrorPageEnabled && error.code == noInternetErrorCode else { return }
                     let action = NativeErrorPageAction(networkError: error,
                                                        windowUUID: windowUUID,
                                                        actionType: NativeErrorPageActionType.receivedError
@@ -897,7 +982,7 @@ extension BrowserViewController: WKNavigationDelegate {
               let metadataManager = tab.metadataManager
         else { return }
 
-        searchTelemetry?.trackTabAndTopSiteSAP(tab, webView: webView)
+        searchTelemetry.trackTabAndTopSiteSAP(tab, webView: webView)
         webviewTelemetry.start()
         tab.url = webView.url
 
@@ -940,7 +1025,10 @@ extension BrowserViewController: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
         webviewTelemetry.stop()
-
+        if isPDFRefactorEnabled {
+            scrollController.configureRefreshControl()
+            navigationHandler?.removeDocumentLoading()
+        }
         if let tab = tabManager[webView],
            let metadataManager = tab.metadataManager {
             navigateInTab(tab: tab, to: navigation, webViewStatus: .finishedNavigation)
@@ -1006,28 +1094,51 @@ private extension BrowserViewController {
       return isHttpScheme && isAppStoreHost
     }
 
-    // Use for sms and mailto links, which do not show a confirmation before opening.
-    func showSnackbar(forExternalUrl url: URL, tab: Tab, completion: @escaping (Bool) -> Void) {
-        let snackBar = TimerSnackBar(text: .ExternalLinkGenericConfirmation + "\n\(url.absoluteString)", img: nil)
-        let ok = SnackButton(title: .OKString, accessibilityIdentifier: "AppOpenExternal.button.ok") { bar in
-            tab.removeSnackbar(bar)
-            completion(true)
-        }
-        let cancel = SnackButton(
-            title: .CancelString,
-            accessibilityIdentifier: "AppOpenExternal.button.cancel"
-        ) { bar in
-            tab.removeSnackbar(bar)
-            completion(false)
-        }
-        let theme = currentTheme()
-        ok.applyTheme(theme: theme)
-        cancel.applyTheme(theme: theme)
-        snackBar.applyTheme(theme: theme)
+    // Use for sms and mailto, which do not show a confirmation before opening.
+    func showExternalAlert(withText text: String, completion: @escaping (UIAlertAction) -> Void) {
+        let alert = UIAlertController(title: nil,
+                                      message: text,
+                                      preferredStyle: .alert)
 
-        snackBar.addButton(ok)
-        snackBar.addButton(cancel)
-        tab.addSnackbar(snackBar)
+        let okOption = UIAlertAction(
+            title: .ExternalOpenMessage,
+            style: .default,
+            handler: completion
+        )
+
+        let cancelOption = UIAlertAction(
+            title: .CancelString,
+            style: .cancel,
+            handler: nil
+        )
+
+        alert.addAction(okOption)
+        alert.addAction(cancelOption)
+
+        present(alert, animated: true, completion: nil)
+    }
+
+    func showAppStoreAlert(completion: @escaping (Bool) -> Void) {
+        let alert = UIAlertController(title: nil,
+                                      message: .ExternalLinkAppStoreConfirmationTitle,
+                                      preferredStyle: .alert)
+
+        let okOption = UIAlertAction(
+            title: .AppStoreString,
+            style: .default,
+            handler: { _ in completion(true) }
+        )
+
+        let cancelOption = UIAlertAction(
+            title: .NotNowString,
+            style: .cancel,
+            handler: { _ in completion(false) }
+        )
+
+        alert.addAction(okOption)
+        alert.addAction(cancelOption)
+
+        present(alert, animated: true, completion: nil)
     }
 
     func shouldRequestBeOpenedAsPopup(_ request: URLRequest) -> Bool {
@@ -1046,9 +1157,16 @@ private extension BrowserViewController {
         return false
     }
 
+    // The WKNavigationAction request for Paypal popUp is empty which causes that we open a blank page in
+    // createWebViewWith. We will show Paypal popUp in page like mobile devices using the mobile User Agent
+    // so we will block the creation of a new Webview with this check
+    func isPayPalPopUp(_ navigationAction: WKNavigationAction) -> Bool {
+        return navigationAction.sourceFrame.request.url?.baseDomain == "paypal.com"
+    }
+
     func shouldDisplayJSAlertForWebView(_ webView: WKWebView) -> Bool {
         // Only display a JS Alert if we are selected and there isn't anything being shown
-        return ((tabManager.selectedTab == nil ? false : tabManager.selectedTab!.webView == webView))
+        return ((tabManager.selectedTab == nil ? false : tabManager.selectedTab!.webView === webView))
             && (self.presentedViewController == nil)
     }
 

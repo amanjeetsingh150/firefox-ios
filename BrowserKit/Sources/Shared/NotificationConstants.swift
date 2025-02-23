@@ -55,13 +55,17 @@ extension Notification.Name {
 
     public static let FakespotViewControllerDidAppear = Notification.Name("FakespotViewControllerDidAppear")
 
+    public static let TrackingProtectionViewControllerDidDismiss =
+    Notification.Name("TrackingProtectionViewControllerDidDismiss")
+
+    public static let TrackingProtectionViewControllerDidAppear =
+    Notification.Name("TrackingProtectionViewControllerDidAppear")
+
     public static let FileDidDownload = Notification.Name("FileDidDownload")
 
     public static let SearchBarPositionDidChange = Notification.Name("SearchBarPositionDidChange")
 
     public static let WallpaperDidChange = Notification.Name("WallpaperDidChange")
-
-    public static let UpdateLabelOnTabClosed = Notification.Name("UpdateLabelOnTabClosed")
 
     public static let TopTabsTabClosed = Notification.Name("TopTabsTabClosed")
 

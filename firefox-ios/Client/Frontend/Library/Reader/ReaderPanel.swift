@@ -27,7 +27,7 @@ private struct ReadingListTableViewCellUX {
 }
 
 class ReadingListTableViewCell: UITableViewCell, ThemeApplicable {
-    var title: String = "Example" {
+    var title = "Example" {
         didSet {
             titleLabel.text = title
             updateAccessibilityLabel()
@@ -481,7 +481,7 @@ extension ReadingListPanel: LibraryPanelContextMenu {
 
     func getSiteDetails(for indexPath: IndexPath) -> Site? {
         guard let record = records?[indexPath.row] else { return nil }
-        return Site(url: record.url, title: record.title)
+        return Site.createBasicSite(url: record.url, title: record.title)
     }
 
     func getContextMenuActions(for site: Site, with indexPath: IndexPath) -> [PhotonRowActions]? {
