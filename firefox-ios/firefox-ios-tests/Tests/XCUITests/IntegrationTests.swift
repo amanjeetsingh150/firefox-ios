@@ -13,7 +13,7 @@ private let historyItemSavedOnDesktop = "https://www.example.com/"
 private let loginEntry = "https://accounts.google.com"
 private let tabOpenInDesktop = "https://example.com/"
 
-class IntegrationTests: BaseTestCase {
+class IntegrationTests: FeatureFlaggedTestBase {
     let testWithDB = ["testFxASyncHistory"]
     let testFxAChinaServer = ["testFxASyncPageUsingChinaFxA"]
 
@@ -43,7 +43,7 @@ class IntegrationTests: BaseTestCase {
      super.setUp()
      }
 
-    func allowNotifications () {
+    func allowNotifications() {
         addUIInterruptionMonitor(withDescription: "notifications") { (alert) -> Bool in
             alert.buttons["Allow"].waitAndTap()
             return true
@@ -52,6 +52,7 @@ class IntegrationTests: BaseTestCase {
     }
 
     private func signInFxAccounts() {
+        navigator.goto(BrowserTabMenu)
         navigator.goto(Intro_FxASignin)
         navigator.performAction(Action.OpenEmailToSignIn)
         sleep(5)
@@ -59,11 +60,12 @@ class IntegrationTests: BaseTestCase {
             app.navigationBars[AccessibilityIdentifiers.Settings.FirefoxAccount.fxaNavigationBar],
             timeout: TIMEOUT_LONG
         )
-        mozWaitForElementToExist(app.staticTexts["Continue to your Mozilla account"], timeout: TIMEOUT_LONG)
         userState.fxaUsername = ProcessInfo.processInfo.environment["FXA_EMAIL"]!
         userState.fxaPassword = ProcessInfo.processInfo.environment["FXA_PASSWORD"]!
+        mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Settings.FirefoxAccount.emailTextField])
         navigator.performAction(Action.FxATypeEmail)
         navigator.performAction(Action.FxATapOnContinueButton)
+        mozWaitForElementToNotExist(app.textFields[AccessibilityIdentifiers.Settings.FirefoxAccount.emailTextField])
         mozWaitForElementToExist(app.staticTexts["Enter your password"], timeout: TIMEOUT_LONG)
         navigator.performAction(Action.FxATypePasswordExistingAccount)
         navigator.performAction(Action.FxATapOnSignInButton)
@@ -75,6 +77,7 @@ class IntegrationTests: BaseTestCase {
     private func waitForInitialSyncComplete() {
         navigator.nowAt(BrowserTab)
         waitForTabsButton()
+        navigator.goto(BrowserTabMenu)
         navigator.goto(SettingsScreen)
         mozWaitForElementToExist(app.staticTexts["ACCOUNT"], timeout: TIMEOUT_LONG)
         mozWaitForElementToNotExist(app.staticTexts["Sync and Save Data"])
@@ -89,7 +92,8 @@ class IntegrationTests: BaseTestCase {
         mozWaitForElementToExist(app.tables.staticTexts["Sync Now"], timeout: TIMEOUT_LONG)
     }
 
-    func testFxASyncHistory () {
+    func testFxASyncHistory() {
+        app.launch()
         // History is generated using the DB so go directly to Sign in
         // Sign into Mozilla Account
         navigator.goto(BrowserTabMenu)
@@ -99,7 +103,8 @@ class IntegrationTests: BaseTestCase {
         waitForInitialSyncComplete()
     }
 
-    func testFxASyncPageUsingChinaFxA () {
+    func testFxASyncPageUsingChinaFxA() {
+        app.launch()
         // History is generated using the DB so go directly to Sign in
         // Sign into Mozilla Account
         navigator.goto(BrowserTabMenu)
@@ -112,7 +117,8 @@ class IntegrationTests: BaseTestCase {
         )
     }
 
-    func testFxASyncBookmark () {
+    func testFxASyncBookmark() {
+        app.launch()
         // Bookmark is added by the DB
         // Sign into Mozilla Account
         navigator.openURL(testingURL)
@@ -126,7 +132,8 @@ class IntegrationTests: BaseTestCase {
         waitForInitialSyncComplete()
     }
 
-    func testFxASyncBookmarkDesktop () {
+    func testFxASyncBookmarkDesktop() {
+        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -136,14 +143,18 @@ class IntegrationTests: BaseTestCase {
         mozWaitForElementToExist(app.tables["Bookmarks List"].cells.staticTexts["Example Domain"])
     }
 
-    func testFxASyncTabs () {
-        navigator.openURL(testingURL)
-        waitUntilPageLoad()
-        navigator.goto(BrowserTabMenu)
+    func testFxASyncTabs() {
+        app.launch()
         signInFxAccounts()
 
-        // Wait for initial sync to complete
+        // We only sync tabs if the user is signed in
         navigator.nowAt(BrowserTab)
+        waitForTabsButton()
+        navigator.openURL(testingURL)
+        waitUntilPageLoad()
+
+        // Wait for initial sync to complete
+        waitForInitialSyncComplete()
         // This is only to check that the device's name changed
         navigator.goto(SettingsScreen)
         app.tables.cells.element(boundBy: 1).waitAndTap()
@@ -155,12 +166,13 @@ class IntegrationTests: BaseTestCase {
 
         // Sync again just to make sure to sync after new name is shown
         app.buttons["Settings"].waitAndTap()
-        mozWaitForElementToExist(app.staticTexts["ACCOUNT"])
-        app.tables.cells.element(boundBy: 2).waitAndTap()
-        mozWaitForElementToExist(app.tables.staticTexts["Sync Now"], timeout: TIMEOUT_LONG)
+        navigator.nowAt(SettingsScreen)
+        navigator.goto(BrowserTab)
+        waitForInitialSyncComplete()
     }
 
-    func testFxASyncLogins () {
+    func testFxASyncLogins() {
+        app.launch()
         navigator.openURL("gmail.com")
         waitUntilPageLoad()
 
@@ -180,7 +192,8 @@ class IntegrationTests: BaseTestCase {
         waitForInitialSyncComplete()
     }
 
-    func testFxASyncHistoryDesktop () {
+    func testFxASyncHistoryDesktop() {
+        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -192,7 +205,8 @@ class IntegrationTests: BaseTestCase {
         mozWaitForElementToExist(app.tables.cells.staticTexts[historyItemSavedOnDesktop])
     }
 
-    func testFxASyncPasswordDesktop () {
+    func testFxASyncPasswordDesktop() {
+        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -214,7 +228,30 @@ class IntegrationTests: BaseTestCase {
         XCTAssertTrue(app.tables.cells.staticTexts[loginEntry].exists, "The login saved on desktop is not synced")
     }
 
-    func testFxASyncTabsDesktop () {
+    func testFxASyncTabsDesktop_tabTrayExperimentOn() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
+        app.launch()
+        // Sign into Mozilla Account
+        signInFxAccounts()
+
+        // Wait for initial sync to complete
+        waitForInitialSyncComplete()
+
+        // Check synced Tabs
+        app.buttons["Done"].waitAndTap()
+        navigator.nowAt(HomePanelsScreen)
+        navigator.goto(TabTray)
+        navigator.performAction(Action.ToggleExperimentSyncMode)
+
+        // Need to swipe to get the data on the screen on focus
+        app.swipeDown()
+        mozWaitForElementToExist(app.tables.otherElements["profile1"])
+        XCTAssertTrue(app.tables.staticTexts[tabOpenInDesktop].exists, "The tab is not synced")
+    }
+
+    func testFxASyncTabsDesktop_tabTrayExperimentOff() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
+        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -234,6 +271,7 @@ class IntegrationTests: BaseTestCase {
     }
 
     func testFxADisconnectConnect() {
+        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -290,8 +328,8 @@ class IntegrationTests: BaseTestCase {
         mozWaitForElementToNotExist(app.staticTexts["Enter your password"], timeout: TIMEOUT_LONG)
 
         navigator.nowAt(SettingsScreen)
-        mozWaitForElementToExist(app.staticTexts["GENERAL"])
         app.swipeDown()
+        mozWaitForElementToExist(app.staticTexts["GENERAL"])
         mozWaitForElementToExist(app.staticTexts["ACCOUNT"])
         mozWaitForElementToExist(app.tables.staticTexts["Sync Now"], timeout: TIMEOUT_LONG)
 

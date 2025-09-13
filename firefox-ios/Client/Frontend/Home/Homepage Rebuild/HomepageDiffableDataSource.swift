@@ -10,18 +10,20 @@ typealias HomepageItem = HomepageDiffableDataSource.HomeItem
 
 /// Holds the data source configuration for the new homepage as part of the rebuild project
 final class HomepageDiffableDataSource:
-    UICollectionViewDiffableDataSource<HomepageSection, HomepageItem> {
+    UICollectionViewDiffableDataSource<HomepageSection, HomepageItem>,
+    FeatureFlaggable {
     typealias TextColor = UIColor
     typealias NumberOfTilesPerRow = Int
 
     enum HomeSection: Hashable {
-        case header
         case messageCard
-        case topSites(NumberOfTilesPerRow)
+        case topSites(TextColor?, NumberOfTilesPerRow)
+        case searchBar
         case jumpBackIn(TextColor?, JumpBackInSectionLayoutConfiguration)
         case bookmarks(TextColor?)
         case pocket(TextColor?)
         case customizeHomepage
+        case spacer
 
         var canHandleLongPress: Bool {
             switch self {
@@ -33,31 +35,52 @@ final class HomepageDiffableDataSource:
         }
     }
 
-    enum HomeItem: Hashable {
-        case header(HeaderState)
+    enum HomeItem: Hashable, Sendable {
         case messageCard(MessageCardConfiguration)
         case topSite(TopSiteConfiguration, TextColor?)
         case topSiteEmpty
+        case searchBar
         case jumpBackIn(JumpBackInTabConfiguration)
         case jumpBackInSyncedTab(JumpBackInSyncedTabConfiguration)
         case bookmark(BookmarkConfiguration)
-        case pocket(PocketStoryConfiguration)
-        case pocketDiscover(PocketDiscoverConfiguration)
+        case merino(MerinoStoryConfiguration)
         case customizeHomepage
+        case spacer
 
         static var cellTypes: [ReusableCell.Type] {
             return [
-                HomepageHeaderCell.self,
                 HomepageMessageCardCell.self,
+                LegacyTopSiteCell.self,
                 TopSiteCell.self,
                 EmptyTopSiteCell.self,
+                SearchBarCell.self,
                 JumpBackInCell.self,
                 SyncedTabCell.self,
                 BookmarksCell.self,
-                PocketStandardCell.self,
-                PocketDiscoverCell.self,
-                CustomizeHomepageSectionCell.self
+                MerinoStandardCell.self,
+                StoryCell.self,
+                CustomizeHomepageSectionCell.self,
+                HomepageSpacerCell.self
             ]
+        }
+
+        var telemetryItemType: HomepageTelemetry.ItemType? {
+            switch self {
+            case .topSite:
+                return .topSite
+            case .jumpBackIn:
+                return .jumpBackInTab
+            case .jumpBackInSyncedTab:
+                return .jumpBackInSyncedTab
+            case .bookmark:
+                return .bookmark
+            case .merino:
+                return .story
+            case .customizeHomepage:
+                return .customizeHomepage
+            default:
+                return nil
+            }
         }
     }
 
@@ -69,17 +92,24 @@ final class HomepageDiffableDataSource:
 
         let textColor = state.wallpaperState.wallpaperConfiguration.textColor
 
-        snapshot.appendSections([.header])
-        snapshot.appendItems([.header(state.headerState)], toSection: .header)
-
         if let configuration = state.messageState.messageCardConfiguration {
             snapshot.appendSections([.messageCard])
             snapshot.appendItems([.messageCard(configuration)], toSection: .messageCard)
         }
 
         if let (topSites, numberOfCellsPerRow) = getTopSites(with: state.topSitesState, and: textColor) {
-            snapshot.appendSections([.topSites(numberOfCellsPerRow)])
-            snapshot.appendItems(topSites, toSection: .topSites(numberOfCellsPerRow))
+            snapshot.appendSections([.topSites(textColor, numberOfCellsPerRow)])
+            snapshot.appendItems(topSites, toSection: .topSites(textColor, numberOfCellsPerRow))
+        }
+
+        if state.shouldShowSpacer {
+            snapshot.appendSections([.spacer])
+            snapshot.appendItems([.spacer], toSection: .spacer)
+        }
+
+        if state.searchState.shouldShowSearchBar {
+            snapshot.appendSections([.searchBar])
+            snapshot.appendItems([.searchBar], toSection: .searchBar)
         }
 
         if let (tabs, configuration) = getJumpBackInTabs(with: state.jumpBackInState, and: jumpBackInDisplayConfig) {
@@ -92,23 +122,24 @@ final class HomepageDiffableDataSource:
             snapshot.appendItems(bookmarks, toSection: .bookmarks(textColor))
         }
 
-        if let stories = getPocketStories(with: state.pocketState) {
+        if let stories = getPocketStories(with: state.merinoState) {
             snapshot.appendSections([.pocket(textColor)])
             snapshot.appendItems(stories, toSection: .pocket(textColor))
         }
 
-        snapshot.appendSections([.customizeHomepage])
-        snapshot.appendItems([.customizeHomepage], toSection: .customizeHomepage)
+        if !featureFlags.isFeatureEnabled(.homepageStoriesRedesign, checking: .buildOnly) {
+            snapshot.appendSections([.customizeHomepage])
+            snapshot.appendItems([.customizeHomepage], toSection: .customizeHomepage)
+        }
 
-        apply(snapshot, animatingDifferences: true)
+        apply(snapshot, animatingDifferences: false)
     }
 
     private func getPocketStories(
-        with pocketState: PocketState
+        with pocketState: MerinoState
     ) -> [HomepageDiffableDataSource.HomeItem]? {
-        var stories: [HomeItem] = pocketState.pocketData.compactMap { .pocket($0) }
+        let stories: [HomeItem] = pocketState.merinoData.compactMap { .merino($0) }
         guard pocketState.shouldShowSection, !stories.isEmpty else { return nil }
-        stories.append(.pocketDiscover(pocketState.pocketDiscoverItem))
         return stories
     }
 
@@ -162,3 +193,5 @@ final class HomepageDiffableDataSource:
         return state.bookmarks.compactMap { .bookmark($0) }
     }
 }
+
+class HomepageSpacerCell: UICollectionViewCell, ReusableCell { }

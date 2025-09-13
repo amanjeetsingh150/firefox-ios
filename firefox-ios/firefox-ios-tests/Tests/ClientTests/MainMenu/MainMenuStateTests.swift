@@ -4,6 +4,7 @@
 
 import Redux
 import XCTest
+import SummarizeKit
 
 @testable import Client
 
@@ -30,6 +31,7 @@ final class MainMenuStateTests: XCTestCase {
     func testUpdatingCurrentTabInfo() {
         let initialState = createSubject()
         let reducer = mainMenuReducer()
+        let accountData = AccountData(title: "Test Title", subtitle: "Test Subtitle")
 
         let expectedResult = MainMenuTabInfo(
             tabID: "1234",
@@ -40,9 +42,12 @@ final class MainMenuStateTests: XCTestCase {
             hasChangedUserAgent: true,
             zoomLevel: 1.0,
             readerModeIsAvailable: false,
+            summaryIsAvailable: false,
+            summarizerConfig: SummarizerConfig(instructions: "Test instructions", options: [:]),
             isBookmarked: false,
             isInReadingList: false,
-            isPinned: false
+            isPinned: false,
+            accountData: accountData
         )
 
         XCTAssertNil(initialState.currentTabInfo)
@@ -65,7 +70,7 @@ final class MainMenuStateTests: XCTestCase {
 
         XCTAssertNil(initialState.navigationDestination)
 
-        MainMenuNavigationDestination.allCases.forEach { destination in
+        MainMenuNavigationDestination.allCasesForTests.forEach { destination in
             let newState = reducer(
                 initialState,
                 MainMenuAction(

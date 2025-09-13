@@ -21,9 +21,9 @@ class TopSitesHelperTests: XCTestCase {
     }
 
     override func tearDown() {
-        super.tearDown()
         self.deleteDatabases()
         self.profile = nil
+        super.tearDown()
     }
 
     override func setUp() {
@@ -223,8 +223,9 @@ extension TopSitesHelperTests {
     }
 }
 
+// TODO: FXIOS-13300 - Refactor Cursor and it's subclasses to be concurrency safe
 // MARK: - SiteCursorMock
-class SiteCursorMock: Cursor<Site> {
+private class SiteCursorMock: Cursor<Site>, @unchecked Sendable {
     var sites = [Site]()
     override func asArray() -> [Site] {
         return sites
@@ -232,7 +233,7 @@ class SiteCursorMock: Cursor<Site> {
 }
 
 // MARK: - MockablePinnedSites
-class PinnedSitesMock: MockablePinnedSites {
+private class PinnedSitesMock: MockablePinnedSites {
     class Error: MaybeErrorType {
         var description = "Error"
     }

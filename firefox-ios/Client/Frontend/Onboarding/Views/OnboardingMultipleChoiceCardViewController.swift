@@ -5,7 +5,6 @@
 import UIKit
 import Common
 import ComponentLibrary
-import Shared
 
 class OnboardingMultipleChoiceCardViewController: OnboardingCardViewController {
     struct UX {
@@ -84,8 +83,9 @@ class OnboardingMultipleChoiceCardViewController: OnboardingCardViewController {
 
         setupView()
         updateLayout()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
-        listenForThemeChange(view)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -243,13 +243,41 @@ class OnboardingMultipleChoiceCardViewController: OnboardingCardViewController {
         view.addSubview(scrollView)
     }
 
+    /// Determines whether a given button is the selected button based on the toolbar layout, button properties,
+    /// and the `version1` or `version2 experiment.
+    ///
+    /// - Description: For the `version1` or `version2` experiment, the bottom toolbar button is set as
+    ///   the default selected button.
+    ///   For other layouts, the first button in the multiple choice buttons list is used as the default.
+    private func isSelectedButton<T: OnboardingCardInfoModelProtocol>(
+        buttonModel: OnboardingMultipleChoiceButtonModel,
+        viewModel: T) -> Bool {
+        let toolbarLayout = FxNimbus.shared.features
+            .toolbarRefactorFeature
+            .value()
+            .layout
+
+        switch toolbarLayout {
+        case .version1, .version2, .baseline:
+            let isToolbarBottomAction = buttonModel.action == .toolbarBottom
+            let isToolbarTopAction = buttonModel.action == .toolbarTop
+            if isToolbarBottomAction {
+                return true
+            } else {
+                return !isToolbarTopAction && buttonModel == viewModel.multipleChoiceButtons.first
+            }
+        default: return buttonModel == viewModel.multipleChoiceButtons.first
+        }
+    }
+
     private func buildButtonViews() {
         multipleChoiceButtons.removeAll()
         multipleChoiceButtons = viewModel.multipleChoiceButtons.map({ buttonModel in
+            let isSelectedButton = isSelectedButton(buttonModel: buttonModel, viewModel: viewModel)
             return OnboardingMultipleChoiceButtonView(
                 windowUUID: windowUUID,
                 viewModel: OnboardingMultipleChoiceButtonViewModel(
-                    isSelected: buttonModel == viewModel.multipleChoiceButtons.first,
+                    isSelected: isSelectedButton,
                     info: buttonModel,
                     presentingCardName: viewModel.name,
                     a11yIDRoot: viewModel.a11yIdRoot
@@ -259,7 +287,6 @@ class OnboardingMultipleChoiceCardViewController: OnboardingCardViewController {
             )
         })
     }
-
     // MARK: - Button Actions
     @objc
     override func primaryAction() {

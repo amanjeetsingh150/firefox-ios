@@ -9,11 +9,13 @@ import Shared
 import ComponentLibrary
 
 protocol EmptyPrivateTabsViewDelegate: AnyObject {
+    @MainActor
     func didTapLearnMore(urlRequest: URLRequest)
 }
 
 // View we display when there are no private tabs created
-class EmptyPrivateTabsView: UIView {
+class EmptyPrivateTabsView: UIView,
+                            EmptyPrivateTabView {
     struct UX {
         static let paddingInBetweenItems: CGFloat = 15
         static let verticalPadding: CGFloat = 20
@@ -23,6 +25,7 @@ class EmptyPrivateTabsView: UIView {
 
     // MARK: - Properties
 
+    var needsSafeArea: Bool { false }
     weak var delegate: EmptyPrivateTabsViewDelegate?
 
     // UI
@@ -44,7 +47,7 @@ class EmptyPrivateTabsView: UIView {
         label.font = FXFontStyles.Regular.body.scaledFont()
         label.textAlignment = .center
         label.numberOfLines = 0
-        label.text = .TabTrayPrivateBrowsingDescription
+        label.text = .TabsTray.TabTrayPrivateBrowsingDescription
     }
 
     private lazy var learnMoreButton: LinkButton = .build { button in
@@ -124,7 +127,7 @@ class EmptyPrivateTabsView: UIView {
         ])
     }
 
-    func applyTheme(_ theme: Theme) {
+    func applyTheme(theme: Theme) {
         titleLabel.textColor = theme.colors.textPrimary
         descriptionLabel.textColor = theme.colors.textPrimary
         learnMoreButton.applyTheme(theme: theme)
@@ -133,10 +136,15 @@ class EmptyPrivateTabsView: UIView {
 
     @objc
     private func didTapLearnMore() {
-        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        if let langID = Locale.preferredLanguages.first {
-            let learnMoreRequest = URLRequest(url: "https://support.mozilla.org/1/mobile/\(appVersion ?? "0.0")/iOS/\(langID)/private-browsing-ios".asURL!)
-            delegate?.didTapLearnMore(urlRequest: learnMoreRequest)
-        }
+        guard let url = SupportUtils.URLForTopic("private-browsing-ios") else { return }
+        let request = URLRequest(url: url)
+        delegate?.didTapLearnMore(urlRequest: request)
+    }
+
+    // MARK: - InsetUpdatable
+
+    func updateInsets(top: CGFloat, bottom: CGFloat) {
+        scrollView.contentInset.top = top
+        scrollView.contentInset.bottom = bottom
     }
 }

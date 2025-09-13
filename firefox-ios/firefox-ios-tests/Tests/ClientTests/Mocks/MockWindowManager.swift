@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Storage
 import Common
 @testable import Client
 
@@ -12,6 +11,8 @@ final class MockWindowManager: WindowManager {
     private let tabManager: MockTabManager
 
     var closePrivateTabsMultiActionCalled = 0
+    var overrideWindows = false
+    var windowsWereAccessed = false
 
     init(
         wrappedManager: WindowManagerImplementation,
@@ -24,7 +25,12 @@ final class MockWindowManager: WindowManager {
     // MARK: - WindowManager Protocol
 
     var windows: [WindowUUID: AppWindowInfo] {
-        wrappedManager.windows
+        windowsWereAccessed = true
+        if overrideWindows {
+            return [.XCTestDefaultUUID: AppWindowInfo(tabManager: tabManager, sceneCoordinator: nil)]
+        } else {
+            return wrappedManager.windows
+        }
     }
 
     func newBrowserWindowConfigured(_ windowInfo: AppWindowInfo, uuid: WindowUUID) {
@@ -43,6 +49,7 @@ final class MockWindowManager: WindowManager {
         wrappedManager.allWindowUUIDs(includingReserved: includingReserved)
     }
 
+    @MainActor
     func windowWillClose(uuid: WindowUUID) {
         wrappedManager.windowWillClose(uuid: uuid)
     }
@@ -51,10 +58,12 @@ final class MockWindowManager: WindowManager {
         wrappedManager.reserveNextAvailableWindowUUID(isIpad: isIpad)
     }
 
+    @MainActor
     func postWindowEvent(event: WindowEvent, windowUUID: WindowUUID) {
         wrappedManager.postWindowEvent(event: event, windowUUID: windowUUID)
     }
 
+    @MainActor
     func performMultiWindowAction(_ action: MultiWindowAction) {
         switch action {
         case .closeAllPrivateTabs:

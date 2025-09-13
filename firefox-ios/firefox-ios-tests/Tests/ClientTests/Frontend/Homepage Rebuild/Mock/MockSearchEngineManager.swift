@@ -9,6 +9,8 @@ import Foundation
 class MockSearchEnginesManager: SearchEnginesManagerProvider {
     private let searchEngines: [OpenSearchEngine]
 
+    weak var delegate: (any SearchEngineDelegate)?
+
     var defaultEngine: OpenSearchEngine? {
         return searchEngines.first
     }
@@ -21,7 +23,15 @@ class MockSearchEnginesManager: SearchEnginesManagerProvider {
         self.searchEngines = searchEngines
     }
 
-    func getOrderedEngines(completion: @escaping ([OpenSearchEngine]) -> Void) {
-        completion(searchEngines)
+    func getOrderedEngines(completion: @escaping SearchEngineCompletion) {
+        completion(
+            SearchEnginePrefs(
+                engineIdentifiers: searchEngines.map {
+                    $0.shortName
+                },
+                disabledEngines: [],
+                version: .v1),
+            searchEngines
+        )
     }
 }

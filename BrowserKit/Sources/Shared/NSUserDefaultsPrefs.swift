@@ -5,7 +5,7 @@
 import Common
 import Foundation
 
-open class NSUserDefaultsPrefs: Prefs {
+open class NSUserDefaultsPrefs: Prefs, @unchecked Sendable {
     fileprivate let prefixWithDot: String
     fileprivate let userDefaults: UserDefaults
 
@@ -98,6 +98,10 @@ open class NSUserDefaultsPrefs: Prefs {
 
     open func objectForKey<T: Any>(_ defaultName: String) -> T? {
         return userDefaults.object(forKey: qualifyKey(defaultName)) as? T
+    }
+
+    open func hasObjectForKey(_ defaultName: String) -> Bool {
+        return userDefaults.object(forKey: qualifyKey(defaultName)) != nil
     }
 
     open func intForKey(_ defaultName: String) -> Int32? {

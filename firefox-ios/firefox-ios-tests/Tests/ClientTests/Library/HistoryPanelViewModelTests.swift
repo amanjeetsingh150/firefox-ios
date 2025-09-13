@@ -38,15 +38,13 @@ class HistoryPanelViewModelTests: XCTestCase {
         HistoryPanelViewModel.Sections.allCases.forEach({ section in
             switch section {
             case .lastHour:
-                XCTAssertEqual(section.title, .LibraryPanel.Sections.LastHour)
-            case .today:
-                XCTAssertEqual(section.title, .LibraryPanel.Sections.Today)
-            case .yesterday:
-                XCTAssertEqual(section.title, .LibraryPanel.Sections.Yesterday)
-            case .lastWeek:
-                XCTAssertEqual(section.title, .LibraryPanel.Sections.LastWeek)
-            case .lastMonth:
-                XCTAssertEqual(section.title, .LibraryPanel.Sections.LastMonth)
+                XCTAssertEqual(section.title, .LibraryPanel.History.ClearHistorySheet.LastHourOption)
+            case .lastTwentyFourHours:
+                XCTAssertEqual(section.title, .LibraryPanel.History.ClearHistorySheet.LastTwentyFourHoursOption)
+            case .lastSevenDays:
+                XCTAssertEqual(section.title, .LibraryPanel.History.ClearHistorySheet.LastSevenDaysOption)
+            case .lastFourWeeks:
+                XCTAssertEqual(section.title, .LibraryPanel.History.ClearHistorySheet.LastFourWeeksOption)
             case .older:
                 XCTAssertEqual(section.title, .LibraryPanel.Sections.Older)
             case .additionalHistoryActions, .searchResults:
@@ -190,7 +188,7 @@ class HistoryPanelViewModelTests: XCTestCase {
     private func addSiteVisit(_ profile: MockProfile,
                               url: String,
                               title: String,
-                              file: StaticString = #file,
+                              file: StaticString = #filePath,
                               line: UInt = #line) {
         let visitObservation = VisitObservation(url: url, title: title, visitType: .link)
         let result = profile.places.applyObservation(visitObservation: visitObservation)
@@ -199,13 +197,13 @@ class HistoryPanelViewModelTests: XCTestCase {
     }
 
     private func clear(profile: MockProfile,
-                       file: StaticString = #file,
+                       file: StaticString = #filePath,
                        line: UInt = #line) {
         let result = profile.places.deleteEverythingHistory()
         XCTAssertTrue(result.value.isSuccess, "History cleared.", file: file, line: line)
     }
 
-    private func fetchHistory(file: StaticString = #file,
+    private func fetchHistory(file: StaticString = #filePath,
                               line: UInt = #line,
                               completion: @escaping (Bool) -> Void) {
         let expectation = self.expectation(description: "Wait for history")
@@ -220,7 +218,7 @@ class HistoryPanelViewModelTests: XCTestCase {
     }
 
     private func fetchSearchHistory(searchTerm: String,
-                                    file: StaticString = #file,
+                                    file: StaticString = #filePath,
                                     line: UInt = #line,
                                     completion: @escaping (Bool) -> Void) {
         let expectation = self.expectation(description: "Wait for history search")
@@ -235,7 +233,7 @@ class HistoryPanelViewModelTests: XCTestCase {
     }
 
     private func createSearchTermGroup(timestamp: MicrosecondTimestamp,
-                                       file: StaticString = #file,
+                                       file: StaticString = #filePath,
                                        line: UInt = #line) -> ASGroup<Site> {
         var groupSites = [Site]()
         for index in 0...3 {

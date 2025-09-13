@@ -50,8 +50,16 @@ class ManageFxAccountSetting: Setting {
     }
 
     deinit {
-        if let notification = notification {
-            NotificationCenter.default.removeObserver(notification)
+        // TODO: FXIOS-13097 This is a work around until we can leverage isolated deinits
+        guard Thread.isMainThread else {
+            assertionFailure("ManageFxAccountSetting was not deallocated on the main thread. Observer was not removed")
+            return
+        }
+
+        MainActor.assumeIsolated {
+            if let notification = notification {
+                NotificationCenter.default.removeObserver(notification)
+            }
         }
     }
 }
@@ -140,9 +148,17 @@ class DeviceNameSetting: StringSetting {
         notification = NotificationCenter.default.addObserver(
             forName: Notification.Name.constellationStateUpdate,
             object: nil,
-            queue: nil
+            queue: .main
         ) { [weak self] notification in
-            self?.tableView?.tableView.reloadData()
+            guard Thread.isMainThread else {
+                assertionFailure("This must be called main thread")
+                return
+            }
+
+            // We have set the queue to `.main` on the observer, so theoretically this is safe to call here
+            MainActor.assumeIsolated {
+                self?.tableView?.tableView.reloadData()
+            }
         }
     }
 
@@ -152,8 +168,16 @@ class DeviceNameSetting: StringSetting {
     }
 
     deinit {
-        if let notification = notification {
-            NotificationCenter.default.removeObserver(notification)
+        // TODO: FXIOS-13097 This is a work around until we can leverage isolated deinits
+        guard Thread.isMainThread else {
+            assertionFailure("DeviceNameSetting was not deallocated on the main thread. Observer was not removed")
+            return
+        }
+
+        MainActor.assumeIsolated {
+            if let notification = notification {
+                NotificationCenter.default.removeObserver(notification)
+            }
         }
     }
 }
@@ -173,9 +197,14 @@ class SyncContentSettingsViewController: SettingsTableViewController, FeatureFla
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.profile?.syncManager?.reportOpenSyncSettingsMenuTelemetry()
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         if !enginesToSyncOnExit.isEmpty {
-            _ = self.profile?.syncManager?.syncNamedCollections(
+            self.profile?.syncManager?.syncPostSyncSettingsChange(
                 why: .enabledChange,
                 names: Array(enginesToSyncOnExit)
             )
@@ -275,13 +304,7 @@ class SyncContentSettingsViewController: SettingsTableViewController, FeatureFla
             attributedStatusText: nil,
             settingDidChange: engineSettingChanged(.addresses))
 
-        var engineSectionChildren: [Setting] = [bookmarks, history, tabs, passwords]
-
-        if featureFlags.isFeatureEnabled(
-            .creditCardAutofillStatus,
-            checking: .buildOnly) {
-            engineSectionChildren.append(creditCards)
-        }
+        var engineSectionChildren: [Setting] = [bookmarks, history, tabs, passwords, creditCards]
 
         if AddressLocaleFeatureValidator.isValidRegion() {
             engineSectionChildren.append(addresses)

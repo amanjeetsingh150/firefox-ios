@@ -6,6 +6,7 @@ import XCTest
 import Common
 @testable import Client
 
+@MainActor
 final class RemoteTabsCoordinatorTests: XCTestCase {
     private var mockProfile: MockProfile!
     private var mockRouter: MockRouter!
@@ -74,7 +75,7 @@ final class RemoteTabsCoordinatorTests: XCTestCase {
     }
 
     // MARK: - Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> RemoteTabsCoordinator {
         let subject = RemoteTabsCoordinator(profile: mockProfile,
                                             router: mockRouter,

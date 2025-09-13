@@ -4,18 +4,23 @@
 
 import Redux
 import XCTest
+import SummarizeKit
 
 @testable import Client
 
-final class BrowserViewControllerStateTests: XCTestCase {
+final class BrowserViewControllerStateTests: XCTestCase, StoreTestUtility {
+    let storeUtilityHelper = StoreTestUtilityHelper()
+
     override func setUp() {
         super.setUp()
         DependencyHelperMock().bootstrapDependencies()
+        setupStore()
     }
 
     override func tearDown() {
-        super.tearDown()
         DependencyHelperMock().reset()
+        resetStore()
+        super.tearDown()
     }
 
     func testAddNewTabAction() {
@@ -87,6 +92,18 @@ final class BrowserViewControllerStateTests: XCTestCase {
         XCTAssertEqual(newState.navigateTo, .reload)
     }
 
+    func testShowSummarizerAction() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        let action = getAction(for: .showSummarizer)
+        let newState = reducer(initialState, action)
+
+        guard case .summarizer = newState.displayView else {
+            return XCTFail("Expected .summarizer")
+        }
+    }
+
     // MARK: - Navigation Browser Action
     func test_tapOnCustomizeHomepage_navigationBrowserAction_returnsExpectedState() {
         let initialState = createSubject()
@@ -94,7 +111,7 @@ final class BrowserViewControllerStateTests: XCTestCase {
 
         XCTAssertNil(initialState.navigationDestination)
 
-        let action = getNavigationBrowserAction(for: .tapOnCustomizeHomepage, destination: .settings(.homePage))
+        let action = getNavigationBrowserAction(for: .tapOnCustomizeHomepageButton, destination: .settings(.homePage))
         let newState = reducer(initialState, action)
 
         XCTAssertEqual(newState.navigationDestination?.destination, .settings(.homePage))
@@ -223,6 +240,152 @@ final class BrowserViewControllerStateTests: XCTestCase {
         XCTAssertEqual(newState.navigationDestination?.url, nil)
     }
 
+    // MARK: StartAtHomeAction
+
+    func test_shouldStartAtHome_withStartAtHomeAction_returnsTrue() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertFalse(initialState.shouldStartAtHome)
+
+        let action = StartAtHomeAction(
+            shouldStartAtHome: true,
+            windowUUID: .XCTestDefaultUUID,
+            actionType: StartAtHomeMiddlewareActionType.startAtHomeCheckCompleted
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertTrue(newState.shouldStartAtHome)
+    }
+
+    func test_shouldStartAtHome_withStartAtHomeAction_returnsFalse() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertFalse(initialState.shouldStartAtHome)
+
+        let action = StartAtHomeAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: StartAtHomeMiddlewareActionType.startAtHomeCheckCompleted
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertFalse(newState.shouldStartAtHome)
+    }
+
+    // MARK: - Summarizer
+    func test_configuredSummarizer_summarizerAction_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        let action = SummarizeAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: SummarizeMiddlewareActionType.configuredSummarizer,
+            summarizerConfig: SummarizerConfig(instructions: "Test instructions", options: [:])
+        )
+        let newState = reducer(initialState, action)
+        let config = SummarizerConfig(instructions: "Test instructions", options: [:])
+        XCTAssertEqual(newState.navigationDestination?.destination, .summarizer(config: config))
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    // MARK: - Zero Search State
+
+    func test_tapOnHomepageSearchBar_navigationBrowserAction_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = getNavigationBrowserAction(for: .tapOnHomepageSearchBar, destination: .zeroSearch)
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, .zeroSearch)
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    func test_didTapButtonToolbarAction_withHomepageSearch_andSearchButtonType_navigateToZeroSearch() {
+        setupStoreForSearchBar()
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = ToolbarMiddlewareAction(
+            buttonType: .search,
+            windowUUID: .XCTestDefaultUUID,
+            actionType: ToolbarMiddlewareActionType.didTapButton
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, .zeroSearch)
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    func test_didTapButtonToolbarAction_withHomepageSearch_andNoButtonType_navigateToZeroSearch() {
+        setupStoreForSearchBar()
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = ToolbarMiddlewareAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: ToolbarMiddlewareActionType.didTapButton
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, nil)
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    func test_didTapButtonToolbarAction_withoutHomepageSearch_andSearchButtonType_doesNotNavigateToZeroSearch() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = ToolbarMiddlewareAction(
+            buttonType: .search,
+            windowUUID: .XCTestDefaultUUID,
+            actionType: ToolbarMiddlewareActionType.didTapButton
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, nil)
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    func test_didTapButtonToolbarAction_withoutHomepageSearch_andNoButtonType_doesNotNavigateToZeroSearch() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = ToolbarMiddlewareAction(
+            windowUUID: .XCTestDefaultUUID,
+            actionType: ToolbarMiddlewareActionType.didTapButton
+        )
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, nil)
+        XCTAssertEqual(newState.navigationDestination?.url, nil)
+    }
+
+    // MARK: - Shortcuts Library
+
+    func test_tapOnShortcutsShowAllButton_navigationBrowserAction_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = browserViewControllerReducer()
+
+        XCTAssertNil(initialState.navigationDestination)
+
+        let action = getNavigationBrowserAction(for: .tapOnShortcutsShowAllButton, destination: .shortcutsLibrary)
+        let newState = reducer(initialState, action)
+
+        XCTAssertEqual(newState.navigationDestination?.destination, .shortcutsLibrary)
+    }
+
     // MARK: - Private
     private func createSubject() -> BrowserViewControllerState {
         return BrowserViewControllerState(windowUUID: .XCTestDefaultUUID)
@@ -259,5 +422,72 @@ final class BrowserViewControllerStateTests: XCTestCase {
                                      isNativeErrorPage: isNativeErrorPage,
                                      windowUUID: .XCTestDefaultUUID,
                                      actionType: actionType)
+    }
+
+    /// We need to set up the state for the homepage search bar in order to test method that relies on this state
+    func setupStoreForSearchBar() {
+        let initialHomepageState = HomepageState
+            .reducer(
+                HomepageState(windowUUID: .XCTestDefaultUUID),
+                HomepageAction(
+                    windowUUID: .XCTestDefaultUUID,
+                    actionType: HomepageActionType.initialize
+                )
+            )
+        let newHomepageState = HomepageState
+            .reducer(
+                initialHomepageState,
+                HomepageAction(
+                    isSearchBarEnabled: true,
+                    windowUUID: .XCTestDefaultUUID,
+                    actionType: HomepageMiddlewareActionType.configuredSearchBar
+                )
+            )
+
+        StoreTestUtilityHelper.setupStore(
+            with: AppState(
+                activeScreens: ActiveScreensState(
+                    screens: [
+                        .browserViewController(
+                            BrowserViewControllerState(
+                                windowUUID: .XCTestDefaultUUID
+                            )
+                        ),
+                        .homepage(
+                            newHomepageState
+                        )
+                    ]
+                )
+            ),
+            middlewares: []
+        )
+    }
+
+    // MARK: StoreTestUtility
+    func setupAppState() -> AppState {
+        return AppState(
+            activeScreens: ActiveScreensState(
+                screens: [
+                    .browserViewController(
+                        BrowserViewControllerState(
+                            windowUUID: .XCTestDefaultUUID
+                        )
+                    )
+                ]
+            )
+        )
+    }
+
+    func setupStore() {
+        StoreTestUtilityHelper.setupStore(
+            with: setupAppState(),
+            middlewares: []
+        )
+    }
+
+    // In order to avoid flaky tests, we should reset the store
+    // similar to production
+    func resetStore() {
+        StoreTestUtilityHelper.resetStore()
     }
 }

@@ -40,6 +40,7 @@ class TopSitesDataAdaptorImplementation: TopSitesDataAdaptor, FeatureFlaggable {
     private let contileProvider: ContileProviderInterface
     private let unifiedAdsProvider: UnifiedAdsProviderInterface
     private let dispatchGroup: DispatchGroupInterface
+    private let searchEnginesManager: SearchEnginesManagerProvider
 
     // Pre-loading the data with a default number of tiles so we always show section when needed
     // If this isn't done, then no data will be found from the view model and section won't show
@@ -52,6 +53,7 @@ class TopSitesDataAdaptorImplementation: TopSitesDataAdaptor, FeatureFlaggable {
          contileProvider: ContileProviderInterface = ContileProvider(),
          unifiedAdsProvider: UnifiedAdsProviderInterface = UnifiedAdsProvider(),
          notificationCenter: NotificationProtocol = NotificationCenter.default,
+         searchEnginesManager: SearchEnginesManager = AppContainer.shared.resolve(),
          dispatchGroup: DispatchGroupInterface = DispatchGroup()
     ) {
         self.profile = profile
@@ -60,21 +62,20 @@ class TopSitesDataAdaptorImplementation: TopSitesDataAdaptor, FeatureFlaggable {
         self.contileProvider = contileProvider
         self.unifiedAdsProvider = unifiedAdsProvider
         self.notificationCenter = notificationCenter
+        self.searchEnginesManager = searchEnginesManager
         self.dispatchGroup = dispatchGroup
-        topSiteHistoryManager.delegate = self
 
-        setupNotifications(forObserver: self,
-                           observing: [.FirefoxAccountChanged,
-                                       .PrivateDataClearedHistory,
-                                       .ProfileDidFinishSyncing,
-                                       .TopSitesUpdated,
-                                       .DefaultSearchEngineUpdated])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.FirefoxAccountChanged,
+                        .PrivateDataClearedHistory,
+                        .ProfileDidFinishSyncing,
+                        .TopSitesUpdated,
+                        .DefaultSearchEngineUpdated]
+        )
 
         loadTopSitesData()
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     func getTopSitesData() -> [TopSite] {
@@ -194,7 +195,7 @@ class TopSitesDataAdaptorImplementation: TopSitesDataAdaptor, FeatureFlaggable {
         if sponsoredTileSpaces > 0 {
             sites.addSponsoredTiles(sponsoredTileSpaces: sponsoredTileSpaces,
                                     contiles: contiles,
-                                    defaultSearchEngine: profile.searchEnginesManager.defaultEngine)
+                                    defaultSearchEngine: searchEnginesManager.defaultEngine)
         }
     }
 
@@ -220,7 +221,7 @@ class TopSitesDataAdaptorImplementation: TopSitesDataAdaptor, FeatureFlaggable {
     // MARK: - Sponsored tiles (Contiles)
 
     private var shouldLoadSponsoredTiles: Bool {
-        return profile.prefs.boolForKey(PrefsKeys.UserFeatureFlagPrefs.SponsoredShortcuts) ?? true
+        return profile.prefs.boolForKey(PrefsKeys.FeatureFlags.SponsoredShortcuts) ?? true
     }
 
     private var shouldAddSponsoredTiles: Bool {
@@ -301,7 +302,7 @@ private extension Array where Element == Site {
 }
 
 // MARK: - DataObserverDelegate
-extension TopSitesDataAdaptorImplementation: DataObserverDelegate {
+extension TopSitesDataAdaptorImplementation {
     func didInvalidateDataSource(forceRefresh forced: Bool) {
         guard forced else { return }
         loadTopSitesData()

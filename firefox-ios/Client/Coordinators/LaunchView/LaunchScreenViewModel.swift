@@ -7,8 +7,13 @@ import Foundation
 import Shared
 
 protocol LaunchFinishedLoadingDelegate: AnyObject {
+    @MainActor
     func launchWith(launchType: LaunchType)
+
+    @MainActor
     func launchBrowser()
+
+    @MainActor
     func finishedLoadingLaunchOrder()
 }
 
@@ -47,10 +52,12 @@ class LaunchScreenViewModel {
         profile.prefs.setBool(true, forKey: PrefsKeys.splashScreenShownKey)
     }
 
-    func startLoading(appVersion: String = AppInfo.appVersion) async {
-        await loadLaunchType(appVersion: appVersion)
+    @MainActor
+    func startLoading(appVersion: String = AppInfo.appVersion) {
+        loadLaunchType(appVersion: appVersion)
     }
 
+    @MainActor
     func loadNextLaunchType() {
         guard let launches = launchOrder else { return }
 
@@ -62,7 +69,8 @@ class LaunchScreenViewModel {
         }
     }
 
-    private func loadLaunchType(appVersion: String) async {
+    @MainActor
+    private func loadLaunchType(appVersion: String) {
         var launchOrder = [LaunchType]()
 
         if introScreenManager.shouldShowIntroScreen {
@@ -72,7 +80,7 @@ class LaunchScreenViewModel {
 
             launchOrder.append(.intro(manager: introScreenManager))
         } else if updateViewModel.shouldShowUpdateSheet(appVersion: appVersion),
-                  await updateViewModel.hasSyncableAccount() {
+                  updateViewModel.containsSyncableAccount() {
             launchOrder.append(.update(viewModel: updateViewModel))
         } else if surveySurfaceManager.shouldShowSurveySurface {
             launchOrder.append(.survey(manager: surveySurfaceManager))

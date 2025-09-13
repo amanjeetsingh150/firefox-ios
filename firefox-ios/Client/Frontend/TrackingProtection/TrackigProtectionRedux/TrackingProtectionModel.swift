@@ -165,6 +165,7 @@ class TrackingProtectionModel {
         return ContentBlocker.shared.isSafelisted(url: url)
     }
 
+    @MainActor
     func onTapClearCookiesAndSiteData(controller: UIViewController) {
         let alertMessage = String(format: clearCookiesAlertText, url.baseDomain ?? url.shortDisplayString)
         let alert = UIAlertController(
@@ -182,14 +183,14 @@ class TrackingProtectionModel {
             self?.selectedTab?.webView?.reload()
 
             guard let windowUUID = self?.selectedTab?.windowUUID else { return }
-            store.dispatch(
+            store.dispatchLegacy(
                 TrackingProtectionMiddlewareAction(
                     windowUUID: windowUUID,
                     actionType: TrackingProtectionMiddlewareActionType.dismissTrackingProtection
                 )
             )
 
-            store.dispatch(
+            store.dispatchLegacy(
                 GeneralBrowserAction(
                     toastType: .clearCookies,
                     windowUUID: windowUUID,
@@ -201,6 +202,7 @@ class TrackingProtectionModel {
         controller.present(alert, animated: true, completion: nil)
     }
 
+    @MainActor
     func clearCookiesAndSiteData() {
         _ = CookiesClearable().clear()
         _ = SiteDataClearable().clear()

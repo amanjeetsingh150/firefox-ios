@@ -7,6 +7,7 @@ import UIKit
 
 /// Delegate for the text field events. Since LocationTextField owns the UITextFieldDelegate,
 /// callers must use this instead.
+@MainActor
 protocol LocationTextFieldDelegate: AnyObject {
     func locationTextField(_ textField: LocationTextField, didEnterText text: String)
     func locationTextFieldShouldReturn(_ textField: LocationTextField) -> Bool
@@ -156,12 +157,6 @@ class LocationTextField: UITextField, UITextFieldDelegate, ThemeApplicable {
         clearButtonTintColor = colors.iconPrimary
         markedTextStyle = [NSAttributedString.Key.backgroundColor: colors.layerAutofillText]
         textColor = colors.textPrimary
-
-        attributedPlaceholder = NSAttributedString(
-            string: placeholder ?? "",
-            attributes: [NSAttributedString.Key.foregroundColor: colors.textSecondary]
-        )
-
         tintClearButton()
     }
 

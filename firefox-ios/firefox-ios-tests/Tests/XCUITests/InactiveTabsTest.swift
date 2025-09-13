@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
+import Common
 import XCTest
-import Shared
 
-final class InactiveTabsTest: BaseTestCase {
+final class InactiveTabsTest: FeatureFlaggedTestBase {
     override func setUp() {
         // Load 20 tabs. 19 tabs are inactive.
         let tabsDatabase = "tabsState20.archive"
@@ -18,8 +18,9 @@ final class InactiveTabsTest: BaseTestCase {
             LaunchArguments.DisableAnimations,
         ]
         launchArguments.append(LaunchArguments.LoadTabsStateArchive + tabsDatabase)
-
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
         super.setUp()
+        app.launch()
 
         // Workaround: Restart app to guarantee the tabs are loaded
         waitForTabsButton()
@@ -29,7 +30,7 @@ final class InactiveTabsTest: BaseTestCase {
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307045
-    func testInactiveTabs() {
+    func testInactiveTabs_tabTrayExperimentOff() {
         // Confirm we have tabs loaded
         let tabsButtonNumber = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].staticTexts["20"]
         waitForTabsButton()
@@ -43,59 +44,59 @@ final class InactiveTabsTest: BaseTestCase {
         waitForElementsToExist(
             [
                 app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerView],
-                app.otherElements["Tabs Tray"].staticTexts.firstMatch
+                app.otherElements[tabsTray].staticTexts.firstMatch
             ]
         )
 
         // Tap on the ">" button.
-        app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerView].waitAndTap()
+        let inactiveButtone = app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerView]
+        mozWaitForElementToExist(inactiveButtone)
+        inactiveButtone.tap(force: true)
         waitForElementsToExist(
             [
                 app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerButton],
-                app.otherElements["Tabs Tray"].staticTexts["Homepage"],
-                app.otherElements["Tabs Tray"].staticTexts["Google"],
-                app.otherElements["Tabs Tray"].staticTexts["Facebook - log in or sign up"],
-                app.otherElements["Tabs Tray"].staticTexts["Amazon.com. Spend less. Smile more."]
+                app.otherElements[tabsTray].staticTexts["Homepage"],
+                app.otherElements[tabsTray].staticTexts["Google"],
+                app.otherElements[tabsTray].staticTexts["Facebook - log in or sign up"],
+                app.otherElements[tabsTray].staticTexts["Amazon.com. Spend less. Smile more."]
             ]
         )
         app.buttons[AccessibilityIdentifiers.TabTray.doneButton].waitAndTap()
 
-        // Go to Settings -> Tabs and disable "Inactive tabs"
+        // Go to Settings -> Browsing and disable "Inactive tabs"
         navigator.nowAt(NewTabScreen)
-        navigator.goto(SettingsScreen)
-        app.cells[AccessibilityIdentifiers.Settings.Tabs.title].waitAndTap()
-        mozWaitForElementToExist(app.tables.otherElements[AccessibilityIdentifiers.Settings.Tabs.Customize.title])
+        navigator.goto(BrowsingSettings)
+        mozWaitForElementToExist(app.tables.otherElements[AccessibilityIdentifiers.Settings.Browsing.tabs])
         XCTAssertEqual(
-            app.switches[AccessibilityIdentifiers.Settings.Tabs.Customize.inactiveTabsSwitch].value as? String, "1")
-        app.switches[AccessibilityIdentifiers.Settings.Tabs.Customize.inactiveTabsSwitch].waitAndTap()
+            app.switches[AccessibilityIdentifiers.Settings.Browsing.inactiveTabsSwitch].value as? String, "1")
+        app.switches[AccessibilityIdentifiers.Settings.Browsing.inactiveTabsSwitch].waitAndTap()
         XCTAssertEqual(
-            app.switches[AccessibilityIdentifiers.Settings.Tabs.Customize.inactiveTabsSwitch].value as? String, "0")
+            app.switches[AccessibilityIdentifiers.Settings.Browsing.inactiveTabsSwitch].value as? String, "0")
         app.navigationBars.buttons["Settings"].waitAndTap() // Note: No AccessibilityIdentifiers
         navigator.nowAt(SettingsScreen)
 
         // Return to tabs tray
         navigator.goto(TabTray)
-        app.otherElements["Tabs Tray"].swipeDown()
-        app.otherElements["Tabs Tray"].swipeDown()
-        app.otherElements["Tabs Tray"].swipeDown()
+        app.otherElements[tabsTray].swipeDown()
+        app.otherElements[tabsTray].swipeDown()
+        app.otherElements[tabsTray].swipeDown()
         waitForElementsToExist(
             [
-                app.otherElements["Tabs Tray"].staticTexts["Homepage"],
-                app.otherElements["Tabs Tray"].staticTexts["Google"],
-                app.otherElements["Tabs Tray"].staticTexts["Facebook - log in or sign up"],
-                app.otherElements["Tabs Tray"].staticTexts["Amazon.com. Spend less. Smile more."],
+                app.otherElements[tabsTray].staticTexts["Homepage"],
+                app.otherElements[tabsTray].staticTexts["Google"],
+                app.otherElements[tabsTray].staticTexts["Facebook - log in or sign up"],
+                app.otherElements[tabsTray].staticTexts["Amazon.com. Spend less. Smile more."],
             ]
         )
         mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerButton])
         app.buttons[AccessibilityIdentifiers.TabTray.doneButton].waitAndTap()
         navigator.nowAt(NewTabScreen)
 
-        // Go to Settings -> Tabs and enable "Inactive tabs"
-        navigator.goto(SettingsScreen)
-        app.cells[AccessibilityIdentifiers.Settings.Tabs.title].waitAndTap()
-        app.switches[AccessibilityIdentifiers.Settings.Tabs.Customize.inactiveTabsSwitch].waitAndTap()
+        // Go to Settings -> Browsing and disable "Inactive tabs"
+        navigator.goto(BrowsingSettings)
+        app.switches[AccessibilityIdentifiers.Settings.Browsing.inactiveTabsSwitch].waitAndTap()
         XCTAssertEqual(
-            app.switches[AccessibilityIdentifiers.Settings.Tabs.Customize.inactiveTabsSwitch].value as? String, "1")
+            app.switches[AccessibilityIdentifiers.Settings.Browsing.inactiveTabsSwitch].value as? String, "1")
         app.navigationBars.buttons["Settings"].waitAndTap()
         navigator.nowAt(SettingsScreen)
 
@@ -107,11 +108,11 @@ final class InactiveTabsTest: BaseTestCase {
         waitForElementsToExist(
             [
                 app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerButton],
-                app.otherElements["Tabs Tray"].staticTexts["Homepage"]
+                app.otherElements[tabsTray].staticTexts["Homepage"]
             ]
         )
-        app.otherElements["Tabs Tray"].staticTexts["Homepage"].waitAndTap()
-        mozWaitForElementToNotExist(app.otherElements["Tabs Tray"])
+        app.otherElements[tabsTray].staticTexts["Homepage"].waitAndTap()
+        mozWaitForElementToNotExist(app.otherElements[tabsTray])
 
         navigator.nowAt(NewTabScreen)
         navigator.goto(TabTray)
@@ -127,23 +128,23 @@ final class InactiveTabsTest: BaseTestCase {
         waitForElementsToExist(
             [
                 app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerButton],
-                app.otherElements["Tabs Tray"].staticTexts["Google"]
+                app.otherElements[tabsTray].staticTexts["Google"]
             ]
         )
         if !iPad() {
             // The active tabs on iPhone is so far down that "Homepage" is invisible.
             // iPad is large enough that "Homepage" is still visible"
-            mozWaitForElementToNotExist(app.otherElements["Tabs Tray"].staticTexts["Homepage"])
+            mozWaitForElementToNotExist(app.otherElements[tabsTray].staticTexts["Homepage"])
         }
 
         // Swipe on a tab from the list to delete
-        app.otherElements["Tabs Tray"].staticTexts["Google"].swipeLeft()
-        app.otherElements["Tabs Tray"].buttons["Close"].waitAndTap() // Note: No AccessibilityIdentifier
-        mozWaitForElementToNotExist(app.otherElements["Tabs Tray"].staticTexts["Google"])
+        app.otherElements[tabsTray].staticTexts["Google"].swipeLeft()
+        app.otherElements[tabsTray].buttons["Close"].waitAndTap() // Note: No AccessibilityIdentifier
+        mozWaitForElementToNotExist(app.otherElements[tabsTray].staticTexts["Google"])
         waitForElementsToExist(
             [
-                app.otherElements["Tabs Tray"].staticTexts["Facebook - log in or sign up"],
-                app.otherElements["Tabs Tray"].staticTexts["Amazon.com. Spend less. Smile more."]
+                app.otherElements[tabsTray].staticTexts["Facebook - log in or sign up"],
+                app.otherElements[tabsTray].staticTexts["Amazon.com. Spend less. Smile more."]
             ]
         )
 
@@ -155,11 +156,11 @@ final class InactiveTabsTest: BaseTestCase {
 
         // All inactive tabs are deleted
         navigator.nowAt(TabTray)
-        mozWaitForElementToExist(app.otherElements["Tabs Tray"].staticTexts["Homepage"])
-        XCTAssertEqual(app.otherElements["Tabs Tray"].collectionViews.cells.count, 2)
+        mozWaitForElementToExist(app.otherElements[tabsTray].staticTexts["Homepage"])
+        XCTAssertEqual(app.otherElements[tabsTray].collectionViews.cells.count, 2)
         mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.TabTray.InactiveTabs.headerView])
-        mozWaitForElementToNotExist(app.otherElements["Tabs Tray"].staticTexts["Google"])
-        mozWaitForElementToNotExist(app.otherElements["Tabs Tray"].staticTexts["Facebook - log in or sign up"])
-        mozWaitForElementToNotExist(app.otherElements["Tabs Tray"].staticTexts["Amazon.com. Spend less. Smile more."])
+        mozWaitForElementToNotExist(app.otherElements[tabsTray].staticTexts["Google"])
+        mozWaitForElementToNotExist(app.otherElements[tabsTray].staticTexts["Facebook - log in or sign up"])
+        mozWaitForElementToNotExist(app.otherElements[tabsTray].staticTexts["Amazon.com. Spend less. Smile more."])
     }
 }

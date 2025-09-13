@@ -11,7 +11,7 @@ import struct MozillaAppServices.CreditCard
 
 class CreditCardSettingsViewController: SensitiveViewController, UIAdaptivePresentationControllerDelegate, Themeable {
     var viewModel: CreditCardSettingsViewModel
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var themeManager: ThemeManager
     var notificationCenter: NotificationProtocol
 
@@ -75,7 +75,8 @@ class CreditCardSettingsViewController: SensitiveViewController, UIAdaptivePrese
     override func viewDidLoad() {
         super.viewDidLoad()
         viewSetup()
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
@@ -153,10 +154,6 @@ class CreditCardSettingsViewController: SensitiveViewController, UIAdaptivePrese
         view.backgroundColor = theme.colors.layer1
     }
 
-    deinit {
-        notificationCenter.removeObserver(self)
-    }
-
     // MARK: - Private helpers
 
     private func updateStateForEditView(editState: CreditCardEditState,
@@ -169,8 +166,6 @@ class CreditCardSettingsViewController: SensitiveViewController, UIAdaptivePrese
         creditCardEditView = CreditCardInputView(viewModel: viewModel.cardInputViewModel, windowUUID: windowUUID)
         viewModel.cardInputViewModel.dismiss = { [weak self] status, successVal in
             DispatchQueue.main.async {
-                self?.showToast(status: status)
-
                 if successVal {
                     self?.updateCreditCardList()
                     self?.sendTelemetry(forStatus: status)
@@ -188,13 +183,6 @@ class CreditCardSettingsViewController: SensitiveViewController, UIAdaptivePrese
         creditCardAddEditView.modalPresentationStyle = .formSheet
         creditCardAddEditView.presentationController?.delegate = self
         present(creditCardAddEditView, animated: true, completion: nil)
-    }
-
-    private func showToast(status: CreditCardModifiedStatus) {
-        guard status != .none else { return }
-        SimpleToast().showAlertWithText(status.message,
-                                        bottomContainer: view,
-                                        theme: self.themeManager.getCurrentTheme(for: self.windowUUID))
     }
 
     @objc

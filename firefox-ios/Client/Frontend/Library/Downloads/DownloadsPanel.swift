@@ -22,13 +22,13 @@ class DownloadsPanel: UIViewController,
     var state: LibraryPanelMainState
     var bottomToolbarItems = [UIBarButtonItem]()
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     private var viewModel = DownloadsPanelViewModel()
     private let logger: Logger
     private let events: [Notification.Name] = [.FileDidDownload,
                                                .PrivateDataClearedDownloadedFiles,
-                                               .DynamicFontChanged,
+                                               UIContentSizeCategory.didChangeNotification,
                                                .DownloadPanelFileWasDeleted]
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -61,6 +61,8 @@ class DownloadsPanel: UIViewController,
         self.state = .downloads
         self.windowUUID = windowUUID
         super.init(nibName: nil, bundle: nil)
+
+        // FIXME: FXIOS-12995 Use Notifiable
         events.forEach {
             NotificationCenter.default.addObserver(
                 self,
@@ -95,7 +97,7 @@ class DownloadsPanel: UIViewController,
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
-        listenForThemeChange(view)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
@@ -114,7 +116,7 @@ class DownloadsPanel: UIViewController,
             switch notification.name {
             case .FileDidDownload, .PrivateDataClearedDownloadedFiles:
                 self.reloadData()
-            case .DynamicFontChanged:
+            case UIContentSizeCategory.didChangeNotification:
                 self.reloadData()
                 if self.emptyStateOverlayView.superview != nil {
                     self.emptyStateOverlayView.removeFromSuperview()

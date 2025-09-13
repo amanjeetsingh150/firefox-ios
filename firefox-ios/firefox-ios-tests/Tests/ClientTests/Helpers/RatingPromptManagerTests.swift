@@ -5,7 +5,6 @@
 import Common
 import MozillaAppServices
 import Shared
-import Storage
 import StoreKit
 import XCTest
 
@@ -164,7 +163,7 @@ class RatingPromptManagerTests: XCTestCase {
 }
 
 // MARK: - CrashingMockLogger
-class CrashingMockLogger: Logger {
+final class CrashingMockLogger: Logger, @unchecked Sendable {
     func setup(sendCrashReports: Bool) {}
     func configure(crashManager: CrashManager) {}
     func copyLogsToDocuments() {}
@@ -181,7 +180,7 @@ class CrashingMockLogger: Logger {
              category: LoggerCategory,
              extra: [String: String]? = nil,
              description: String? = nil,
-             file: String = #file,
+             file: String = #filePath,
              function: String = #function,
              line: Int = #line) {}
 }

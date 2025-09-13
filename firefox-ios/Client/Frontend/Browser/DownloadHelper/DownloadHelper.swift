@@ -44,8 +44,7 @@ class DownloadHelper: NSObject {
         }
 
         // Handles attachments downloads.
-        // Only supports PDF and Words docs but can be expanded to support more extensions
-        if shouldDownloadAttachment(isForMainFrame: isForMainFrame) {
+        if shouldDownloadAttachment() {
             return true
         }
 
@@ -53,16 +52,15 @@ class DownloadHelper: NSObject {
         return !canShowInWebView || forceDownload
     }
 
-    func shouldDownloadAttachment(isForMainFrame: Bool) -> Bool {
+    private func shouldDownloadAttachment() -> Bool {
         let contentDisposition = (preflightResponse as? HTTPURLResponse)?.allHeaderFields["Content-Disposition"] as? String
         let isAttachment = contentDisposition?.starts(with: "attachment") ?? false
-        let canBeDownloaded = MIMEType.canBeDownloaded(preflightResponse.mimeType) && !isForMainFrame
-
-        return isAttachment && canBeDownloaded
+        // Bugzilla #1976304; always respect content-disposition: attachment
+        return isAttachment
     }
 
     func downloadViewModel(windowUUID: WindowUUID,
-                           okAction: @escaping (HTTPDownload) -> Void) -> PhotonActionSheetViewModel? {
+                           okAction: @Sendable @MainActor @escaping (HTTPDownload) -> Void) -> PhotonActionSheetViewModel? {
         var requestUrl = request.url
         if let url = requestUrl, url.scheme == "blob" {
             requestUrl = url.removeBlobFromUrl()
@@ -94,16 +92,14 @@ class DownloadHelper: NSObject {
                                              text: modelText,
                                              iconString: "file",
                                              iconAlignment: .right,
-                                             bold: true)
-        filenameItem.customHeight = { _ in
-            return 80
-        }
-
-        filenameItem.customRender = { label, contentView in
+                                             bold: true,
+                                             customRender: { label, contentView in
             label.numberOfLines = 2
             label.font = FXFontStyles.Bold.body.scaledFont()
             label.lineBreakMode = .byCharWrapping
-        }
+        }, customHeight: { _ in
+            return 80
+        })
 
         let downloadFileItem = SingleActionViewModel(title: .OpenInDownloadHelperAlertDownloadNow,
                                                      iconString: StandardImageIdentifiers.Large.download) { _ in

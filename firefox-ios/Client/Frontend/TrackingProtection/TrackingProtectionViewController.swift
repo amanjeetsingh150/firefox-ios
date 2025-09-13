@@ -19,10 +19,15 @@ struct TPMenuUX {
         static let connectionDetailsHeaderMargins: CGFloat = 8
         static let faviconCornerRadius: CGFloat = 16
         static let clearDataButtonTopDistance: CGFloat = 32
-        static let clearDataButtonCornerRadius: CGFloat = 12
         static let clearDataButtonBorderWidth: CGFloat = 0
         static let settingsLinkButtonBottomSpacing: CGFloat = 16
         static let modalMenuCornerRadius: CGFloat = 12
+        static let newStyleCornerRadius: CGFloat = if #available(iOS 26.0, *) {
+            24
+        } else {
+            viewCornerRadius
+        }
+        static let backgroundAlpha: CGFloat = 0.80
         struct Line {
             static let height: CGFloat = 0.5
         }
@@ -30,7 +35,10 @@ struct TPMenuUX {
 }
 
 protocol TrackingProtectionMenuDelegate: AnyObject {
+    @MainActor
     func settingsOpenPage(settings: Route.SettingsSection)
+
+    @MainActor
     func didFinish()
 }
 
@@ -41,7 +49,7 @@ class TrackingProtectionViewController: UIViewController,
                                         UIScrollViewDelegate {
     var themeManager: ThemeManager
     var profile: Profile?
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -85,7 +93,6 @@ class TrackingProtectionViewController: UIViewController,
     private lazy var clearCookiesButton: TrackingProtectionButton = .build { button in
         button.titleLabel?.textAlignment = .left
         button.titleLabel?.numberOfLines = 0
-        button.layer.cornerRadius = TPMenuUX.UX.clearDataButtonCornerRadius
         button.layer.borderWidth = TPMenuUX.UX.clearDataButtonBorderWidth
         button.addTarget(self, action: #selector(self.didTapClearCookiesAndSiteData), for: .touchUpInside)
     }
@@ -146,9 +153,16 @@ class TrackingProtectionViewController: UIViewController,
             addGestureRecognizer()
         }
         setupView()
-        listenForThemeChange(view)
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
+
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification,
+                        UIAccessibility.reduceTransparencyStatusDidChangeNotification]
+        )
         scrollView.delegate = self
         updateViewDetails()
     }
@@ -242,7 +256,7 @@ class TrackingProtectionViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .trackingProtection)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
         let uuid = windowUUID
         store.subscribe(self, transform: {
             return $0.select({ appState in
@@ -251,11 +265,11 @@ class TrackingProtectionViewController: UIViewController,
         })
     }
 
-    func unsubscribeFromRedux() {
+    nonisolated func unsubscribeFromRedux() {
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .trackingProtection)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     // MARK: Content View
@@ -321,6 +335,9 @@ class TrackingProtectionViewController: UIViewController,
                 equalTo: baseView.topAnchor,
                 constant: TPMenuUX.UX.connectionDetailsHeaderMargins),
         ]
+        if #available(iOS 26.0, *) {
+            connectionDetailsHeaderView.layer.cornerRadius = TPMenuUX.UX.newStyleCornerRadius
+        }
         constraints.append(contentsOf: connectionHeaderConstraints)
     }
 
@@ -350,14 +367,14 @@ class TrackingProtectionViewController: UIViewController,
         constraints.append(contentsOf: trackersConnectionConstraints)
         trackersView.trackersButtonCallback = { [weak self] in
             guard let self else { return }
-            store.dispatch(
+            store.dispatchLegacy(
                 TrackingProtectionAction(windowUUID: windowUUID,
                                          actionType: TrackingProtectionActionType.tappedShowBlockedTrackers)
             )
         }
         connectionStatusView.connectionStatusButtonCallback = { [weak self] in
             guard let self, model.connectionSecure else { return }
-            store.dispatch(
+            store.dispatchLegacy(
                 TrackingProtectionAction(windowUUID: windowUUID,
                                          actionType: TrackingProtectionActionType.tappedShowTrackingProtectionDetails)
             )
@@ -382,6 +399,9 @@ class TrackingProtectionViewController: UIViewController,
             // site is safelisted if site ETP is disabled
             self?.model.toggleSiteSafelistStatus()
             self?.updateProtectionViewStatus()
+        }
+        if #available(iOS 26.0, *) {
+            toggleView.layer.cornerRadius = TPMenuUX.UX.newStyleCornerRadius
         }
     }
 
@@ -482,16 +502,22 @@ class TrackingProtectionViewController: UIViewController,
         toggleView.setupActions()
     }
 
-    // MARK: Notifications
+    // - MARK: Notifications
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
-            adjustLayout()
+        case UIContentSizeCategory.didChangeNotification:
+            ensureMainThread {
+                self.adjustLayout()
+            }
+        case UIAccessibility.reduceTransparencyStatusDidChangeNotification:
+            ensureMainThread {
+                self.applyTheme()
+            }
         default: break
         }
     }
 
-    // MARK: View Transitions
+    // MARK: - View Transitions
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         adjustLayout()
@@ -504,7 +530,7 @@ class TrackingProtectionViewController: UIViewController,
         }, completion: nil)
     }
 
-    // MARK: Accessibility
+    // MARK: - Accessibility
     private func setupAccessibilityIdentifiers() {
         connectionDetailsHeaderView.setupAccessibilityIdentifiers(foxImageA11yId: model.foxImageA11yId)
         trackersView.setupAccessibilityIdentifiers(
@@ -555,7 +581,7 @@ class TrackingProtectionViewController: UIViewController,
 
     @objc
     private func didTapClearCookiesAndSiteData() {
-        store.dispatch(
+        store.dispatchLegacy(
             TrackingProtectionAction(windowUUID: windowUUID,
                                      actionType: TrackingProtectionActionType.tappedShowClearCookiesAlert)
         )
@@ -563,7 +589,7 @@ class TrackingProtectionViewController: UIViewController,
 
     @objc
     func protectionSettingsTapped() {
-        store.dispatch(
+        store.dispatchLegacy(
             TrackingProtectionAction(windowUUID: windowUUID,
                                      actionType: TrackingProtectionActionType.tappedShowSettings)
         )
@@ -573,7 +599,7 @@ class TrackingProtectionViewController: UIViewController,
     func openSettingsTapped() {
         let isContentBlockingConfigEnabled = profile?.prefs.boolForKey(ContentBlockingConfig.Prefs.EnabledKey) ?? true
         if !isContentBlockingConfigEnabled {
-            store.dispatch(
+            store.dispatchLegacy(
                 TrackingProtectionAction(windowUUID: windowUUID,
                                          actionType: TrackingProtectionActionType.tappedShowSettings)
             )
@@ -593,7 +619,7 @@ class TrackingProtectionViewController: UIViewController,
     }
 
     private func showSettings() {
-        store.dispatch(
+        store.dispatchLegacy(
             NavigationBrowserAction(
                 navigationDestination: NavigationDestination(.trackingProtectionSettings),
                 windowUUID: self.windowUUID,
@@ -667,14 +693,12 @@ class TrackingProtectionViewController: UIViewController,
                                                  image: model.connectionDetailsImage)
         adjustLayout()
     }
-}
 
-// MARK: - Themable
-extension TrackingProtectionViewController {
+    // MARK: - Themable
     func applyTheme() {
         let theme = currentTheme()
         overrideUserInterfaceStyle = theme.type.getInterfaceStyle()
-        view.backgroundColor = theme.colors.layer3
+        view.backgroundColor = theme.colors.layer3.withAlphaComponent(backgroundAlpha)
         headerContainer.applyTheme(theme: theme)
         connectionDetailsHeaderView.applyTheme(theme: theme)
         trackersView.applyTheme(theme: theme)
@@ -684,5 +708,17 @@ extension TrackingProtectionViewController {
         clearCookiesButton.applyTheme(theme: theme)
         settingsLinkButton.applyTheme(theme: theme)
         setNeedsStatusBarAppearanceUpdate()
+    }
+
+    private var backgroundAlpha: CGFloat {
+        guard !UIAccessibility.isReduceTransparencyEnabled else {
+            return 1.0
+        }
+
+        if #available(iOS 26.0, *) {
+            return TPMenuUX.UX.backgroundAlpha
+        }
+
+        return 1.0
     }
 }

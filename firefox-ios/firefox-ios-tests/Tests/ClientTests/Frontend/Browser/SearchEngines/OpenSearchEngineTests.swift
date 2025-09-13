@@ -135,6 +135,7 @@ class OpenSearchEngineTests: XCTestCase {
         return OpenSearchEngine(
             engineID: type.engineID,
             shortName: type.name,
+            telemetrySuffix: nil,
             image: testImage,
             searchTemplate: "some link",
             suggestTemplate: nil,
@@ -157,7 +158,7 @@ class OpenSearchEngineTests: XCTestCase {
                 directoryPath = (NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
             }
 
-            let fileAccessor = FileAccessor(rootPath: directoryPath)
+            let fileAccessor = MockFiles(rootPath: directoryPath)
             let profilePath = try fileAccessor.getAndEnsureDirectory() as NSString
             return profilePath.appendingPathComponent(customSearchEnginesFileName)
         }

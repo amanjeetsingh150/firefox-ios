@@ -16,7 +16,7 @@ class AddressAutofillSettingsViewController: SensitiveViewController, Themeable 
     var viewModel: AddressAutofillSettingsViewModel
 
     /// Observer for theme changes.
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
 
     /// Manager responsible for handling themes.
     var themeManager: ThemeManager
@@ -84,8 +84,7 @@ class AddressAutofillSettingsViewController: SensitiveViewController, Themeable 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
-        listenForThemeChange(view)
-        applyTheme()
+
         viewModel.addressListViewModel.presentToast = { [weak self] status in
             guard let self else { return }
             switch status {
@@ -108,6 +107,9 @@ class AddressAutofillSettingsViewController: SensitiveViewController, Themeable 
                 )
             }
         }
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     private func show(toast: Toast,
@@ -115,9 +117,9 @@ class AddressAutofillSettingsViewController: SensitiveViewController, Themeable 
                       duration: DispatchTimeInterval? = Toast.UX.toastDismissAfter) {
         toast.showToast(viewController: self, delay: delay, duration: duration) { toast in
             [
-                toast.leadingAnchor.constraint(equalTo: self.view.leadingAnchor,
+                toast.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor,
                                                constant: Toast.UX.toastSidePadding),
-                toast.trailingAnchor.constraint(equalTo: self.view.trailingAnchor,
+                toast.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor,
                                                 constant: -Toast.UX.toastSidePadding),
                 toast.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor)
             ]
@@ -158,10 +160,5 @@ class AddressAutofillSettingsViewController: SensitiveViewController, Themeable 
     @objc
     func addAddress() {
         self.viewModel.addressListViewModel.addAddressButtonTap()
-    }
-
-    deinit {
-        addressAutofillSettingsPageView.removeFromParent()
-        addressAutofillSettingsPageView.view.removeFromSuperview()
     }
 }

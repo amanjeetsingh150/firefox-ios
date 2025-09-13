@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Shared
 import Storage
 import XCTest
 
@@ -55,7 +54,6 @@ final class SearchViewModelTests: XCTestCase {
         subject.filteredOpenedTabs = []
         subject.filteredRemoteClientTabs = []
         searchEnginesManager.shouldShowSyncedTabsSuggestions = false
-        subject.searchHighlights = []
         subject.firefoxSuggestions = []
         searchEnginesManager.shouldShowFirefoxSuggestions = false
         searchEnginesManager.shouldShowSponsoredSuggestions = false
@@ -81,6 +79,7 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertTrue(subject.hasFirefoxSuggestions)
     }
 
+    @MainActor
     func testFirefoxSuggestionReturnsNoSuggestions() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -91,16 +90,17 @@ final class SearchViewModelTests: XCTestCase {
         searchEnginesManager.shouldShowSponsoredSuggestions = false
 
         let subject = createSubject()
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
         XCTAssertEqual(subject.firefoxSuggestions.count, 0)
 
         // Providers set to false, so regardless of the prefs, we shouldn't see anything
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
         XCTAssertEqual(subject.firefoxSuggestions.count, 0)
     }
 
+    @MainActor
     func testFirefoxSuggestionReturnsNoSuggestionsWhenSuggestionSettingsFalse() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -112,11 +112,12 @@ final class SearchViewModelTests: XCTestCase {
 
         let subject = createSubject()
 
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
         XCTAssertEqual(subject.firefoxSuggestions.count, 0)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testFirefoxSuggestionReturnsSponsoredAndNonSponsored() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -126,7 +127,7 @@ final class SearchViewModelTests: XCTestCase {
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
         let subject = createSubject()
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertEqual(subject.firefoxSuggestions.count, 2)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
@@ -207,61 +208,67 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(subject.filteredRemoteClientTabs.count, 3)
     }
 
+    @MainActor
     func testSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
 
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
         XCTAssertTrue(subject.firefoxSuggestions.isEmpty)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testNonSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
 
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertTrue(subject.firefoxSuggestions.isEmpty)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testNonSponsoredAndSponsoredSuggestionsInPrivateModeWithPrivateSuggestionsOn() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
         searchEnginesManager.shouldShowPrivateModeFirefoxSuggestions = true
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertTrue(subject.firefoxSuggestions.isEmpty)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testNonSponsoredInPrivateModeWithPrivateSuggestionsOn() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = false
         searchEnginesManager.shouldShowPrivateModeFirefoxSuggestions = true
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertTrue(subject.firefoxSuggestions.isEmpty)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testNonSponsoredAndSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
         searchEnginesManager.shouldShowPrivateModeFirefoxSuggestions = false
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertTrue(subject.firefoxSuggestions.isEmpty)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
+    @MainActor
     func testLoad_forFirefoxSuggestions_doesNotTriggerReloadForSameSuggestions() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -271,8 +278,8 @@ final class SearchViewModelTests: XCTestCase {
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = true
         let subject = createSubject()
-        await subject.loadFirefoxSuggestions()?.value
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertEqual(subject.firefoxSuggestions.count, 2)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
@@ -302,6 +309,7 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
     }
 
+    @MainActor
     func testFirefoxSuggestionReturnsSponsored() async {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -311,12 +319,13 @@ final class SearchViewModelTests: XCTestCase {
         searchEnginesManager.shouldShowFirefoxSuggestions = false
         searchEnginesManager.shouldShowSponsoredSuggestions = true
         let subject = createSubject()
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertEqual(subject.firefoxSuggestions[0].title, "Mozilla")
         XCTAssertEqual(subject.firefoxSuggestions.count, 1)
     }
 
+    @MainActor
     func testFirefoxSuggestionReturnsNonSponsored() async {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -326,7 +335,7 @@ final class SearchViewModelTests: XCTestCase {
         searchEnginesManager.shouldShowFirefoxSuggestions = true
         searchEnginesManager.shouldShowSponsoredSuggestions = false
         let subject = createSubject()
-        await subject.loadFirefoxSuggestions()?.value
+        await subject.loadFirefoxSuggestions()
 
         XCTAssertEqual(subject.firefoxSuggestions[0].title, "California")
         XCTAssertEqual(subject.firefoxSuggestions.count, 1)
@@ -361,7 +370,7 @@ final class SearchViewModelTests: XCTestCase {
     private func createSubject(
         isPrivate: Bool = false,
         isBottomSearchBar: Bool = false,
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) -> SearchViewModel {
         let subject = SearchViewModel(

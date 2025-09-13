@@ -5,7 +5,6 @@
 import UIKit
 import Common
 import ComponentLibrary
-import Shared
 
 class OnboardingBasicCardViewController: OnboardingCardViewController {
     struct UX {
@@ -84,8 +83,9 @@ class OnboardingBasicCardViewController: OnboardingCardViewController {
 
         setupView()
         updateLayout()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
-        listenForThemeChange(view)
     }
 
     override func viewWillAppear(_ animated: Bool) {

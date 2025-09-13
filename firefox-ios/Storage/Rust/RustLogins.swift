@@ -8,12 +8,8 @@ import Shared
 import Common
 
 import class MozillaAppServices.LoginsStorage
-import class MozillaAppServices.MZKeychainWrapper
 import enum MozillaAppServices.LoginsApiError
-import enum MozillaAppServices.MZKeychainItemAccessibility
 import func MozillaAppServices.checkCanary
-import func MozillaAppServices.createCanary
-import func MozillaAppServices.createKey
 import struct MozillaAppServices.Login
 import struct MozillaAppServices.LoginEntry
 import protocol MozillaAppServices.KeyManager
@@ -33,6 +29,10 @@ public extension LoginsStoreError {
         case .MissingKey: return "MissingKey"
         case .EncryptionFailed(reason: let reason): return "EncryptionFailed reason:\(reason)"
         case .DecryptionFailed(reason: let reason): return "DecryptionFailed reason:\(reason)"
+        case .NssUninitialized: return "NssUninitialized"
+        case .NssAuthenticationError(reason: let reason): return "NssAuthenticationError reason:\(reason)"
+        case .AuthenticationError(reason: let reason): return "AuthenticationError reason:\(reason)"
+        case .AuthenticationCanceled: return "AuthenticationCanceled"
         }
     }
 }
@@ -199,101 +199,7 @@ public extension LoginEntry {
     }
 }
 
-public enum LoginEncryptionKeyError: Error {
-    case noKeyCreated
-    case illegalState
-    case dbRecordCountVerificationError(String)
-}
-
-/// Running tests on Bitrise code that reads/writes to keychain silently fails.
-/// SecItemAdd status: -34018 - A required entitlement isn't present.
-/// This should be removed if we ever have keychain support on our CI.
-class KeychainManager {
-    static var shared: MZKeychainWrapper = {
-        AppConstants.isRunningTest
-            ? MockMZKeychainWrapper.shared
-            : MZKeychainWrapper.sharedClientAppContainerKeychain
-    }()
-}
-
-public class RustLoginEncryptionKeys {
-    public let loginPerFieldKeychainKey = "appservices.key.logins.perfield"
-
-    let keychain = KeychainManager.shared
-    let canaryPhraseKey = "canaryPhrase"
-    let canaryPhrase = "a string for checking validity of the key"
-
-    private let logger: Logger
-
-    public init(logger: Logger = DefaultLogger.shared) {
-        self.logger = logger
-    }
-
-    fileprivate func createAndStoreKey() throws -> String {
-        do {
-            let secret = try createKey()
-            let canary = try createCanary(text: canaryPhrase, encryptionKey: secret)
-
-            DispatchQueue.global(qos: .background).sync {
-                self.keychain.set(secret,
-                                  forKey: self.loginPerFieldKeychainKey,
-                                  withAccessibility: MZKeychainItemAccessibility.afterFirstUnlock)
-                self.keychain.set(canary,
-                                  forKey: self.canaryPhraseKey,
-                                  withAccessibility: MZKeychainItemAccessibility.afterFirstUnlock)
-            }
-            return secret
-        } catch let err as NSError {
-            if let loginsStoreError = err as? LoginsStoreError {
-                logLoginsStoreError(
-                    err: loginsStoreError,
-                    errorDomain: err.domain,
-                    errorMessage: "Error while creating and storing logins key")
-
-                throw LoginEncryptionKeyError.noKeyCreated
-            } else {
-                logger.log("Unknown error while creating and storing logins key",
-                           level: .warning,
-                           category: .storage,
-                           description: err.localizedDescription)
-
-                throw LoginEncryptionKeyError.noKeyCreated
-            }
-        }
-    }
-
-    private func logLoginsStoreError(
-        err: LoginsStoreError,
-        errorDomain: String,
-        errorMessage: String
-    ) {
-        var message: String {
-            switch err {
-            case .InvalidRecord(let message),
-                    .NoSuchRecord(let message),
-                    .Interrupted(let message),
-                    .SyncAuthInvalid(let message),
-                    .UnexpectedLoginsApiError(let message):
-                return message
-            case .InvalidKey:
-                return "InvalidKey"
-            case .MissingKey:
-                return "MissingKey"
-            case .EncryptionFailed(reason: let reason):
-                return "EncryptionFailed reason:\(reason)"
-            case .DecryptionFailed(reason: let reason):
-                return "DecryptionFailed reason:\(reason)"
-            }
-        }
-
-        logger.log(errorMessage,
-                   level: .warning,
-                   category: .storage,
-                   description: "\(errorDomain) - \(err.descriptionValue): \(message)")
-    }
-}
-
-public class LoginRecordError: MaybeErrorType {
+public final class LoginRecordError: MaybeErrorType {
     public let description: String
     public init(description: String) {
         self.description = description
@@ -303,25 +209,27 @@ public class LoginRecordError: MaybeErrorType {
 /// This is a protocol followed by RustLogins to provide an alternative to using `Deferred` in that code
 /// Its part of a long term effort to remove `Deferred` usage inside the application and is a work in progress.
 protocol LoginsProtocol {
-    func getLogin(id: String, completionHandler: @escaping (Result<Login?, Error>) -> Void)
+    func getLogin(id: String, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void)
     func getLoginsFor(
         protectionSpace: URLProtectionSpace,
         withUsername username: String?,
-        completionHandler: @escaping (Result<[Login], Error>) -> Void)
-    func addLogin(login: LoginEntry, completionHandler: @escaping (Result<Login?, Error>) -> Void)
-    func listLogins(completionHandler: @escaping (Result<[Login], Error>) -> Void)
-    func updateLogin(id: String, login: LoginEntry, completionHandler: @escaping (Result<Login?, Error>) -> Void)
-    func use(login: Login, completionHandler: @escaping (Result<Login?, Error>) -> Void)
-    func searchLoginsWithQuery(_ query: String?, completionHandler: @escaping (Result<[Login], Error>) -> Void)
-    func deleteLogins(ids: [String], completionHandler: @escaping ([Result<Bool?, Error>]) -> Void)
-    func deleteLogin(id: String, completionHandler: @escaping (Result<Bool?, Error>) -> Void)
+        completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void)
+    func addLogin(login: LoginEntry, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void)
+    func listLogins(completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void)
+    func updateLogin(id: String, login: LoginEntry, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void)
+    func use(login: Login, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void)
+    func searchLoginsWithQuery(_ query: String?, completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void)
+    func deleteLogins(ids: [String], completionHandler: @escaping @Sendable ([Result<Bool?, Error>]) -> Void)
+    func deleteLogin(id: String, completionHandler: @escaping @Sendable (Result<Bool?, Error>) -> Void)
 }
 
-public class RustLogins: LoginsProtocol, KeyManager {
+/// TODO(FXIOS-12942): Implement proper thread-safety
+public final class RustLogins: LoginsProtocol, KeyManager, @unchecked Sendable {
     let perFieldDatabasePath: String
 
     let queue: DispatchQueue
     var storage: LoginsStorage?
+    let rustKeychain = KeychainManager.shared
 
     private(set) var isOpen = false
 
@@ -399,7 +307,46 @@ public class RustLogins: LoginsProtocol, KeyManager {
         return error
     }
 
-    public func getLogin(id: String, completionHandler: @escaping (Result<Login?, Error>) -> Void) {
+    // `verifyLogins` iterates through the stored logins of sync users checking if each record
+    // can be decrypted. If the record cannot be decrypted, it is locally deleted to potentially
+    // be overwritten by a previously synced server record.
+    //
+    // This function is meant to be executed only once (which is enforced via the
+    // `LoginsHaveBeenVerified` pref) and is called before a logins sync in `RustSyncManager`.
+    //
+    // NOTE: This function is for a very specific purpose and should not be used for general
+    // purposes.
+    public func verifyLogins(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        queue.async {
+            guard self.isOpen else {
+                self.logger.log("Logins verification failed as database is closed",
+                                level: .warning,
+                                category: .storage)
+                completionHandler(false)
+                return
+            }
+
+            self.getStoredKey { result in
+                switch result {
+                case .success:
+                    do {
+                        try self.storage?.deleteUndecryptableRecordsForRemoteReplacement()
+                        completionHandler(true)
+                    } catch let err as NSError {
+                        self.logger.log("Error verifying logins",
+                                        level: .warning,
+                                        category: .storage,
+                                        description: err.localizedDescription)
+                        completionHandler(false)
+                    }
+                case .failure:
+                    completionHandler(false)
+                }
+            }
+        }
+    }
+
+    public func getLogin(id: String, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -416,53 +363,10 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    public func getLogin(id: String) -> Deferred<Maybe<Login?>> {
-        let deferred = Deferred<Maybe<Login?>>()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            do {
-                let record = try self.storage?.get(id: id)
-                deferred.fill(Maybe(success: record))
-            } catch let err as NSError {
-                deferred.fill(Maybe(failure: err))
-            }
-        }
-
-        return deferred
-    }
-
-    public func searchLoginsWithQuery(_ query: String?) -> Deferred<Maybe<Cursor<Login>>> {
-        return listLogins().bind { result in
-            if let error = result.failureValue {
-                return deferMaybe(error)
-            }
-
-            guard let records = result.successValue else {
-                return deferMaybe(ArrayCursor(data: []))
-            }
-
-            guard let query = query?.lowercased(), !query.isEmpty else {
-                return deferMaybe(ArrayCursor(data: records))
-            }
-
-            let filteredRecords = records.filter {
-                let username = $0.username
-                return $0.origin.lowercased().contains(query) || username.lowercased().contains(query)
-            }
-            return deferMaybe(ArrayCursor(data: filteredRecords))
-        }
-    }
-
     public func getLoginsFor(
         protectionSpace: URLProtectionSpace,
         withUsername username: String?,
-        completionHandler: @escaping (Result<[Login], Error>) -> Void) {
+        completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void) {
         listLogins { result in
             switch result {
             case .success(let records):
@@ -489,7 +393,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
 
     public func searchLoginsWithQuery(
         _ query: String?,
-        completionHandler: @escaping (Result<[Login], Error>) -> Void) {
+        completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void) {
             listLogins { result in
                 switch result {
                 case .success(let logins):
@@ -512,38 +416,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
             }
         }
 
-    public func getLoginsForProtectionSpace(
-        _ protectionSpace: URLProtectionSpace,
-        withUsername username: String? = nil
-    ) -> Deferred<Maybe<Cursor<Login>>> {
-        return listLogins().bind { result in
-            if let error = result.failureValue {
-                return deferMaybe(error)
-            }
-
-            guard let records = result.successValue else {
-                return deferMaybe(ArrayCursor(data: []))
-            }
-
-            let filteredRecords: [Login]
-            if let username = username {
-                filteredRecords = records.filter {
-                    return $0.username == username && (
-                        $0.origin == protectionSpace.urlString() ||
-                        $0.origin == protectionSpace.host
-                    )
-                }
-            } else {
-                filteredRecords = records.filter {
-                    return $0.origin == protectionSpace.urlString() ||
-                    $0.origin == protectionSpace.host
-                }
-            }
-            return deferMaybe(ArrayCursor(data: filteredRecords))
-        }
-    }
-
-    public func hasLogins(completionHandler: @escaping (Result<Bool, Error>) -> Void) {
+    public func hasLogins(completionHandler: @escaping @Sendable (Result<Bool, Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -575,28 +448,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
         return deferred
     }
 
-    public func listLogins() -> Deferred<Maybe<[Login]>> {
-        let deferred = Deferred<Maybe<[Login]>>()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            do {
-                let records = try self.storage?.list()
-                deferred.fill(Maybe(success: records ?? []))
-            } catch let err as NSError {
-                deferred.fill(Maybe(failure: err))
-            }
-        }
-
-        return deferred
-    }
-
-    public func listLogins(completionHandler: @escaping (Result<[Login], Error>) -> Void) {
+    public func listLogins(completionHandler: @escaping @Sendable (Result<[Login], Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -613,36 +465,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    public func addLogin(login: LoginEntry) -> Deferred<Maybe<String>> {
-        let deferred = Deferred<Maybe<String>>()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            self.getStoredKey { result in
-                switch result {
-                case .success:
-                    do {
-                        let id = try self.storage?.add(login: login).id
-                        deferred.fill(Maybe(success: id!))
-                    } catch let err as NSError {
-                        deferred.fill(Maybe(failure: err))
-                    }
-                case .failure(let err):
-                    deferred.fill(Maybe(failure: err))
-                }
-            }
-        }
-
-        return deferred
-    }
-
-    public func addLogin(login: LoginEntry, completionHandler: @escaping (Result<Login?, Error>) -> Void) {
+    public func addLogin(login: LoginEntry, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -666,28 +489,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    public func use(login: Login) -> Success {
-        let deferred = Success()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            do {
-                try self.storage?.touch(id: login.id)
-                deferred.fill(Maybe(success: ()))
-            } catch let err as NSError {
-                deferred.fill(Maybe(failure: err))
-            }
-        }
-
-        return deferred
-    }
-
-    public func use(login: Login, completionHandler: @escaping (Result<Login?, Error>) -> Void) {
+    public func use(login: Login, completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -704,38 +506,10 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    public func updateLogin(id: String, login: LoginEntry) -> Success {
-        let deferred = Success()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            self.getStoredKey { result in
-                switch result {
-                case .success:
-                    do {
-                        _ = try self.storage?.update(id: id, login: login)
-                        deferred.fill(Maybe(success: ()))
-                    } catch let err as NSError {
-                        deferred.fill(Maybe(failure: err))
-                    }
-                case .failure(let err):
-                    deferred.fill(Maybe(failure: err))
-                }
-            }
-        }
-
-        return deferred
-    }
-
     public func updateLogin(
         id: String,
         login: LoginEntry,
-        completionHandler: @escaping (Result<Login?, Error>) -> Void) {
+        completionHandler: @escaping @Sendable (Result<Login?, Error>) -> Void) {
             queue.async {
                 guard self.isOpen else {
                     let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -759,10 +533,10 @@ public class RustLogins: LoginsProtocol, KeyManager {
             }
         }
 
-    public func deleteLogins(ids: [String], completionHandler: @escaping ([Result<Bool?, Error>]) -> Void) {
-        var results: [Result<Bool?, Error>] = []
+    public func deleteLogins(ids: [String], completionHandler: @escaping @Sendable ([Result<Bool?, Error>]) -> Void) {
         for id in ids {
             deleteLogin(id: id) { result in
+                var results: [Result<Bool?, Error>] = []
                 results.append(result)
                 if results.count == ids.count {
                     completionHandler(results)
@@ -771,7 +545,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    public func deleteLogin(id: String, completionHandler: @escaping (Result<Bool?, Error>) -> Void) {
+    public func deleteLogin(id: String, completionHandler: @escaping @Sendable (Result<Bool?, Error>) -> Void) {
         queue.async {
             guard self.isOpen else {
                 let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
@@ -786,31 +560,6 @@ public class RustLogins: LoginsProtocol, KeyManager {
                 completionHandler(.failure(err))
             }
         }
-    }
-
-    public func deleteLogins(ids: [String]) -> Deferred<[Maybe<Bool>]> {
-        return all(ids.map { deleteLogin(id: $0) })
-    }
-
-    public func deleteLogin(id: String) -> Deferred<Maybe<Bool>> {
-        let deferred = Deferred<Maybe<Bool>>()
-
-        queue.async {
-            guard self.isOpen else {
-                let error = LoginsStoreError.UnexpectedLoginsApiError(reason: "Database is closed")
-                deferred.fill(Maybe(failure: error as MaybeErrorType))
-                return
-            }
-
-            do {
-                let existed = try self.storage?.delete(id: id)
-                deferred.fill(Maybe(success: existed!))
-            } catch let err as NSError {
-                deferred.fill(Maybe(failure: err))
-            }
-        }
-
-        return deferred
     }
 
     public func wipeLocalEngine() -> Success {
@@ -840,8 +589,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    private func resetLoginsAndKey(rustKeys: RustLoginEncryptionKeys,
-                                   completion: @escaping (Result<String, NSError>) -> Void) {
+    private func resetLoginsAndKey(completion: @escaping @Sendable (Result<String, NSError>) -> Void) {
         self.wipeLocalEngine().upon { result in
             guard result.isSuccess else {
                 completion(.failure(result.failureValue! as NSError))
@@ -849,7 +597,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
             }
 
             do {
-                let key = try rustKeys.createAndStoreKey()
+                let key = try self.rustKeychain.createLoginsKeyData()
                 completion(.success(key))
             } catch let error as NSError {
                 self.logger.log("Error creating logins encryption key",
@@ -861,46 +609,32 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    private func getKeychainData(rustKeys: RustLoginEncryptionKeys) -> (String?, String?) {
-        var keychainData: (String?, String?) = (nil, nil)
+    public func getStoredKey(completion: @escaping @Sendable (Result<String, NSError>) -> Void) {
+        let (key, encryptedCanaryPhrase) = rustKeychain.getLoginsKeyData()
 
-        DispatchQueue.global(qos: .background).sync {
-            let key = rustKeys.keychain.string(forKey: rustKeys.loginPerFieldKeychainKey)
-            let encryptedCanaryPhrase = rustKeys.keychain.string(forKey: rustKeys.canaryPhraseKey)
-            keychainData = (key, encryptedCanaryPhrase)
-        }
-
-        return keychainData
-    }
-
-    public func getStoredKey(completion: @escaping (Result<String, NSError>) -> Void) {
-        let rustKeys = RustLoginEncryptionKeys()
-        let (key, encryptedCanaryPhrase) = getKeychainData(rustKeys: rustKeys)
         switch(key, encryptedCanaryPhrase) {
         case (.some(key), .some(encryptedCanaryPhrase)):
-                self.handleExpectedKeyAction(rustKeys: rustKeys,
-                                             encryptedCanaryPhrase: encryptedCanaryPhrase,
+                self.handleExpectedKeyAction(encryptedCanaryPhrase: encryptedCanaryPhrase,
                                              key: key,
                                              completion: completion)
         case (.some(key), .none):
-            self.handleUnexpectedKeyAction(rustKeys: rustKeys, completion: completion)
+            self.handleUnexpectedKeyAction(completion: completion)
         case (.none, .some(encryptedCanaryPhrase)):
-            self.handleMissingKeyAction(rustKeys: rustKeys, completion: completion)
+            self.handleMissingKeyAction(completion: completion)
         case (.none, .none):
-            self.handleFirstTimeCallOrClearedKeychainAction(rustKeys: rustKeys, completion: completion)
+            self.handleFirstTimeCallOrClearedKeychainAction(completion: completion)
         default:
             self.handleIllegalStateAction(completion: completion)
         }
     }
 
-    private func handleExpectedKeyAction(rustKeys: RustLoginEncryptionKeys,
-                                         encryptedCanaryPhrase: String?,
+    private func handleExpectedKeyAction(encryptedCanaryPhrase: String?,
                                          key: String?,
-                                         completion: @escaping (Result<String, NSError>) -> Void) {
+                                         completion: @escaping @Sendable (Result<String, NSError>) -> Void) {
         // We expected the key to be present, and it is.
         do {
             let canaryIsValid = try checkCanary(canary: encryptedCanaryPhrase!,
-                                                text: rustKeys.canaryPhrase,
+                                                text: rustKeychain.loginsCanaryPhrase,
                                                 encryptionKey: key!)
             if canaryIsValid {
                 completion(.success(key!))
@@ -909,7 +643,7 @@ public class RustLogins: LoginsProtocol, KeyManager {
                                 level: .warning,
                                 category: .storage)
                 GleanMetrics.LoginsStoreKeyRegeneration.corrupt.record()
-                self.resetLoginsAndKey(rustKeys: rustKeys, completion: completion)
+                self.resetLoginsAndKey(completion: completion)
             }
         } catch let error as NSError {
             self.logger.log("Error validating logins encryption key",
@@ -920,30 +654,29 @@ public class RustLogins: LoginsProtocol, KeyManager {
         }
     }
 
-    private func handleUnexpectedKeyAction(rustKeys: RustLoginEncryptionKeys,
-                                           completion: @escaping (Result<String, NSError>) -> Void) {
+    private func handleUnexpectedKeyAction(completion: @escaping @Sendable (Result<String, NSError>) -> Void) {
         // The key is present, but we didn't expect it to be there.
 
         self.logger.log("Logins key lost due to storage malfunction, new one generated",
                         level: .warning,
                         category: .storage)
         GleanMetrics.LoginsStoreKeyRegeneration.other.record()
-        self.resetLoginsAndKey(rustKeys: rustKeys, completion: completion)
+        self.resetLoginsAndKey(completion: completion)
     }
 
-    private func handleMissingKeyAction(rustKeys: RustLoginEncryptionKeys,
-                                        completion: @escaping (Result<String, NSError>) -> Void) {
+    private func handleMissingKeyAction(completion: @escaping @Sendable (Result<String, NSError>) -> Void) {
         // We expected the key to be present, but it's gone missing on us.
 
         self.logger.log("Logins key lost, new one generated",
                         level: .warning,
                         category: .storage)
         GleanMetrics.LoginsStoreKeyRegeneration.lost.record()
-        self.resetLoginsAndKey(rustKeys: rustKeys, completion: completion)
+        self.resetLoginsAndKey(completion: completion)
     }
 
-    private func handleFirstTimeCallOrClearedKeychainAction(rustKeys: RustLoginEncryptionKeys,
-                                                            completion: @escaping (Result<String, NSError>) -> Void) {
+    private func handleFirstTimeCallOrClearedKeychainAction(
+        completion: @escaping @Sendable (Result<String, NSError>) -> Void
+    ) {
         // We didn't expect the key to be present, which either means this is a first-time
         // call or the key data has been cleared from the keychain.
 
@@ -963,12 +696,12 @@ public class RustLogins: LoginsProtocol, KeyManager {
                 // Since the key data isn't present and we have login records in
                 // the database, we both clear the database and reset the key.
                 GleanMetrics.LoginsStoreKeyRegeneration.keychainDataLost.record()
-                self.resetLoginsAndKey(rustKeys: rustKeys, completion: completion)
+                self.resetLoginsAndKey(completion: completion)
             } else {
                 // There are no records in the database so we don't need to wipe any
                 // existing login records. We just need to create a new key.
                 do {
-                    let key = try rustKeys.createAndStoreKey()
+                    let key = try self.rustKeychain.createLoginsKeyData()
                     completion(.success(key))
                 } catch let error as NSError {
                     completion(.failure(error))
@@ -1008,10 +741,14 @@ public class RustLogins: LoginsProtocol, KeyManager {
     * ```
     */
     public func getKey() throws -> Data {
-        let rustKeys = RustLoginEncryptionKeys()
-        guard let keyData = rustKeys.keychain.data(forKey: rustKeys.loginPerFieldKeychainKey) else {
+        switch rustKeychain.queryKeychainForKey(key: rustKeychain.loginsKeyIdentifier) {
+        case .success(let result):
+            guard let data = result, let key = data.data(using: String.Encoding.utf8) else {
+                throw LoginsStoreError.MissingKey
+            }
+            return key
+        case .failure:
             throw LoginsStoreError.MissingKey
         }
-        return keyData
     }
 }

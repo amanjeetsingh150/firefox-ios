@@ -8,6 +8,7 @@ import Redux
 import UIKit
 
 protocol NavigationToolbarContainerDelegate: AnyObject {
+    @MainActor
     func configureContextualHint(for: UIButton, with contextualHintType: String)
 }
 
@@ -23,14 +24,16 @@ final class NavigationToolbarContainer: UIView, ThemeApplicable, StoreSubscriber
             subscribeToRedux()
         }
     }
+    lazy var toolbarHelper: ToolbarHelperInterface = ToolbarHelper()
     weak var toolbarDelegate: NavigationToolbarContainerDelegate?
-    private var toolbarState: ToolbarState?
     private var model: NavigationToolbarContainerModel?
 
     private lazy var toolbar: BrowserNavigationToolbar =  .build { _ in }
     private var toolbarHeightConstraint: NSLayoutConstraint?
 
     private var bottomToolbarHeight: CGFloat { return UX.toolbarHeight + UIConstants.BottomInset }
+
+    private var theme: Theme?
 
     override init(frame: CGRect) {
         super.init(frame: .zero)
@@ -74,7 +77,10 @@ final class NavigationToolbarContainer: UIView, ThemeApplicable, StoreSubscriber
 
         if self.model != model {
             self.model = model
-            toolbar.configure(config: model.navigationToolbarConfiguration, toolbarDelegate: self)
+            toolbar.configure(
+                config: model.navigationToolbarConfiguration,
+                toolbarDelegate: self
+            )
         }
     }
 
@@ -95,7 +101,8 @@ final class NavigationToolbarContainer: UIView, ThemeApplicable, StoreSubscriber
     // MARK: - ThemeApplicable
     func applyTheme(theme: Theme) {
         toolbar.applyTheme(theme: theme)
-        backgroundColor = theme.colors.layer1
+        let backgroundAlpha: CGFloat = toolbarHelper.glassEffectAlpha
+        backgroundColor = theme.colors.layerSurfaceLow.withAlphaComponent(backgroundAlpha)
     }
 }
 

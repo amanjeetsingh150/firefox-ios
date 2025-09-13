@@ -10,7 +10,7 @@ enum AccessoryType {
     case standard, creditCard, address, login, passwordGenerator
 }
 
-class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
+class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable, FeatureFlaggable, Notifiable {
     // MARK: - Constants
     private struct UX {
         static let toolbarHeight: CGFloat = 50
@@ -22,7 +22,7 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
 
     // MARK: - Properties
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     private var currentAccessoryView: AutofillAccessoryViewButtonItem?
     let windowUUID: WindowUUID
@@ -35,6 +35,13 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
     var savedAddressesClosure: (() -> Void)?
     var savedLoginsClosure: (() -> Void)?
     var useStrongPasswordClosure: (() -> Void)?
+
+    var hasAccessoryView: Bool {
+        return currentAccessoryView != nil
+    }
+    private var searchBarPosition: SearchBarPosition {
+        return featureFlags.getCustomState(for: .searchBarPosition) ?? .bottom
+    }
 
     // MARK: - UI Elements
     private let toolbar: UIToolbar = .build {
@@ -152,8 +159,14 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
         super.init(frame: CGRect(width: UIScreen.main.bounds.width,
                                  height: UX.toolbarHeight))
 
-        listenForThemeChange(self)
         setupLayout()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.SearchBarPositionDidChange]
+        )
         applyTheme()
     }
 
@@ -187,7 +200,6 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
             currentAccessoryView = passwordGeneratorView
         }
 
-        setNeedsLayout()
         setupLayout()
         layoutIfNeeded()
     }
@@ -233,8 +245,19 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
 
     func applyTheme() {
         let theme = themeManager.getCurrentTheme(for: windowUUID)
+        let backgroundColor: UIColor = if #available(iOS 26.0, *) {
+            // Use the same color that uses the toolbar
+            searchBarPosition == .top ? .clear : theme.colors.layerSurfaceLow
+        } else {
+            theme.colors.layer5
+        }
+        let buttonsBackgroundColor: UIColor = if #available(iOS 26.0, *) {
+            .clear
+        } else {
+            theme.colors.layer5Hover
+        }
 
-        backgroundColor = theme.colors.layer5
+        self.backgroundColor = backgroundColor
         [previousButton, nextButton, doneButton].forEach {
             $0.tintColor = theme.colors.iconAccentBlue
             $0.customView?.tintColor = theme.colors.iconAccentBlue
@@ -242,7 +265,7 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
 
         [creditCardAutofillView, addressAutofillView, loginAutofillView, passwordGeneratorView].forEach {
             $0.accessoryImageViewTintColor = theme.colors.iconPrimary
-            $0.backgroundColor = theme.colors.layer5Hover
+            $0.backgroundColor = buttonsBackgroundColor
         }
     }
 
@@ -288,5 +311,13 @@ class AccessoryViewProvider: UIView, Themeable, InjectedThemeUUIDIdentifiable {
         TelemetryWrapper.recordEvent(category: .action,
                                      method: .view,
                                      object: .creditCardAutofillPromptShown)
+    }
+
+    // MARK: - Notifiable
+    nonisolated func handleNotifications(_ notification: Notification) {
+        guard notification.name == .SearchBarPositionDidChange else { return }
+        DispatchQueue.main.async {
+            self.applyTheme()
+        }
     }
 }

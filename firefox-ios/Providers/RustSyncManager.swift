@@ -9,8 +9,8 @@ import Sync
 import AuthenticationServices
 import Common
 
-import class MozillaAppServices.MZKeychainWrapper
 import enum MozillaAppServices.OAuthScope
+import enum MozillaAppServices.ServiceStatus
 import enum MozillaAppServices.SyncEngineSelection
 import enum MozillaAppServices.SyncReason
 import struct MozillaAppServices.DeviceSettings
@@ -29,13 +29,18 @@ public class RustSyncManager: NSObject, SyncManager {
     // profile as a whole, so we hold on to our Prefs, potentially for a little while
     // longer. This is safe as a strong reference, because there's no cycle.
     private weak var profile: BrowserProfile?
+    private let logins: SyncLoginProvider
+    private let autofill: SyncAutofillProvider
+    private let places: SyncPlacesProvider
+    private let tabs: SyncTabsProvider
     private let prefs: Prefs
     private var syncTimer: Timer?
     private var backgrounded = true
     private let logger: Logger
     private let fxaDeclinedEngines = "fxa.cwts.declinedSyncEngines"
     private var notificationCenter: NotificationProtocol
-    var creditCardAutofillEnabled = false
+    private var syncBackOffTimer: Timer?
+    private let syncBackOffDelay = 180.0 // 3 Minutes
 
     let fifteenMinutesInterval = TimeInterval(60 * 15)
 
@@ -54,7 +59,7 @@ public class RustSyncManager: NSObject, SyncManager {
         }
     }
 
-    lazy var syncManagerAPI = RustSyncManagerAPI(logger: logger)
+    lazy var syncManagerAPI = RustSyncManagerAPI(logger: logger, dispatchQueue: DispatchQueue.global())
 
     public var isSyncing: Bool {
         return syncDisplayState != nil && syncDisplayState! == .inProgress
@@ -69,14 +74,21 @@ public class RustSyncManager: NSObject, SyncManager {
     init(profile: BrowserProfile,
          creditCardAutofillEnabled: Bool = false,
          logger: Logger = DefaultLogger.shared,
+         logins: SyncLoginProvider? = nil,
+         autofill: SyncAutofillProvider? = nil,
+         places: SyncPlacesProvider? = nil,
+         tabs: SyncTabsProvider? = nil,
          notificationCenter: NotificationProtocol = NotificationCenter.default) {
         self.profile = profile
         self.prefs = profile.prefs
         self.logger = logger
         self.notificationCenter = notificationCenter
+        self.logins = logins ?? profile.logins
+        self.autofill = autofill ?? profile.autofill
+        self.places = places ?? profile.places
+        self.tabs = tabs ?? profile.tabs
 
         super.init()
-        self.creditCardAutofillEnabled = creditCardAutofillEnabled
     }
 
     @objc
@@ -94,10 +106,6 @@ public class RustSyncManager: NSObject, SyncManager {
                                     selector: selector,
                                     userInfo: nil,
                                     repeats: true)
-    }
-
-    public func updateCreditCardAutofillStatus(value: Bool) {
-        creditCardAutofillEnabled = value
     }
 
     func syncEverythingSoon() {
@@ -273,9 +281,9 @@ public class RustSyncManager: NSObject, SyncManager {
                     .prefsForSync
                     .branch("scratchpad")
                     .stringForKey("keyLabel") {
-                        MZKeychainWrapper
+                        RustKeychain
                             .sharedClientAppContainerKeychain
-                            .removeObject(forKey: keyLabel)
+                            .removeObject(key: keyLabel)
                 }
                 self.prefsForSync.clearAll()
             }
@@ -297,7 +305,7 @@ public class RustSyncManager: NSObject, SyncManager {
         return false
     }
 
-    public func getEngineEnablementChangesForAccount() -> [String: Bool] {
+    public func getEngineEnablementChangesForAccount(withStateChange: Bool = true) -> [String: Bool] {
         var engineEnablements: [String: Bool] = [:]
 
         let engines = syncManagerAPI.rustTogglableEngines
@@ -306,7 +314,9 @@ public class RustSyncManager: NSObject, SyncManager {
         // screen on FxA.
         if let declined = UserDefaults.standard.stringArray(forKey: fxaDeclinedEngines) {
             engines.forEach { engineEnablements[$0.rawValue] = !declined.contains($0.rawValue) }
-            UserDefaults.standard.removeObject(forKey: fxaDeclinedEngines)
+            if withStateChange {
+                UserDefaults.standard.removeObject(forKey: fxaDeclinedEngines)
+            }
         } else {
             // Bundle in authState the engines the user activated/disabled since the
             // last sync.
@@ -346,7 +356,24 @@ public class RustSyncManager: NSObject, SyncManager {
         public let description = "Failed to get token server endpoint url."
     }
 
+    func shouldSyncLogins(completion: @escaping (Bool) -> Void) {
+        if !(self.prefs.boolForKey(PrefsKeys.LoginsHaveBeenVerified) ?? false) {
+            // We should only sync logins when the verification step has completed successfully.
+            // Otherwise logins could exist in the database that can't be decrypted and would
+            // prevent logins from syncing if they are not removed.
+
+            self.logins.verifyLogins { successfullyVerified in
+                self.prefs.setBool(successfullyVerified, forKey: PrefsKeys.LoginsHaveBeenVerified)
+                completion(successfullyVerified)
+            }
+        } else {
+            // Successful logins verification already occurred so login syncing can proceed
+            completion(true)
+        }
+    }
+
     private func registerSyncEngines(engines: [RustSyncManagerAPI.TogglableEngine],
+                                     dispatchGroup: DispatchGroupInterface,
                                      loginKey: String?,
                                      creditCardKey: String?,
                                      completion: @escaping (([String], [String: String])) -> Void) {
@@ -359,70 +386,80 @@ public class RustSyncManager: NSObject, SyncManager {
             self.syncManagerAPI.rustTogglableEngines.contains($0) }) {
              switch engine {
              case .tabs:
-                 self.profile?.tabs.registerWithSyncManager()
+                 self.tabs.registerWithSyncManager()
                  rustEngines.append(engine.rawValue)
              case .passwords:
-                 if loginKey != nil {
-                     self.profile?.logins.registerWithSyncManager()
-                     rustEngines.append(engine.rawValue)
+                 dispatchGroup.enter()
+                 self.shouldSyncLogins { shouldSync in
+                     defer { dispatchGroup.leave() }
+                     if shouldSync, loginKey != nil {
+                         self.logins.registerWithSyncManager()
+                         rustEngines.append(engine.rawValue)
+                     }
                  }
              case .creditcards:
-                 if self.creditCardAutofillEnabled {
-                    if let key = creditCardKey {
-                        // checking if autofill was already registered with addresses
-                        if !registeredAutofill {
-                            self.profile?.autofill.registerWithSyncManager()
-                            registeredAutofill = true
-                        }
-                        localEncryptionKeys[engine.rawValue] = key
-                        rustEngines.append(engine.rawValue)
-                     }
+                if let key = creditCardKey {
+                    // checking if autofill was already registered with addresses
+                    if !registeredAutofill {
+                        self.autofill.registerWithSyncManager()
+                        registeredAutofill = true
+                    }
+                    localEncryptionKeys[engine.rawValue] = key
+                    rustEngines.append(engine.rawValue)
                  }
              case .addresses:
                  // checking if autofill was already registered with credit cards
                  if !registeredAutofill {
-                     self.profile?.autofill.registerWithSyncManager()
+                     self.autofill.registerWithSyncManager()
                      registeredAutofill = true
                  }
                  rustEngines.append(engine.rawValue)
              case .bookmarks, .history:
                  if !registeredPlaces {
-                     self.profile?.places.registerWithSyncManager()
+                     self.places.registerWithSyncManager()
                      registeredPlaces = true
                  }
                  rustEngines.append(engine.rawValue)
              }
         }
-        completion((rustEngines, localEncryptionKeys))
+
+        dispatchGroup.notify(queue: .global()) {
+            completion((rustEngines, localEncryptionKeys))
+        }
     }
 
     func getEnginesAndKeys(engines: [RustSyncManagerAPI.TogglableEngine],
+                           dispatchGroup: DispatchGroupInterface = DispatchGroup(),
                            completion: @escaping (([String], [String: String])) -> Void) {
-        profile?.logins.getStoredKey { loginResult in
-            var loginKey: String?
+        logins.getStoredKey { loginResult in
+            let loginKey: String?
 
             switch loginResult {
             case .success(let key):
                 loginKey = key
             case .failure(let err):
-                self.logger.log("Login encryption key could not be retrieved for syncing: \(err)",
-                                level: .warning,
-                                category: .sync)
+                self.logger.log(
+                    "Login encryption key could not be retrieved for syncing: \(err)",
+                    level: .warning,
+                    category: .sync
+                )
+                loginKey = nil
             }
 
-            self.profile?.autofill.getStoredKey { creditCardResult in
+            self.autofill.getStoredKey { creditCardResult in
                 var creditCardKey: String?
-
                 switch creditCardResult {
                 case .success(let key):
                     creditCardKey = key
                 case .failure(let err):
-                    self.logger.log("Credit card encryption key could not be retrieved for syncing: \(err)",
-                                    level: .warning,
-                                    category: .sync)
+                    self.logger.log(
+                        "Credit card encryption key could not be retrieved for syncing: \(err)",
+                        level: .warning,
+                        category: .sync
+                    )
                 }
-
                 self.registerSyncEngines(engines: engines,
+                                         dispatchGroup: dispatchGroup,
                                          loginKey: loginKey,
                                          creditCardKey: creditCardKey,
                                          completion: completion)
@@ -564,8 +601,13 @@ public class RustSyncManager: NSObject, SyncManager {
 
     @discardableResult
     public func syncEverything(why: SyncReason) -> Success {
-        return syncRustEngines(why: why,
-                               engines: syncManagerAPI.rustTogglableEngines.compactMap { $0.rawValue }) >>> succeed
+        // Convert Deferred<Maybe<SyncResult>> into Deferred<Maybe<Void>>:
+        // - If sync succeeds, return success with ().
+        // - If sync fails, propagate the same failure.
+        return syncRustEngines(
+            why: why,
+            engines: syncManagerAPI.rustTogglableEngines.compactMap { $0.rawValue }
+        ).map { $0.map { _ in () } }
     }
 
     /**
@@ -573,7 +615,7 @@ public class RustSyncManager: NSObject, SyncManager {
      * Some help is given to callers who use different namespaces (specifically: `passwords` is mapped to `logins`)
      * and to preserve some ordering rules.
      */
-    public func syncNamedCollections(why: SyncReason, names: [String]) -> Success {
+    public func syncNamedCollections(why: SyncReason, names: [String]) -> Deferred<Maybe<SyncResult>> {
         // Massage the list of names into engine identifiers.var engines = [String]()
         var engines = [String]()
 
@@ -582,7 +624,45 @@ public class RustSyncManager: NSObject, SyncManager {
             engines.append(name)
         }
 
-        return syncRustEngines(why: why, engines: engines) >>> succeed
+        return syncRustEngines(why: why, engines: engines)
+    }
+
+    /**
+     * A specialized version of `syncNamedCollections` for execution after a sync settings change. Allows selective
+     * sync of different collections and retries the sync if the initial call is backed off.
+     */
+    public func syncPostSyncSettingsChange(why: SyncReason, names: [String]) {
+        let enablements = getEngineEnablementChangesForAccount(withStateChange: false)
+        let enabledEngines = Array(enablements.filter({ $0.value }).keys)
+        let disabledEngines = Array(enablements.filter({ !$0.value }).keys)
+
+        // report sync settings telemetry changes
+        self.syncManagerAPI.reportSaveSyncSettingsTelemetry(enabledEngines: enabledEngines,
+                                                            disabledEngines: disabledEngines)
+
+        syncNamedCollections(why: why, names: names).upon { result in
+            guard result.isSuccess, let syncResult = result.successValue else {
+                return
+            }
+
+            // If the sync was backed off, retry it after a delay.
+            if syncResult.status == .backedOff {
+                self.retrySyncAfterDelay(why: why, names: names)
+            }
+        }
+    }
+
+    public func reportOpenSyncSettingsMenuTelemetry() {
+        self.syncManagerAPI.reportOpenSyncSettingsMenuTelemetry()
+    }
+
+    private func retrySyncAfterDelay(why: SyncReason, names: [String]) {
+        self.syncBackOffTimer?.invalidate()
+
+        self.syncBackOffTimer = Timer.scheduledTimer(withTimeInterval: self.syncBackOffDelay,
+                                                     repeats: false) { _ in
+            _ = self.syncNamedCollections(why: why, names: names)
+        }
     }
 
     public func syncTabs() -> Deferred<Maybe<SyncResult>> {

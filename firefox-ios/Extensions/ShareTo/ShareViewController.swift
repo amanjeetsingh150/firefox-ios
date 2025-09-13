@@ -475,14 +475,12 @@ extension ShareViewController {
             // Intentionally block thread with database call.
 
             // Add new bookmark to the top of the folder
-            // If bookmarks refactor is enabled, save bookmark to recent bookmark folder, otherwise save to root folder
-            let isBookmarkRefactorEnabled = profile.prefs.boolForKey(PrefsKeys.IsBookmarksRefactorEnabled) ?? false
-            let recentBookmarkFolderGuid = profile.prefs.stringForKey(PrefsKeys.RecentBookmarkFolder)
-            let parentGuid = (isBookmarkRefactorEnabled ? recentBookmarkFolderGuid : nil) ?? BookmarkRoots.MobileFolderGUID
-            _ = profile.places.createBookmark(parentGUID: parentGuid,
-                                              url: item.url,
-                                              title: item.title,
-                                              position: 0).value
+            // Save bookmark to recent bookmark folder, otherwise save to root folder
+            let folderGuid = profile.prefs.stringForKey(PrefsKeys.RecentBookmarkFolder) ?? BookmarkRoots.MobileFolderGUID
+            profile.places.createBookmark(parentGUID: folderGuid,
+                                          url: item.url,
+                                          title: item.title,
+                                          position: 0)
             profile.shutdown()
 
             addAppExtensionTelemetryEvent(forMethod: "bookmark-this-page")
@@ -534,7 +532,7 @@ extension ShareViewController {
             return "firefox://open-url?url=\(encoded)"
         }
 
-        guard let url = URL(string: firefoxUrl(url), invalidCharacters: false) else { return }
+        guard let url = URL(string: firefoxUrl(url)) else { return }
         var responder = self as UIResponder?
         let selectorOpenURL = sel_registerName("openURL:")
         while let current = responder {

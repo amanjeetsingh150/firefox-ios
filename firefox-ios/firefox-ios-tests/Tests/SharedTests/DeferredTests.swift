@@ -44,11 +44,11 @@ class DeferredTests: XCTestCase {
         let e1 = self.expectation(description: "First.")
         let e2 = self.expectation(description: "Second.")
 
-        let f1: () -> Deferred<Maybe<Int>> = {
+        let f1: @Sendable () -> Deferred<Maybe<Int>> = {
             return deferMaybe(5)
         }
 
-        let f2: (_ x: Int) -> Deferred<Maybe<String>> = {
+        let f2: @Sendable (_ x: Int) -> Deferred<Maybe<String>> = {
             if $0 == 5 {
                 e1.fulfill()
             }
@@ -67,64 +67,122 @@ class DeferredTests: XCTestCase {
         waitForExpectations(timeout: 10, handler: nil)
     }
 
-    func testPassAccumulate_andDoesntLeak() {
-        let expectation = self.expectation(description: "Deinit is called")
-        let accumulateCall: () -> Success = {
+    func testDeferMaybe() {
+        XCTAssertTrue(deferMaybe("foo").value.isSuccess)
+    }
+
+    // MARK: Test `all`
+
+    @MainActor // Test explicitly calling `all` on the main thread
+    func testDeferredAll_calledOnMainThread() {
+        let expectation = self.expectation(description: "All blocks ran")
+
+        let deferreds = [
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(success: ()), defaultQueue: .global())
+        ]
+
+        _ = all(deferreds).bind { results -> Success in
+            XCTAssertEqual(results.count, 2)
+
+            if let failure = results.first(where: { $0.isFailure }) {
+                XCTFail()
+                return deferMaybe(failure.failureValue!)
+            }
+
+            expectation.fulfill()
             return succeed()
         }
 
-        var myclass: AccumulateTestClass? = AccumulateTestClass(
-            expectation: expectation,
-            accumulateCall: accumulateCall
-        )
-        trackForMemoryLeaks(myclass!)
-        myclass = nil
-
         waitForExpectations(timeout: 3, handler: nil)
     }
 
-    func testFailAccumulate_andDoesntLeak() {
-        let expectation = self.expectation(description: "Deinit is called")
+    @MainActor // Test explicitly calling `all` on the main thread
+    func testDeferredAll_calledOnMainThread_withFailure() {
+        let expectation = self.expectation(description: "All blocks ran")
 
-        let accumulateCall: () -> Success = {
-            return Deferred(value: Maybe(failure: AccumulateTestClass.Error()))
+        let deferreds = [
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(success: ()), defaultQueue: .global()),
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(failure: NSError()), defaultQueue: .main)
+        ]
+
+        _ = all(deferreds).bind { results -> Success in
+            XCTAssertEqual(results.count, 4)
+
+            if let failure = results.first(where: { $0.isFailure }) {
+                // We expect one of the results to be a failure
+                expectation.fulfill()
+                return deferMaybe(failure.failureValue!)
+            }
+
+            XCTFail()
+            return succeed()
         }
 
-        var myclass: AccumulateTestClass? = AccumulateTestClass(
-            expectation: expectation,
-            accumulateCall: accumulateCall
-        )
-        trackForMemoryLeaks(myclass!)
-        myclass = nil
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testDeferredAll_calledOnBackgroundThread() {
+        let expectation = self.expectation(description: "All blocks ran")
+
+        let deferreds = [
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(success: ()), defaultQueue: .global())
+        ]
+
+        // Run from a background thread
+        Task {
+            _ = all(deferreds).bind { results -> Success in
+                XCTAssertEqual(results.count, 2)
+
+                if let failure = results.first(where: { $0.isFailure }) {
+                    XCTFail()
+                    return deferMaybe(failure.failureValue!)
+                }
+
+                expectation.fulfill()
+                return succeed()
+            }
+        }
 
         waitForExpectations(timeout: 3, handler: nil)
     }
 
-    func testDeferMaybe() {
-        XCTAssertTrue(deferMaybe("foo").value.isSuccess)
+    func testDeferredAll_calledOnBackgroundThread_withFailure() {
+        let expectation = self.expectation(description: "All blocks ran")
+
+        let deferreds = [
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(success: ()), defaultQueue: .global()),
+            Success(value: Maybe(success: ()), defaultQueue: .main),
+            Success(value: Maybe(failure: NSError()), defaultQueue: .main)
+        ]
+
+        // Run from a background thread
+        Task {
+            _ = all(deferreds).bind { results -> Success in
+                XCTAssertEqual(results.count, 4)
+
+                if let failure = results.first(where: { $0.isFailure }) {
+                    // We expect one of the results to be a failure
+                    expectation.fulfill()
+                    return deferMaybe(failure.failureValue!)
+                }
+
+                XCTFail()
+                return succeed()
+            }
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
     }
 }
 
 // MARK: Helper
 private extension DeferredTests {
-    class AccumulateTestClass {
-        class Error: MaybeErrorType {
-            var description = "Error"
-        }
-
-        let expectation: XCTestExpectation
-
-        init(expectation: XCTestExpectation, accumulateCall: @escaping () -> Success) {
-            self.expectation = expectation
-            accumulate([accumulateCall]).upon { _ in }
-        }
-
-        deinit {
-            expectation.fulfill()
-        }
-    }
-
-    func trackForMemoryLeaks(_ instance: AnyObject, file: StaticString = #file, line: UInt = #line) {
+    func trackForMemoryLeaks(_ instance: AnyObject, file: StaticString = #filePath, line: UInt = #line) {
         addTeardownBlock { [weak instance] in
             XCTAssertNil(
                 instance,

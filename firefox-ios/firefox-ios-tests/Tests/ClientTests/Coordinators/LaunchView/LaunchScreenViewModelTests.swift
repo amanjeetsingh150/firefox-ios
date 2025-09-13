@@ -42,11 +42,12 @@ final class LaunchScreenViewModelTests: XCTestCase {
         XCTAssertEqual(delegate.finishedLoadingLaunchOrderCalled, 0)
     }
 
-    func testLaunchType_intro() async {
+    @MainActor
+    func testLaunchType_intro() {
         profile.prefs.setInt(1, forKey: PrefsKeys.TermsOfServiceAccepted)
         let subject = createSubject()
         subject.delegate = delegate
-        await subject.startLoading(appVersion: "112.0")
+        subject.startLoading(appVersion: "112.0")
 
         XCTAssertEqual(delegate.launchBrowserCalled, 0)
         XCTAssertEqual(delegate.finishedLoadingLaunchOrderCalled, 1)
@@ -60,14 +61,15 @@ final class LaunchScreenViewModelTests: XCTestCase {
         XCTAssertEqual(delegate.launchWithTypeCalled, 1)
     }
 
-    func testLaunchType_termsOfService() async {
+    @MainActor
+    func testLaunchType_termsOfService() {
         FxNimbus.shared.features.tosFeature.with(initializer: { _, _ in
             TosFeature(status: true)
         })
 
         let subject = createSubject()
         subject.delegate = delegate
-        await subject.startLoading(appVersion: "112.0")
+        subject.startLoading(appVersion: "112.0")
 
         XCTAssertEqual(delegate.launchBrowserCalled, 0)
         XCTAssertEqual(delegate.finishedLoadingLaunchOrderCalled, 1)
@@ -81,13 +83,14 @@ final class LaunchScreenViewModelTests: XCTestCase {
         XCTAssertEqual(delegate.launchWithTypeCalled, 1)
     }
 
-    func testLaunchType_update() async {
+    @MainActor
+    func testLaunchType_update() {
         profile.prefs.setString("112.0", forKey: PrefsKeys.AppVersion.Latest)
         profile.prefs.setInt(1, forKey: PrefsKeys.IntroSeen)
 
         let subject = createSubject()
         subject.delegate = delegate
-        await subject.startLoading(appVersion: "113.0")
+        subject.startLoading(appVersion: "113.0")
 
         XCTAssertEqual(delegate.launchBrowserCalled, 0)
         XCTAssertEqual(delegate.finishedLoadingLaunchOrderCalled, 1)
@@ -101,7 +104,8 @@ final class LaunchScreenViewModelTests: XCTestCase {
         XCTAssertEqual(delegate.launchWithTypeCalled, 1)
     }
 
-    func testLaunchType_survey() async {
+    @MainActor
+    func testLaunchType_survey() {
         profile.prefs.setString("112.0", forKey: PrefsKeys.AppVersion.Latest)
         profile.prefs.setInt(1, forKey: PrefsKeys.IntroSeen)
         let message = createMessage()
@@ -109,7 +113,7 @@ final class LaunchScreenViewModelTests: XCTestCase {
 
         let subject = createSubject()
         subject.delegate = delegate
-        await subject.startLoading(appVersion: "112.0")
+        subject.startLoading(appVersion: "112.0")
 
         XCTAssertEqual(delegate.launchBrowserCalled, 0)
         XCTAssertEqual(delegate.finishedLoadingLaunchOrderCalled, 1)
@@ -135,7 +139,7 @@ final class LaunchScreenViewModelTests: XCTestCase {
     }
 
     // MARK: - Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> LaunchScreenViewModel {
         let onboardingModel = createOnboardingViewModel()
 
@@ -172,7 +176,7 @@ final class LaunchScreenViewModelTests: XCTestCase {
         ]
 
         return OnboardingViewModel(cards: cards,
-                                   isDismissable: true)
+                                   isDismissible: true)
     }
 
     func createCard(index: Int) -> OnboardingCardInfoModel {

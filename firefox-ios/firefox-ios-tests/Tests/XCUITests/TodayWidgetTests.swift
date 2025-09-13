@@ -11,10 +11,11 @@ let editHomeScreenButton = "com.apple.springboardhome.application-shortcut-item.
 let removeWidgetButton = "com.apple.springboardhome.application-shortcut-item.remove-widget"
 
 // Widget Buttons Identifier
-var goToCopiedLink = springboard.buttons["Go to Copied Link"]
-var newPrivateSearch = springboard.buttons["New Private Search"]
-var newSearch = springboard.buttons["New Search"]
-var clearPrivateTabs = springboard.buttons["Clear Private Tabs"]
+// TODO FXIOS-12604 These global properties are not concurrency safe
+nonisolated(unsafe) var goToCopiedLink = springboard.buttons["Go to Copied Link"]
+nonisolated(unsafe) var newPrivateSearch = springboard.buttons["New Private Search"]
+nonisolated(unsafe) var newSearch = springboard.buttons["New Search"]
+nonisolated(unsafe) var clearPrivateTabs = springboard.buttons["Clear Private Tabs"]
 
 // Widget coordinates
 let normalized = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
@@ -360,16 +361,6 @@ class TodayWidgetTests: BaseTestCase {
         coordinate.tap()
         // Check New Search action
         tapOnWidget(widgetType: "Firefox")
-        // Verify private mode toggle based on device type
-        var elementToAssert = AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton
-        if iPad() {
-            elementToAssert = AccessibilityIdentifiers.Browser.TopTabs.privateModeButton
-        }
-        guard let buttonValue = app.buttons[elementToAssert].value as? String else {
-            XCTFail("Expected value to be a String but found \(type(of: app.buttons[elementToAssert].value))")
-            return
-        }
-        XCTAssertTrue(buttonValue == "Off", "Expected button value to be 'Off', but got \(buttonValue)")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2769297
@@ -423,27 +414,9 @@ class TodayWidgetTests: BaseTestCase {
         // Tap outside the alert to dismiss it
         mozWaitForElementToExist(newPrivateSearch)
         coordinate.tap()
-        // Terminate the app to start a fresh session
-        app.terminate()
-        // Reopen and check the Private Tab widget
         tapOnWidget(widgetType: "Private Tab")
-        // Handle different UI behavior on iPad and iPhone
-        if !iPad() {
-            mozWaitElementHittable(element: app.buttons["CloseButton"], timeout: TIMEOUT)
-            app.buttons["CloseButton"].waitAndTap()
-        }
         // Verify the presence of Private Mode message
         mozWaitForElementToExist(app.staticTexts["Leave no traces on this device"])
-        // Verify private mode toggle is on
-        var elementToAssert = AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton
-        if iPad() {
-            elementToAssert = AccessibilityIdentifiers.Browser.TopTabs.privateModeButton
-        }
-        guard let buttonValue = app.buttons[elementToAssert].value as? String else {
-            XCTFail("Expected value to be a String but found \(type(of: app.buttons[elementToAssert].value))")
-            return
-        }
-        XCTAssertTrue(buttonValue == "On", "Expected button value to be 'On', but got \(buttonValue)")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2769300
@@ -497,19 +470,13 @@ class TodayWidgetTests: BaseTestCase {
         coordinate.tap()
         // Copy the string to the clipboard
         UIPasteboard.general.string = copiedString
-        app.terminate()
-        // Reopen and interact with the Copied Link widget
         tapOnWidget(widgetType: "Copied Link")
         // Handle paste alert
         if #available(iOS 16, *) {
             mozWaitElementHittable(element: springboard.alerts.buttons["Allow Paste"], timeout: TIMEOUT)
             springboard.alerts.buttons["Allow Paste"].waitAndTap()
         }
-        // Handle iPad/iPhone UI differences
-        if !iPad() {
-            mozWaitElementHittable(element: app.buttons["CloseButton"], timeout: TIMEOUT)
-            app.buttons["CloseButton"].waitAndTap()
-        }
+
         // Verify the copied string is in the URL field
         mozWaitForElementToExist(urlBarAddress, timeout: TIMEOUT)
         mozWaitForValueContains(urlBarAddress, value: copiedString, timeout: TIMEOUT)
@@ -546,16 +513,6 @@ class TodayWidgetTests: BaseTestCase {
         springboard.buttons["Done"].waitAndTap()
         checkFirefoxShortcutsOptions()
         springboard.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Firefox")).element.waitAndTap()
-        var elementToAssert = AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton
-        if iPad() {
-            elementToAssert = AccessibilityIdentifiers.Browser.TopTabs.privateModeButton
-        }
-        mozWaitForElementToExist(app.buttons[elementToAssert])
-        guard let buttonValue = app.buttons[elementToAssert].value as? String else {
-            XCTFail("Expected value to be a String but found \(type(of: app.buttons[elementToAssert].value))")
-            return
-        }
-        XCTAssertTrue(buttonValue == "Off", "Expected button value to be 'Off', but got \(buttonValue)")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2783002
@@ -564,7 +521,6 @@ class TodayWidgetTests: BaseTestCase {
             throw XCTSkip("iOS 16 is required")
         }
         XCUIDevice.shared.press(.home)
-        app.terminate()
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
         if checkPresenceFirefoxWidget() {
@@ -589,22 +545,9 @@ class TodayWidgetTests: BaseTestCase {
         springboard.buttons.matching(NSPredicate(
             format: "label CONTAINS[c] %@", "Private Tab")
         ).element.firstMatch.waitAndTap()
-        if !iPad() {
-            mozWaitElementHittable(element: app.buttons["CloseButton"], timeout: TIMEOUT)
-            app.buttons["CloseButton"].waitAndTap()
-        }
+
         // Verify the presence of Private Mode message
         mozWaitForElementToExist(app.staticTexts["Leave no traces on this device"])
-        // Verify private mode toggle is on
-        var elementToAssert = AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton
-        if iPad() {
-            elementToAssert = AccessibilityIdentifiers.Browser.TopTabs.privateModeButton
-        }
-        guard let buttonValue = app.buttons[elementToAssert].value as? String else {
-            XCTFail("Expected value to be a String but found \(type(of: app.buttons[elementToAssert].value))")
-            return
-        }
-        XCTAssertTrue(buttonValue == "On", "Expected button value to be 'On', but got \(buttonValue)")
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2783003
@@ -615,7 +558,7 @@ class TodayWidgetTests: BaseTestCase {
         let copiedString = "mozilla.org"
         UIPasteboard.general.string = copiedString
         XCUIDevice.shared.press(.home)
-        app.terminate()
+
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
         if checkPresenceFirefoxWidget() {
@@ -643,10 +586,6 @@ class TodayWidgetTests: BaseTestCase {
         mozWaitElementHittable(element: springboard.alerts.buttons["Allow Paste"], timeout: TIMEOUT)
         springboard.alerts.buttons["Allow Paste"].waitAndTap()
         // Verify the copied string is in the URL field
-        if !iPad() {
-            mozWaitElementHittable(element: app.buttons["CloseButton"], timeout: TIMEOUT)
-            app.buttons["CloseButton"].waitAndTap()
-        }
         mozWaitForElementToExist(urlBarAddress, timeout: TIMEOUT)
         mozWaitForValueContains(urlBarAddress, value: copiedString, timeout: TIMEOUT)
         guard let urlField = urlBarAddress.value as? String else {

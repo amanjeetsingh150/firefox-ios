@@ -11,16 +11,15 @@ enum HomepageSectionType: Int, CaseIterable {
     case topSites
     case jumpBackIn
     case bookmarks
-    case historyHighlights
-    case pocket
+    case merino
     case customizeHome
 
+    // TODO: FXIOS-12980: Replace "Stories" title with "Top Stories" string once it is translated in v143
     var title: String? {
         switch self {
-        case .pocket: return .FirefoxHomepage.Pocket.SectionTitle
+        case .merino: return .FirefoxHomepage.Pocket.SectionTitle
         case .jumpBackIn: return .FirefoxHomeJumpBackInSectionTitle
         case .bookmarks: return .BookmarksSectionTitle
-        case .historyHighlights: return .FirefoxHomepage.HistoryHighlights.Title
         default: return nil
         }
     }
@@ -32,11 +31,10 @@ enum HomepageSectionType: Int, CaseIterable {
         // Top sites has more than 1 cell type, dequeuing is done through FxHomeSectionHandler protocol
         case .topSites: return ""
         // Pocket has more than 1 cell type, dequeuing is done through FxHomeSectionHandler protocol
-        case .pocket: return ""
+        case .merino: return ""
         // JumpBackIn has more than 1 cell type, dequeuing is done through FxHomeSectionHandler protocol
         case .jumpBackIn: return ""
         case .bookmarks: return LegacyBookmarksCell.cellIdentifier
-        case .historyHighlights: return HistoryHighlightsCell.cellIdentifier
         case .customizeHome: return CustomizeHomepageSectionCell.cellIdentifier
         }
     }
@@ -47,10 +45,8 @@ enum HomepageSectionType: Int, CaseIterable {
                 TopSiteItemCell.self,
                 EmptyTopSiteCell.self,
                 LegacyJumpBackInCell.self,
-                PocketDiscoverCell.self,
                 LegacyPocketStandardCell.self,
                 LegacyBookmarksCell.self,
-                HistoryHighlightsCell.self,
                 CustomizeHomepageSectionCell.self,
                 LegacySyncedTabCell.self
         ]
@@ -67,7 +63,7 @@ enum HomepageSectionType: Int, CaseIterable {
                                          method: .tap,
                                          object: .newPrivateTab,
                                          value: .topSite)
-        case .pocket:
+        case .merino:
             TelemetryWrapper.recordEvent(category: .action,
                                          method: .tap,
                                          object: .newPrivateTab,

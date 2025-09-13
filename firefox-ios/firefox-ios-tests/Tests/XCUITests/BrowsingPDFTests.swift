@@ -38,7 +38,7 @@ class BrowsingPDFTests: BaseTestCase {
         waitUntilPageLoad()
 
         // Click on a link on the pdf and check that the website is shown
-        app.links.element(boundBy: 0).tapOnApp()
+        app.webViews.links.element(boundBy: 0).tapOnApp()
         waitUntilPageLoad()
         let checkboxValidation = app.webViews["Web content"].staticTexts["Verify you are human"]
         if checkboxValidation.exists {
@@ -97,19 +97,18 @@ class BrowsingPDFTests: BaseTestCase {
     func testPinPDFtoTopSites() {
         navigator.openURL(PDF_website["url"]!)
         waitUntilPageLoad()
+        navigator.goto(BrowserTabMenuMore)
         navigator.performAction(Action.PinToTopSitesPAM)
         navigator.performAction(Action.OpenNewTabFromTabTray)
-        waitForElementsToExist(
-            [
-                app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell],
-                app.collectionViews.cells.staticTexts[PDF_website["bookmarkLabel"]!]
-            ]
-        )
+        let pinnedItem = app
+            .links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
+            .staticTexts[PDF_website["bookmarkLabel"]!]
+        mozWaitForElementToExist(pinnedItem)
 
         // Open pdf from pinned site
         let pdfTopSite = app
             .collectionViews[AccessibilityIdentifiers.FirefoxHomepage.collectionView]
-            .links[PDF_website["bookmarkLabel"]!]
+            .links["Pinned: \(PDF_website["bookmarkLabel"]!)"]
             .children(matching: .other)
             .element
             .children(matching: .other)
@@ -120,15 +119,10 @@ class BrowsingPDFTests: BaseTestCase {
 
         // Remove pdf pinned site
         navigator.performAction(Action.OpenNewTabFromTabTray)
-        mozWaitForElementToExist(app.collectionViews.cells.staticTexts[PDF_website["bookmarkLabel"]!])
+        mozWaitForElementToExist(pinnedItem)
         pdfTopSite.press(forDuration: 1)
-        app.tables.cells.otherElements[StandardImageIdentifiers.Large.pinSlash].waitAndTap()
-        waitForElementsToExist(
-            [
-            app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell],
-            app.collectionViews.cells.staticTexts[PDF_website["bookmarkLabel"]!]
-            ]
-        )
+        app.tables.cells.buttons[StandardImageIdentifiers.Large.pinSlash].waitAndTap()
+        mozWaitForElementToNotExist(pinnedItem)
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307121
@@ -136,7 +130,8 @@ class BrowsingPDFTests: BaseTestCase {
     func testBookmarkPDF() {
         navigator.openURL(PDF_website["url"]!)
         waitUntilPageLoad()
-        navigator.performAction(Action.BookmarkThreeDots)
+        navigator.goto(BrowserTabMenu)
+        navigator.performAction(Action.Bookmark)
         navigator.goto(BrowserTabMenu)
         navigator.goto(LibraryPanel_Bookmarks)
         waitForElementsToExist(
@@ -149,6 +144,7 @@ class BrowsingPDFTests: BaseTestCase {
 
     private func longPressOnPdfLink() {
         let link = app.webViews.links.element(boundBy: 0)
+        mozWaitForElementToExist(link)
         let startCoordinate = link.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
         let endCoordinate = link.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         startCoordinate.press(forDuration: 3, thenDragTo: endCoordinate)

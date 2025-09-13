@@ -55,7 +55,7 @@ class LoginListViewModel: ObservableObject {
     }
 }
 
-class MockLogger: Logger {
+class MockLogger: Logger, @unchecked Sendable {
     var crashedLastLaunch = false
     var savedMessage: String?
     var savedLevel: LoggerLevel?
@@ -72,7 +72,7 @@ class MockLogger: Logger {
              category: LoggerCategory,
              extra: [String: String]? = nil,
              description: String? = nil,
-             file: String = #file,
+             file: String = #filePath,
              function: String = #function,
              line: Int = #line) {
         savedMessage = message

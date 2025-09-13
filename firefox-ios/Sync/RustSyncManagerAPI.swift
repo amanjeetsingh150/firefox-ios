@@ -4,7 +4,6 @@
 
 import Foundation
 import Common
-import Shared
 
 import class MozillaAppServices.SyncManagerComponent
 import enum MozillaAppServices.SyncManagerError
@@ -13,6 +12,7 @@ import struct MozillaAppServices.SyncResult
 
 open class RustSyncManagerAPI {
     private let logger: Logger
+    private let dispatchQueue: DispatchQueueInterface
     let api: SyncManagerComponent
 
     // Names of collections that can be enabled/disabled locally.
@@ -26,20 +26,21 @@ open class RustSyncManagerAPI {
     }
 
     public var rustTogglableEngines: [TogglableEngine] = [.tabs, .passwords, .bookmarks, .history, .creditcards, .addresses]
-    public init(logger: Logger = DefaultLogger.shared) {
+    public init(logger: Logger = DefaultLogger.shared, dispatchQueue: DispatchQueueInterface = DispatchQueue.global()) {
         self.api = SyncManagerComponent()
         self.logger = logger
+        self.dispatchQueue = dispatchQueue
     }
 
     public func disconnect() {
-        DispatchQueue.global().async { [unowned self] in
+        dispatchQueue.async { [unowned self] in
             self.api.disconnect()
         }
     }
 
     public func sync(params: SyncParams,
                      completion: @escaping (SyncResult) -> Void) {
-        DispatchQueue.global().async { [weak self] in
+        dispatchQueue.async { [weak self] in
             do {
                 guard let result = try self?.api.sync(params: params) else { return }
 
@@ -78,6 +79,19 @@ open class RustSyncManagerAPI {
                     category: .sync)
                 completion(description)
             }
+        }
+    }
+
+    public func reportOpenSyncSettingsMenuTelemetry() {
+        DispatchQueue.global().async {
+            SyncManagerComponent.reportOpenSyncSettingsMenuTelemetry()
+        }
+    }
+
+    public func reportSaveSyncSettingsTelemetry(enabledEngines: [String], disabledEngines: [String]) {
+        DispatchQueue.global().async {
+            SyncManagerComponent.reportSaveSyncSettingsTelemetry(enabledEngines: enabledEngines,
+                                                                 disabledEngines: disabledEngines)
         }
     }
 

@@ -14,7 +14,8 @@ import struct MozillaAppServices.ClientRemoteTabs
 import struct MozillaAppServices.RemoteTabRecord
 import struct MozillaAppServices.PendingCommand
 
-public class RustRemoteTabs {
+// TODO: FXIOS-13209 Make RustRemoteTabs actually sendable
+public class RustRemoteTabs: @unchecked Sendable {
     let databasePath: String
     let queue: DispatchQueue
     var store: TabsStore?
@@ -130,7 +131,7 @@ public class RustRemoteTabs {
         }
     }
 
-    public func getClientGUIDs(completion: @escaping (Set<GUID>?, Error?) -> Void) {
+    public func getClientGUIDs(completion: @escaping @Sendable (Set<GUID>?, Error?) -> Void) {
         self.getAll().upon { result in
             if let failureValue = result.failureValue {
                 completion(nil, failureValue)
@@ -157,12 +158,25 @@ public class RustRemoteTabs {
 
             let clientAndTabs = rustClientAndTabs
                 .map { $0.toClientAndTabs() }
-                .filter({ record in
-                    remoteDeviceIds.contains { deviceId in
-                        return record.client.fxaDeviceId != nil &&
-                            record.client.fxaDeviceId! == deviceId
-                    }
-                })
+                .filter { record in
+                    guard let fxaDeviceId = record.client.fxaDeviceId else { return false }
+                    return remoteDeviceIds.contains(fxaDeviceId)
+                }
+                .map { client -> ClientAndTabs in
+                    // Sort tabs in descending order by lastUsed
+                    var sortedTabs = client.tabs
+                    sortedTabs.sort { $0.lastUsed > $1.lastUsed }
+                    return ClientAndTabs(client: client.client, tabs: sortedTabs)
+                }
+                .sorted { lhs, rhs in
+                    // Get the most recent tab timestamp for each client (or 0 if no tabs)
+                    let lhsLatest = lhs.tabs.first?.lastUsed ?? 0
+                    let rhsLatest = rhs.tabs.first?.lastUsed ?? 0
+
+                    // Sort by most recent tab timestamp
+                    return lhsLatest > rhsLatest
+                }
+
             return deferMaybe(clientAndTabs)
         }
     }
@@ -203,7 +217,7 @@ public class RustRemoteTabs {
         }
     }
 
-    public func getUnsentCommandUrlsByDeviceId(deviceId: String, completion: @escaping ([String]) -> Void) {
+    public func getUnsentCommandUrlsByDeviceId(deviceId: String, completion: @Sendable @escaping ([String]) -> Void) {
         self.getUnsentCommandsByDeviceId(deviceId: deviceId) { commands in
             let urls = commands.map { item in
                 switch item.command {
@@ -233,7 +247,7 @@ public class RustRemoteTabs {
         }
     }
 
-    private func getUnsentCommandsByDeviceId(deviceId: String, completion: @escaping ([PendingCommand]) -> Void) {
+    private func getUnsentCommandsByDeviceId(deviceId: String, completion: @Sendable @escaping ([PendingCommand]) -> Void) {
         queue.async { [unowned self] in
             guard let tabsCommandQueue = self.tabsCommandQueue else {
                 let err = TabsApiError.UnexpectedTabsError(reason: "Command queue is not initialized") as MaybeErrorType
@@ -270,8 +284,8 @@ func filterSentCommands(unsentCommandUrls: [String], commands: [PendingCommand])
     return sentCommands
 }
 
-internal class RemoteTabsCommandQueue {
-    var commandStore: RemoteCommandStore
+final class RemoteTabsCommandQueue: Sendable {
+    let commandStore: RemoteCommandStore
     private let logger: Logger
 
     init(tabsStore: TabsStore, logger: Logger) {
@@ -348,12 +362,9 @@ internal class RemoteTabsCommandQueue {
 
 public extension RemoteTabRecord {
     func toRemoteTab(client: RemoteClient) -> RemoteTab? {
-        guard let url = Foundation.URL(string: self.urlHistory[0], invalidCharacters: false) else { return nil }
+        guard let url = Foundation.URL(string: self.urlHistory[0]) else { return nil }
         let history = self.urlHistory[1...].map { url in
-            Foundation.URL(
-                string: url,
-                invalidCharacters: false
-            )
+            Foundation.URL(string: url)
         }.compactMap { $0 }
         let icon = self.icon != nil ? Foundation.URL(fileURLWithPath: self.icon ?? "") : nil
 

@@ -3,12 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Shared
 import MobileCoreServices
 import WebKit
 import UniformTypeIdentifiers
 
-class ShareManager: NSObject, FeatureFlaggable {
+class ShareManager: NSObject {
     private struct ActivityIdentifiers {
         static let pocketIconExtension = "com.ideashower.ReadItLaterPro.AddToPocketExtension"
         static let pocketActionExtension = "com.ideashower.ReadItLaterPro.Action-Extension"
@@ -38,27 +37,7 @@ class ShareManager: NSObject, FeatureFlaggable {
 
         activityViewController.excludedActivityTypes = excludingActivities
 
-        activityViewController.completionWithItemsHandler = { activityType, completed, returnedItems, activityError in
-            guard completed else {
-                completionHandler(completed, activityType)
-                return
-            }
-
-            // Add telemetry for Pocket extension activityTypes
-            if activityType?.rawValue == ActivityIdentifiers.pocketIconExtension {
-                TelemetryWrapper.recordEvent(category: .action,
-                                             method: .tap,
-                                             object: .shareSheet,
-                                             value: .sharePocketIcon,
-                                             extras: nil)
-            } else if activityType?.rawValue == ActivityIdentifiers.pocketActionExtension {
-                TelemetryWrapper.recordEvent(category: .action,
-                                             method: .tap,
-                                             object: .shareSheet,
-                                             value: .shareSaveToPocket,
-                                             extras: nil)
-            }
-
+        activityViewController.completionWithItemsHandler = { activityType, completed, _, _ in
             completionHandler(completed, activityType)
         }
 
@@ -89,14 +68,9 @@ class ShareManager: NSObject, FeatureFlaggable {
             }
 
         case .tab(let siteURL, let tab):
-            let isSentFromFirefoxEnabled = LegacyFeatureFlagsManager.shared.isFeatureEnabled(
-                .sentFromFirefox,
-                checking: .buildAndUser
-            )
             activityItems.append(
                 URLActivityItemProvider(
-                    url: siteURL,
-                    allowSentFromFirefoxTreatment: isSentFromFirefoxEnabled
+                    url: siteURL
                 )
             )
 
@@ -116,9 +90,8 @@ class ShareManager: NSObject, FeatureFlaggable {
 
             // Add the webview for an option to add a website to the iOS home screen
             if #available(iOS 16.4, *), let webView = tab.webView {
-                // NOTE: You will not see "Add to Home Screen" option on debug builds. Possibly this is because of how the
-                // com.apple.developer.web-browser entitlement is applied...
-                activityItems.append(webView)
+                activityItems.append(HomePageActivity(url: webView.url,
+                                                      title: webView.title))
             }
 
             if let explicitShareMessage {
@@ -128,8 +101,7 @@ class ShareManager: NSObject, FeatureFlaggable {
                 // share a display title and/or subject line
                 activityItems.append(
                     TitleActivityItemProvider(
-                        title: tab.displayTitle,
-                        applySentFromFirefoxTreatment: isSentFromFirefoxEnabled
+                        title: tab.displayTitle
                     )
                 )
             }

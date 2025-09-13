@@ -6,13 +6,20 @@ import Common
 import Redux
 import UIKit
 
+protocol TabDisplayViewDragAndDropInteraction: AnyObject {
+    func dragAndDropStarted()
+    func dragAndDropEnded()
+}
+
 class TabDisplayView: UIView,
                       ThemeApplicable,
                       UICollectionViewDelegate,
                       UICollectionViewDelegateFlowLayout,
                       TabCellDelegate,
                       SwipeAnimatorDelegate,
-                      InactiveTabsSectionManagerDelegate {
+                      InactiveTabsSectionManagerDelegate,
+                      FeatureFlaggable,
+                      InsetUpdatable {
     struct UX {
         static let cornerRadius: CGFloat = 6.0
     }
@@ -25,11 +32,58 @@ class TabDisplayView: UIView,
     private let windowUUID: WindowUUID
     private let inactiveTabsTelemetry = InactiveTabsTelemetry()
     var theme: Theme?
+    weak var dragAndDropDelegate: TabDisplayViewDragAndDropInteraction?
 
-    private var dataSource: TabDisplayDiffableDataSource?
+    lazy var dataSource =
+    TabDisplayDiffableDataSource(
+        collectionView: collectionView,
+        cellProvider: { [weak self] (collectionView, indexPath, sectionItem) ->
+            UICollectionViewCell in
+            guard let self else { return UICollectionViewCell() }
+
+            switch sectionItem {
+            case .inactiveTab(let inactiveTab):
+                guard let cell = collectionView.dequeueReusableCell(
+                    withReuseIdentifier: InactiveTabsCell.cellIdentifier,
+                    for: indexPath
+                ) as? InactiveTabsCell
+                else { return UICollectionViewCell() }
+
+                cell.configure(with: inactiveTab)
+                if let theme = theme {
+                    cell.applyTheme(theme: theme)
+                }
+                return cell
+            case .tab(let tab):
+                if isTabTrayUIExperimentsEnabled {
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: ExperimentTabCell.cellIdentifier,
+                        for: indexPath
+                    ) as? ExperimentTabCell else { return UICollectionViewCell() }
+
+                    let a11yId = "\(AccessibilityIdentifiers.TabTray.tabCell)_\(indexPath.section)_\(indexPath.row)"
+                    cell.configure(with: tab, theme: theme, delegate: self, a11yId: a11yId)
+                    return cell
+                } else {
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: TabCell.cellIdentifier,
+                        for: indexPath
+                    ) as? TabCell else { return UICollectionViewCell() }
+
+                    let a11yId = "\(AccessibilityIdentifiers.TabTray.tabCell)_\(indexPath.section)_\(indexPath.row)"
+                    cell.configure(with: tab, theme: theme, delegate: self, a11yId: a11yId)
+                    return cell
+                }
+            }
+        })
+
+    private var isTabTrayUIExperimentsEnabled: Bool {
+        return featureFlags.isFeatureEnabled(.tabTrayUIExperiments, checking: .buildOnly)
+        && UIDevice.current.userInterfaceIdiom != .pad
+    }
 
     var shouldHideInactiveTabs: Bool {
-        guard !tabsState.isPrivateMode else { return true }
+        guard !tabsState.isPrivateMode && !isTabTrayUIExperimentsEnabled else { return true }
         return tabsState.inactiveTabs.isEmpty
     }
 
@@ -55,7 +109,16 @@ class TabDisplayView: UIView,
         let collectionView = UICollectionView(frame: bounds,
                                               collectionViewLayout: createLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.register(cellType: TabCell.self)
+        if isTabTrayUIExperimentsEnabled {
+            collectionView.register(cellType: ExperimentTabCell.self)
+            collectionView.register(
+                TabTitleSupplementaryView.self,
+                forSupplementaryViewOfKind: TabTitleSupplementaryView.cellIdentifier,
+                withReuseIdentifier: TabTitleSupplementaryView.cellIdentifier
+            )
+        } else {
+            collectionView.register(cellType: TabCell.self)
+        }
         collectionView.register(cellType: InactiveTabsCell.self)
         collectionView.register(
             InactiveTabsHeaderView.self,
@@ -110,7 +173,7 @@ class TabDisplayView: UIView,
 
         tabsState = state
 
-        dataSource?.updateSnapshot(state: tabsState)
+        dataSource.updateSnapshot(state: tabsState)
 
         if let scrollState = state.scrollState {
             scrollToTab(scrollState)
@@ -120,7 +183,7 @@ class TabDisplayView: UIView,
             let action = TabPanelViewAction(panelType: self.panelType,
                                             windowUUID: self.windowUUID,
                                             actionType: TabPanelViewActionType.addNewTab)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         }
     }
 
@@ -139,85 +202,74 @@ class TabDisplayView: UIView,
 
     private func configureDataSource() {
         // swiftlint:disable line_length
-        dataSource = TabDisplayDiffableDataSource(collectionView: collectionView) { [weak self] (collectionView, indexPath, sectionItem) ->
-            UICollectionViewCell in
+        dataSource.supplementaryViewProvider = { [weak self] (collectionView, kind, indexPath) -> UICollectionReusableView? in
             // swiftlint:enable line_length
-            guard let self else { return UICollectionViewCell() }
-
-            switch sectionItem {
-            case .inactiveTab(let inactiveTab):
-                guard let cell = collectionView.dequeueReusableCell(
-                    withReuseIdentifier: InactiveTabsCell.cellIdentifier,
-                    for: indexPath
-                ) as? InactiveTabsCell
-                else { return UICollectionViewCell() }
-
-                cell.configure(with: inactiveTab)
-                if let theme = theme {
-                    cell.applyTheme(theme: theme)
-                }
-                return cell
-
-            case .tab(let tab):
-                guard
-                    let cell = collectionView.dequeueReusableCell(
-                        withReuseIdentifier: TabCell.cellIdentifier,
-                        for: indexPath
-                    ) as? TabCell
-                else { return UICollectionViewCell() }
-
-                let a11yId = "\(AccessibilityIdentifiers.TabTray.tabCell)_\(indexPath.section)_\(indexPath.row)"
-                cell.configure(with: tab, theme: theme, delegate: self, a11yId: a11yId)
-                return cell
-            }
+            return self?.getSupplementary(collectionView: collectionView, kind: kind, indexPath: indexPath)
         }
+    }
 
-        // swiftlint:disable line_length
-        dataSource?.supplementaryViewProvider = { [weak self] (collectionView, kind, indexPath) -> UICollectionReusableView? in
-            // swiftlint:enable line_length
-            let reusableView = UICollectionReusableView()
-            let section = self?.getSection(for: indexPath.section)
-
-            guard let self, section != .tabs else { return nil }
-
-            if kind == UICollectionView.elementKindSectionHeader,
-               let headerView = collectionView.dequeueReusableSupplementaryView(
+    private func getSupplementary(collectionView: UICollectionView,
+                                  kind: String,
+                                  indexPath: IndexPath) -> UICollectionReusableView? {
+        switch kind {
+        case UICollectionView.elementKindSectionHeader:
+            guard let headerView = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
                 withReuseIdentifier: InactiveTabsHeaderView.cellIdentifier,
-                for: indexPath) as? InactiveTabsHeaderView {
-                headerView.state = tabsState.isInactiveTabsExpanded ? .down : .trailing
-                if let theme = theme {
-                    headerView.applyTheme(theme: theme)
-                }
-                headerView.moreButton.isHidden = false
-                headerView.moreButton.addTarget(self,
-                                                action: #selector(toggleInactiveTab),
-                                                for: .touchUpInside)
-                headerView.accessibilityLabel = tabsState.isInactiveTabsExpanded ?
-                    .TabsTray.InactiveTabs.TabsTrayInactiveTabsSectionOpenedAccessibilityTitle :
-                    .TabsTray.InactiveTabs.TabsTrayInactiveTabsSectionClosedAccessibilityTitle
-                let tapGestureRecognizer = UITapGestureRecognizer(target: self,
-                                                                  action: #selector(toggleInactiveTab))
-                headerView.addGestureRecognizer(tapGestureRecognizer)
-                return headerView
-            } else if kind == UICollectionView.elementKindSectionFooter,
-                      tabsState.isInactiveTabsExpanded,
-                      let footerView = collectionView.dequeueReusableSupplementaryView(
-                        ofKind: UICollectionView.elementKindSectionFooter,
-                        withReuseIdentifier: InactiveTabsFooterView.cellIdentifier,
-                        for: indexPath) as? InactiveTabsFooterView {
-                if let theme = theme {
-                    footerView.applyTheme(theme: theme)
-                }
-                footerView.buttonClosure = {
-                    let action = TabPanelViewAction(panelType: self.panelType,
-                                                    windowUUID: self.windowUUID,
-                                                    actionType: TabPanelViewActionType.closeAllInactiveTabs)
-                    store.dispatch(action)
-                }
-                return footerView
+                for: indexPath) as? InactiveTabsHeaderView
+            else { return nil }
+
+            headerView.state = tabsState.isInactiveTabsExpanded ? .down : .trailing
+            if let theme = theme {
+                headerView.applyTheme(theme: theme)
             }
-            return reusableView
+            headerView.moreButton.isHidden = false
+            headerView.moreButton.addTarget(self,
+                                            action: #selector(toggleInactiveTab),
+                                            for: .touchUpInside)
+            headerView.accessibilityLabel = tabsState.isInactiveTabsExpanded ?
+                .TabsTray.InactiveTabs.TabsTrayInactiveTabsSectionOpenedAccessibilityTitle :
+                .TabsTray.InactiveTabs.TabsTrayInactiveTabsSectionClosedAccessibilityTitle
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self,
+                                                              action: #selector(toggleInactiveTab))
+            headerView.addGestureRecognizer(tapGestureRecognizer)
+            return headerView
+
+        case TabTitleSupplementaryView.cellIdentifier:
+            let titleView = collectionView.dequeueReusableSupplementaryView(
+                ofKind: TabTitleSupplementaryView.cellIdentifier,
+                withReuseIdentifier: TabTitleSupplementaryView.cellIdentifier,
+                for: indexPath
+            ) as? TabTitleSupplementaryView
+
+            guard let tab = tabsState.tabs[safe: indexPath.row] else {
+                return nil
+            }
+            titleView?.configure(with: tab, theme: theme)
+            return titleView
+
+        case UICollectionView.elementKindSectionFooter:
+            guard tabsState.isInactiveTabsExpanded,
+                  let footerView = collectionView.dequeueReusableSupplementaryView(
+                    ofKind: UICollectionView.elementKindSectionFooter,
+                    withReuseIdentifier: InactiveTabsFooterView.cellIdentifier,
+                    for: indexPath) as? InactiveTabsFooterView
+            else { return nil }
+
+            if let theme = theme {
+                footerView.applyTheme(theme: theme)
+            }
+            footerView.buttonClosure = {
+                let action = TabPanelViewAction(panelType: self.panelType,
+                                                windowUUID: self.windowUUID,
+                                                actionType: TabPanelViewActionType.closeAllInactiveTabs)
+                store.dispatchLegacy(action)
+            }
+            return footerView
+
+        default:
+            assertionFailure("This is a developer error")
+            return nil
         }
     }
 
@@ -241,7 +293,11 @@ class TabDisplayView: UIView,
             // If on private mode or regular mode but without inactive
             // tabs we return only the tabs layout
             guard !shouldHideInactiveTabs else {
-                return self.tabsSectionManager.layoutSection(layoutEnvironment)
+                if isTabTrayUIExperimentsEnabled {
+                    return self.tabsSectionManager.experimentLayoutSection(layoutEnvironment)
+                } else {
+                    return self.tabsSectionManager.layoutSection(layoutEnvironment)
+                }
             }
 
             let section = getSection(for: sectionIndex)
@@ -251,7 +307,11 @@ class TabDisplayView: UIView,
                     layoutEnvironment,
                     isExpanded: tabsState.isInactiveTabsExpanded)
             case .tabs:
-                return self.tabsSectionManager.layoutSection(layoutEnvironment)
+                if isTabTrayUIExperimentsEnabled {
+                    return self.tabsSectionManager.experimentLayoutSection(layoutEnvironment)
+                } else {
+                    return self.tabsSectionManager.layoutSection(layoutEnvironment)
+                }
             }
         }
         return layout
@@ -260,11 +320,15 @@ class TabDisplayView: UIView,
     func applyTheme(theme: Theme) {
         self.theme = theme
         collectionView.backgroundColor = theme.colors.layer3
+        collectionView.visibleCells.forEach { ($0 as? ThemeApplicable)?.applyTheme(theme: theme) }
+        collectionView.visibleSupplementaryViews(ofKind: TabTitleSupplementaryView.cellIdentifier)
+            .compactMap { $0 as? TabTitleSupplementaryView }
+            .forEach { $0.applyTheme(theme: theme) }
     }
 
     private func getSection(for sectionIndex: Int) -> TabDisplayViewSection {
+        let snapshot = dataSource.snapshot()
         guard
-            let snapshot = dataSource?.snapshot(),
             sectionIndex >= 0,
             sectionIndex < snapshot.sectionIdentifiers.count
         else { return TabDisplayViewSection.tabs }
@@ -278,28 +342,30 @@ class TabDisplayView: UIView,
                                         tabUUID: inactiveTabs.tabUUID,
                                         windowUUID: windowUUID,
                                         actionType: TabPanelViewActionType.closeInactiveTab)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        if let selectedItem = dataSource?.itemIdentifier(for: indexPath) {
+        if let selectedItem = dataSource.itemIdentifier(for: indexPath) {
             switch selectedItem {
             case .inactiveTab(let inactiveTabsModel):
                 inactiveTabsTelemetry.tabOpened()
                 let tabUUID = inactiveTabsModel.tabUUID
                 let action = TabPanelViewAction(panelType: panelType,
                                                 tabUUID: tabUUID,
+                                                selectedTabIndex: indexPath.item,
                                                 isInactiveTab: true,
                                                 windowUUID: windowUUID,
                                                 actionType: TabPanelViewActionType.selectTab)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
             case .tab(let tabModel):
                 let tabUUID = tabModel.tabUUID
                 let action = TabPanelViewAction(panelType: panelType,
                                                 tabUUID: tabUUID,
+                                                selectedTabIndex: indexPath.item,
                                                 windowUUID: windowUUID,
                                                 actionType: TabPanelViewActionType.selectTab)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
             }
         }
     }
@@ -321,21 +387,23 @@ class TabDisplayView: UIView,
         let action = TabPanelViewAction(panelType: panelType,
                                         windowUUID: windowUUID,
                                         actionType: TabPanelViewActionType.toggleInactiveTabs)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     // MARK: - TabCellDelegate
     func tabCellDidClose(for tabUUID: TabUUID) {
-        let action = TabPanelViewAction(panelType: panelType,
-                                        tabUUID: tabUUID,
-                                        windowUUID: windowUUID,
-                                        actionType: TabPanelViewActionType.closeTab)
-        store.dispatch(action)
+        if !isDragging {
+            let action = TabPanelViewAction(panelType: panelType,
+                                            tabUUID: tabUUID,
+                                            windowUUID: windowUUID,
+                                            actionType: TabPanelViewActionType.closeTab)
+            store.dispatchLegacy(action)
+        }
     }
 
     // MARK: - SwipeAnimatorDelegate
     func swipeAnimator(_ animator: SwipeAnimator) {
-        guard let tabCell = animator.animatingView as? TabCell,
+        guard let tabCell = animator.animatingView as? UICollectionViewCell,
               let indexPath = collectionView.indexPath(for: tabCell) else { return }
 
         let tab = tabsState.tabs[indexPath.item]
@@ -343,13 +411,20 @@ class TabDisplayView: UIView,
                                         tabUUID: tab.tabUUID,
                                         windowUUID: windowUUID,
                                         actionType: TabPanelViewActionType.closeTab)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
         UIAccessibility.post(notification: UIAccessibility.Notification.announcement,
-                             argument: String.TabTrayClosingTabAccessibilityMessage)
+                             argument: String.TabsTray.TabTrayClosingTabAccessibilityMessage)
     }
 
     func swipeAnimatorIsAnimateAwayEnabled(_ animator: SwipeAnimator) -> Bool {
         return !isDragging
+    }
+
+    // MARK: - InsetUpdatable
+
+    func updateInsets(top: CGFloat, bottom: CGFloat) {
+        collectionView.contentInset.top = top
+        collectionView.contentInset.bottom = bottom
     }
 }
 
@@ -397,6 +472,14 @@ extension TabDisplayView: UICollectionViewDragDelegate, UICollectionViewDropDele
             actionType: TabPanelViewActionType.moveTab
         )
 
-        store.dispatch(action)
+        store.dispatchLegacy(action)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, dragSessionWillBegin session: UIDragSession) {
+        dragAndDropDelegate?.dragAndDropStarted()
+    }
+
+    func collectionView(_ collectionView: UICollectionView, dragSessionDidEnd session: UIDragSession) {
+        dragAndDropDelegate?.dragAndDropEnded()
     }
 }

@@ -4,11 +4,10 @@
 
 import UIKit
 import Common
-import Shared
 
 class ThemedNavigationController: DismissableNavigationViewController, Themeable {
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -44,8 +43,9 @@ class ThemedNavigationController: DismissableNavigationViewController, Themeable
         super.viewDidLoad()
         modalPresentationStyle = .overFullScreen
         modalPresentationCapturesStatusBarAppearance = true
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
-        listenForThemeChange(view)
     }
 
     private func setupNavigationBarAppearance(theme: Theme) {

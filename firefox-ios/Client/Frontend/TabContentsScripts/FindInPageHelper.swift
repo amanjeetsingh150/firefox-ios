@@ -4,11 +4,13 @@
 
 import Common
 import Foundation
-import Shared
 import WebKit
 
 protocol FindInPageHelperDelegate: AnyObject {
+    @MainActor
     func findInPageHelper(_ findInPageHelper: FindInPageHelper, didUpdateCurrentResult currentResult: Int)
+
+    @MainActor
     func findInPageHelper(_ findInPageHelper: FindInPageHelper, didUpdateTotalResults totalResults: Int)
 }
 
@@ -30,6 +32,7 @@ class FindInPageHelper: TabContentScript {
         return ["findInPageHandler"]
     }
 
+    @MainActor
     func userContentController(
         _ userContentController: WKUserContentController,
         didReceiveScriptMessage message: WKScriptMessage

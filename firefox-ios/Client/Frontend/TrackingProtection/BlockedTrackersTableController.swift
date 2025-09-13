@@ -5,7 +5,6 @@
 import Foundation
 import Common
 import Shared
-import SiteImageView
 import ComponentLibrary
 
 struct BlockedTrackerItem: Hashable {
@@ -17,7 +16,8 @@ struct BlockedTrackerItem: Hashable {
 // MARK: BlockedTrackersTableViewController
 class BlockedTrackersTableViewController: UIViewController,
                                           Themeable,
-                                          UITableViewDelegate {
+                                          UITableViewDelegate,
+                                          Notifiable {
     private struct UX {
         static let baseCellHeight: CGFloat = 44
         static let baseDistance: CGFloat = 20
@@ -38,7 +38,7 @@ class BlockedTrackersTableViewController: UIViewController,
     var model: BlockedTrackersTableModel
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     let windowUUID: WindowUUID
 
     var currentWindowUUID: UUID? { return windowUUID }
@@ -52,14 +52,16 @@ class BlockedTrackersTableViewController: UIViewController,
         self.notificationCenter = notificationCenter
         self.themeManager = themeManager
         super.init(nibName: nil, bundle: nil)
+
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: View Lifecycle
@@ -68,12 +70,14 @@ class BlockedTrackersTableViewController: UIViewController,
         setupView()
         setupDataSource()
         applySnapshot()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         updateViewDetails()
-        listenForThemeChange(view)
         applyTheme()
     }
 
@@ -210,7 +214,7 @@ class BlockedTrackersTableViewController: UIViewController,
     // MARK: Notifications
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             adjustLayout()
         default: break
         }

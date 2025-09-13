@@ -35,11 +35,10 @@ final class LaunchScreenViewControllerTests: XCTestCase {
         XCTAssertEqual(viewModel.startLoadingCalled, 0)
     }
 
-    @MainActor
-    func testViewDidLoad_whenLaunchType_callsCoordinatorLaunch() async {
+    func testViewDidLoad_whenLaunchType_callsCoordinatorLaunch() {
         viewModel.mockLaunchType = .intro(manager: viewModel.introScreenManager)
         let subject = createSubject()
-        await subject.startLoading()
+        subject.startLoading()
 
         guard case .intro = coordinatorDelegate.savedLaunchType else {
             XCTFail("Expected intro, but was \(String(describing: coordinatorDelegate.savedLaunchType))")
@@ -50,11 +49,10 @@ final class LaunchScreenViewControllerTests: XCTestCase {
         XCTAssertEqual(viewModel.startLoadingCalled, 1)
     }
 
-    @MainActor
-    func testViewDidLoad_whenNilLaunchType_callsCoordinatorBrowser() async {
+    func testViewDidLoad_whenNilLaunchType_callsCoordinatorBrowser() {
         viewModel.mockLaunchType = nil
         let subject = createSubject()
-        await subject.startLoading()
+        subject.startLoading()
 
         XCTAssertEqual(coordinatorDelegate.launchWithTypeCalled, 0)
         XCTAssertEqual(coordinatorDelegate.launchBrowserCalled, 1)
@@ -71,7 +69,7 @@ final class LaunchScreenViewControllerTests: XCTestCase {
     }
 
     // MARK: - Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> LaunchScreenViewController {
         let subject = LaunchScreenViewController(windowUUID: windowUUID,
                                                  coordinator: coordinatorDelegate,

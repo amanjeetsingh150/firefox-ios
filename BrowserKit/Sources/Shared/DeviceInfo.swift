@@ -56,7 +56,7 @@ extension DeviceInfo {
     }
 
     public class func deviceModel() -> String {
-        return UIDevice.current.model
+        return UIDeviceDetails.model
     }
 
     public class func isBlurSupported() -> Bool {
@@ -69,16 +69,30 @@ extension DeviceInfo {
     }
 
     public class func hasConnectivity() -> Bool {
-        let status = Reach().connectionStatus()
-        switch status {
-        case .online(.wwan), .online(.wiFi):
-            return true
+        return connectionType() != .offline
+    }
+
+    /// Represents the current network connection type.
+    public enum ConnectionType: String {
+        case wifi
+        case cellular
+        case offline
+    }
+
+    /// Convenience method to determine the current network connection type.
+    public class func connectionType() -> ConnectionType {
+        switch Reach().connectionStatus() {
+        case .online(.wiFi):
+            return .wifi
+        case .online(.wwan):
+            return .cellular
         default:
-            return false
+            return .offline
         }
     }
 
     // Reports portrait screen size regardless of the current orientation.
+    @MainActor
     public class func screenSizeOrientationIndependent() -> CGSize {
         let screenSize = UIScreen.main.bounds.size
         return CGSize(width: min(screenSize.width, screenSize.height), height: max(screenSize.width, screenSize.height))

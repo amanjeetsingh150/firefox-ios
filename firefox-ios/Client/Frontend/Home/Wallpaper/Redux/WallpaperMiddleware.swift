@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import Common
 import Redux
 
 class WallpaperMiddleware {
@@ -32,7 +31,7 @@ class WallpaperMiddleware {
                 windowUUID: action.windowUUID,
                 actionType: WallpaperMiddlewareActionType.wallpaperDidInitialize
             )
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         default:
             break
         }
@@ -46,7 +45,7 @@ class WallpaperMiddleware {
                 windowUUID: action.windowUUID,
                 actionType: WallpaperMiddlewareActionType.wallpaperDidChange
             )
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         default:
             break
         }

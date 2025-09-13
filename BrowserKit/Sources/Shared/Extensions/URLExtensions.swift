@@ -4,7 +4,6 @@
 
 import UIKit
 import Common
-import WebEngine
 
 // The list of permanent URI schemes has been taken from http://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml
 private let permanentURISchemes = [
@@ -137,16 +136,20 @@ extension URL {
             return self
         }
 
-        if self.absoluteString.starts(with: "blob:") {
+        if absoluteString.starts(with: "blob:") {
             return URL(string: "blob:")
         }
 
-        if self.isFileURL {
-            return URL(string: "file://\(self.lastPathComponent)")
+        if isFileURL {
+            if #available(iOS 16.0, *) {
+                return URL(filePath: lastPathComponent)
+            } else {
+                return URL(fileURLWithPath: lastPathComponent)
+            }
         }
 
-        if self.isReaderModeURL {
-            return self.decodeReaderModeURL?.havingRemovedAuthorisationComponents()
+        if isReaderModeURL {
+            return decodeReaderModeURL?.havingRemovedAuthorisationComponents()
         }
 
         if let internalUrl = InternalURL(self), internalUrl.isErrorPage {
@@ -154,7 +157,7 @@ extension URL {
         }
 
         if !InternalURL.isValid(url: self) {
-            return self.havingRemovedAuthorisationComponents()
+            return havingRemovedAuthorisationComponents()
         }
 
         return nil
@@ -205,7 +208,7 @@ extension URL {
 // MARK: - Exported URL Schemes
 
 extension URL {
-    public static var mozPublicScheme: String = {
+    public static let mozPublicScheme: String = {
         guard let string = Bundle.main.object(
             forInfoDictionaryKey: "MozPublicURLScheme"
         ) as? String, !string.isEmpty else {
@@ -215,7 +218,7 @@ extension URL {
         return string
     }()
 
-    public static var mozInternalScheme: String = {
+    public static let mozInternalScheme: String = {
         guard let string = Bundle.main.object(
             forInfoDictionaryKey: "MozInternalURLScheme"
         ) as? String, !string.isEmpty else {

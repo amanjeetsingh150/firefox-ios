@@ -3,29 +3,32 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
-import Shared
 import Common
 @testable import Client
 
+@MainActor
 final class SceneCoordinatorTests: XCTestCase {
     private var mockRouter: MockRouter!
+    private var profile: MockProfile!
 
     override func setUp() {
         super.setUp()
+        profile = MockProfile()
         DependencyHelperMock().bootstrapDependencies()
-        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: AppContainer.shared.resolve())
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
         self.mockRouter = MockRouter(navigationController: MockNavigationController())
     }
 
     override func tearDown() {
-        super.tearDown()
         mockRouter = nil
-        AppContainer.shared.reset()
+        profile = nil
+        DependencyHelperMock().reset()
+        super.tearDown()
     }
 
     func testInitialState() {
         let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        let subject = SceneCoordinator(scene: scene!)
+        let subject = SceneCoordinator(scene: scene!, introManager: MockIntroScreenManager(isModernEnabled: false))
         trackForMemoryLeaks(subject)
 
         XCTAssertNotNil(subject.window)
@@ -85,6 +88,8 @@ final class SceneCoordinatorTests: XCTestCase {
         XCTAssertNotNil(subject.childCoordinators.first as? BrowserCoordinator)
     }
 
+    // MARK: - Handle route
+
     func testHandleRoute_launchNotFinished_routeSaved() {
         let subject = createSubject()
 
@@ -97,6 +102,7 @@ final class SceneCoordinatorTests: XCTestCase {
 
     func testHandleRoute_launchFinishedAndBrowserNotReady_routeSaved() throws {
         let subject = createSubject()
+        setupNimbusDeeplinkOptimization(isEnabled: false)
 
         subject.start()
         subject.launchBrowser()
@@ -121,8 +127,6 @@ final class SceneCoordinatorTests: XCTestCase {
         XCTAssertNil(subject.savedRoute)
     }
 
-    // MARK: - Handle route
-
     func testHandleShowOnboarding_returnsTrueAndShowsOnboarding() {
         let subject = createSubject()
 
@@ -134,10 +138,10 @@ final class SceneCoordinatorTests: XCTestCase {
     }
 
     // MARK: - Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> SceneCoordinator {
         let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        let subject = SceneCoordinator(scene: scene!)
+        let subject = SceneCoordinator(scene: scene!, introManager: MockIntroScreenManager(isModernEnabled: false))
         // Replace created router from scene with a mock router so we don't trigger real navigation in our tests
         subject.router = mockRouter
         trackForMemoryLeaks(subject, file: file, line: line)
@@ -148,5 +152,11 @@ final class SceneCoordinatorTests: XCTestCase {
         let result = subject.canHandle(route: route)
         subject.handle(route: route)
         return result
+    }
+
+    private func setupNimbusDeeplinkOptimization(isEnabled: Bool) {
+        FxNimbus.shared.features.deeplinkOptimizationRefactorFeature.with { _, _ in
+            return DeeplinkOptimizationRefactorFeature(enabled: isEnabled)
+        }
     }
 }

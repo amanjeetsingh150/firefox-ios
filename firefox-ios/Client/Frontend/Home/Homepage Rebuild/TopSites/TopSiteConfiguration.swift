@@ -4,19 +4,29 @@
 
 import Foundation
 import Storage
-import Shared
 
 /// Top site UI class, used in the homepage top site section
-struct TopSiteConfiguration: Hashable, Equatable {
-    var site: Site
+struct TopSiteConfiguration: Hashable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
+    let site: Site
     var title: String
 
     var sponsoredText: String {
         return .FirefoxHomepage.Shortcuts.Sponsored
     }
 
+    private var pinnedTitle: String {
+        .localizedStringWithFormat(
+            .FirefoxHomepage.Shortcuts.PinnedAccessibilityLabel,
+            title
+        )
+    }
+
+    private var pinnedStatusTitle: String {
+        return isPinned ? pinnedTitle : title
+    }
+
     var accessibilityLabel: String? {
-        return isSponsored ? "\(title), \(sponsoredText)" : title
+        return isSponsored ? "\(pinnedStatusTitle), \(sponsoredText)" : pinnedStatusTitle
     }
 
     var isPinned: Bool {
@@ -35,6 +45,10 @@ struct TopSiteConfiguration: Hashable, Equatable {
         return site.type
     }
 
+    var shortDomain: String? {
+        return site.url.asURL?.shortDomain
+    }
+
     var isGooglePinnedTile: Bool {
         guard case SiteType.pinnedSite(let siteInfo) = site.type else {
             return false
@@ -45,6 +59,14 @@ struct TopSiteConfiguration: Hashable, Equatable {
 
     var isGoogleURL: Bool {
         return site.url == GoogleTopSiteManager.Constants.usUrl || site.url == GoogleTopSiteManager.Constants.rowUrl
+    }
+
+    public var debugDescription: String {
+        return "TopSiteConfiguration (\(site))"
+    }
+
+    public var description: String {
+        return debugDescription
     }
 
     init(site: Site) {
@@ -65,7 +87,7 @@ struct TopSiteConfiguration: Hashable, Equatable {
         DefaultSponsoredTileTelemetry().sendImpressionTelemetry(tileSite: site, position: position)
     }
 
-    func getTelemetrySiteType() -> String {
+    var getTelemetrySiteType: String {
         if isGooglePinnedTile {
             return "google"
         } else if isPinned {

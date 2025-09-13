@@ -3,22 +3,18 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Shared
 
 /*
  * Factory methods for converting rows from SQLite into model objects
  */
 extension BrowserDBSQLite {
     class func basicHistoryColumnFactory(_ row: SDRow) -> Site {
-        let id = row["historyID"] as? Int
         guard let url = row["url"] as? String, let title = row["title"] as? String else {
             assertionFailure("None of these properties should be nil")
             return Site.createBasicSite(url: "", title: "")
         }
 
-        // FXIOS-10996 improved our `Site` type to have strict unique IDs. But this `historyID` field was previously
-        // optional, so we need to migrate users over in v136. Otherwise users will lose all their pinned top sites.
-        var site = Site.createBasicSite(id: id, url: url, title: title)
+        var site = Site.createBasicSite(url: url, title: title, isBookmarked: nil)
 
         // Extract a boolean from the row if it's present.
         if let isBookmarked = row["is_bookmarked"] as? Int {

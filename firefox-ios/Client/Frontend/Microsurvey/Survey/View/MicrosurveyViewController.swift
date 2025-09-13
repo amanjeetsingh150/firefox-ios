@@ -16,9 +16,9 @@ final class MicrosurveyViewController: UIViewController,
                                        Notifiable {
     typealias SubscriberStateType = MicrosurveyState
 
-    // MARK: Themable Variables
+    // MARK: Themeable Variables
     var themeManager: Common.ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: Common.NotificationProtocol
     var currentWindowUUID: UUID? { windowUUID }
 
@@ -135,8 +135,11 @@ final class MicrosurveyViewController: UIViewController,
         microsurveyState = MicrosurveyState(windowUUID: windowUUID)
         self.model = model
         super.init(nibName: nil, bundle: nil)
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
 
         subscribeToRedux()
         configureUI()
@@ -157,7 +160,7 @@ final class MicrosurveyViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .microsurvey)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
         let uuid = windowUUID
         store.subscribe(self, transform: {
             return $0.select({ appState in
@@ -166,17 +169,17 @@ final class MicrosurveyViewController: UIViewController,
         })
     }
 
-    func unsubscribeFromRedux() {
+    nonisolated func unsubscribeFromRedux() {
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .microsurvey)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        listenForThemeChange(view)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
@@ -187,14 +190,13 @@ final class MicrosurveyViewController: UIViewController,
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyAction(surveyId: model.id, windowUUID: windowUUID, actionType: MicrosurveyActionType.surveyDidAppear)
         )
     }
 
     deinit {
         unsubscribeFromRedux()
-        tableView.removeFromSuperview()
     }
 
     private func configureUI() {
@@ -305,7 +307,7 @@ final class MicrosurveyViewController: UIViewController,
     // MARK: Notifiable
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             adjustIconSize()
         default: break
         }
@@ -318,7 +320,7 @@ final class MicrosurveyViewController: UIViewController,
     }
 
     private func sendTelemetry() {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyAction(
                 surveyId: model.id,
                 userSelection: selectedOption,
@@ -344,7 +346,7 @@ final class MicrosurveyViewController: UIViewController,
         )
         confirmationView.applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
         UIAccessibility.post(notification: .screenChanged, argument: nil)
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyAction(
                 surveyId: model.id,
                 windowUUID: windowUUID,
@@ -355,7 +357,7 @@ final class MicrosurveyViewController: UIViewController,
 
     @objc
     private func didTapClose() {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyAction(
                 surveyId: model.id,
                 windowUUID: windowUUID,
@@ -366,7 +368,7 @@ final class MicrosurveyViewController: UIViewController,
 
     @objc
     private func didTapPrivacyPolicy() {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyAction(
                 surveyId: model.id,
                 windowUUID: windowUUID,

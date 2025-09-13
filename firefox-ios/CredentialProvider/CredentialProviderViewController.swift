@@ -5,9 +5,9 @@
 import AuthenticationServices
 import LocalAuthentication
 
+import MozillaAppServices
 import Shared
 import Storage
-import Sync
 
 protocol CredentialProviderViewProtocol: AnyObject {
     var extensionContext: ASCredentialProviderExtensionContext { get }
@@ -26,7 +26,7 @@ struct CredentialProvider {
         return UIColor(named: "credentialCellColor")
     }
 
-    static var tableViewBackgroundColor: UIColor = .systemGroupedBackground
+    static let tableViewBackgroundColor: UIColor = .systemGroupedBackground
 
     static var welcomeScreenBackgroundColor: UIColor? {
         return UIColor(named: "launchScreenBackgroundColor")
@@ -39,6 +39,9 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
 
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
+        // Initialize app services ( including NSS ). Must be called before any other calls to rust components.
+        // In this case we need to call this before we try to decrypt any passwords, otherwise decryption fails.
+        MozillaAppServices.initialize()
         self.presenter = CredentialProviderPresenter(view: self)
     }
 
@@ -196,8 +199,11 @@ extension CredentialProviderViewController: CredentialWelcomeViewControllerDeleg
                 self.extensionContext.cancelRequest(withError: ASExtensionError(.failed))
                 return
             }
-            self.presenter?.profile.syncCredentialIdentities().upon { result in
-                self.extensionContext.completeExtensionConfigurationRequest()
+            self.presenter?.profile.syncCredentialIdentities().uponQueue(.main) { result in
+                // FXIOS-13228 It should be safe to assumeIsolated here because of `.main` queue above
+                MainActor.assumeIsolated {
+                    self.extensionContext.completeExtensionConfigurationRequest()
+                }
             }
         }
     }

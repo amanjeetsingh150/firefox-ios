@@ -6,6 +6,7 @@ import XCTest
 
 @testable import Client
 
+@MainActor
 class OnboardingViewControllerProtocolTests: XCTestCase {
     var nimbusUtility: NimbusOnboardingTestingConfigUtility!
     typealias cards = NimbusOnboardingTestingConfigUtility.CardOrder
@@ -180,7 +181,7 @@ class OnboardingViewControllerProtocolTests: XCTestCase {
 
     // MARK: - Private Helpers
     func createSubject(
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) -> IntroViewController {
         let onboardingViewModel = NimbusOnboardingFeatureLayer().getOnboardingModel(for: .freshInstall)

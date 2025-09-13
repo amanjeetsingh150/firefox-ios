@@ -3,11 +3,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Shared
 import SiteImageView
 
-public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConvertible, CustomDebugStringConvertible {
-    public let id: Int
+// TODO: FXIOS-12712 Make Site actually sendable
+public struct Site: @unchecked Sendable,
+                    Hashable,
+                    Equatable,
+                    Codable,
+                    CustomStringConvertible,
+                    CustomDebugStringConvertible {
     public let url: String
     public let title: String
     public let type: SiteType
@@ -33,15 +37,15 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     public var tileURL: URL {
         switch type {
         case .suggestedSite:
-            return URL(string: url, invalidCharacters: false) ?? URL(string: "about:blank")!
+            return URL(string: url) ?? URL(string: "about:blank")!
         default:
-            return URL(string: url, invalidCharacters: false)?.domainURL ?? URL(string: "about:blank")!
+            return URL(string: url)?.domainURL ?? URL(string: "about:blank")!
         }
     }
 
     /// Gets the second level domain (i.e. `http://www.example.com/` --> `example`).
     public var secondLevelDomain: String? {
-        return URL(string: url, invalidCharacters: false)?.host?.components(separatedBy: ".").suffix(2).first
+        return URL(string: url)?.host?.components(separatedBy: ".").suffix(2).first
     }
 
     public var faviconImageCacheKey: String {
@@ -51,20 +55,19 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     // MARK: - Factory Methods
 
     public static func createBasicSite(
-        id: Int? = nil,
         url: String,
         title: String,
-        isBookmarked: Bool? = nil,
+        isBookmarked: Bool? = false,
         faviconResource: SiteResource? = nil
     ) -> Site {
-        var site = Site(id: id ?? UUID().hashValue, url: url, title: title, type: .basic)
+        var site = Site(url: url, title: title, type: .basic)
         site.isBookmarked = isBookmarked
         site.faviconResource = faviconResource
         return site
     }
 
     public static func createSponsoredSite(url: String, title: String, siteInfo: SponsoredSiteInfo) -> Site {
-        return Site(id: UUID().hashValue, url: url, title: title, type: .sponsoredSite(siteInfo))
+        return Site(url: url, title: title, type: .sponsoredSite(siteInfo))
     }
 
     public static func createSuggestedSite(
@@ -76,7 +79,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     ) -> Site {
         let siteInfo = SuggestedSiteInfo(trackingId: trackingId)
         return Site(
-            id: id ?? UUID().hashValue,
             url: url,
             title: title,
             type: .suggestedSite(siteInfo),
@@ -85,7 +87,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     }
 
     public static func createPinnedSite(
-        id: Int? = nil,
         url: String,
         title: String,
         isGooglePinnedTile: Bool,
@@ -93,7 +94,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     ) -> Site {
         let siteInfo = PinnedSiteInfo(isGooglePinnedTile: isGooglePinnedTile)
         return Site(
-            id: id ?? UUID().hashValue,
             url: url,
             title: title,
             type: .pinnedSite(siteInfo),
@@ -106,7 +106,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
         let siteInfo = PinnedSiteInfo(isGooglePinnedTile: isGooglePinnedTile)
 
         return Site(
-            id: site.id,
             url: site.url,
             title: site.title,
             type: .pinnedSite(siteInfo),
@@ -120,7 +119,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     /// Note: This *copies* the pre-existing Site's ID.
     public static func copiedFrom(site: Site, withLocalizedURLString urlString: String) -> Site {
         return Site(
-            id: site.id,
             url: urlString,
             title: site.title,
             type: site.type,
@@ -133,8 +131,7 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
 
     // MARK: - Initializers
 
-    private init(id: Int, url: String, title: String, type: SiteType, faviconResource: SiteResource? = nil) {
-        self.id = id
+    private init(url: String, title: String, type: SiteType, faviconResource: SiteResource? = nil) {
         self.url = url
         self.title = title
         self.type = type
@@ -142,7 +139,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     }
 
     private init(
-        id: Int,
         url: String,
         title: String,
         type: SiteType,
@@ -151,7 +147,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
         latestVisit: Visit? = nil,
         isBookmarked: Bool? = nil
     ) {
-        self.id = id
         self.url = url
         self.title = title
         self.type = type
@@ -190,7 +185,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
-        try container.encode(id, forKey: .id)
         try container.encode(url, forKey: .url)
         try container.encode(title, forKey: .title)
         try container.encode(type, forKey: .type)
@@ -203,10 +197,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
 
-        // FXIOS-10996 improved our `Site` type to have strict unique IDs. But this field was previously optional, so we need
-        // to migrate users over in v136. Otherwise users will lose all their pinned top sites.
-        let id = try? values.decode(Int.self, forKey: .id)
-
         let url = try values.decode(String.self, forKey: .url)
         let title = try values.decode(String.self, forKey: .title)
 
@@ -216,6 +206,6 @@ public struct Site: Identifiable, Hashable, Equatable, Codable, CustomStringConv
         // Optional properties
         let faviconResource = try? values.decode(SiteResource.self, forKey: .faviconResource)
 
-        self.init(id: id ?? UUID().hashValue, url: url, title: title, type: type, faviconResource: faviconResource)
+        self.init(url: url, title: title, type: type, faviconResource: faviconResource)
     }
 }

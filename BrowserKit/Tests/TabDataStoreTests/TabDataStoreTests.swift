@@ -4,7 +4,6 @@
 
 import XCTest
 @testable import TabDataStore
-import Common
 
 final class TabDataStoreTests: XCTestCase {
     private var mockFileManager: TabFileManagerMock!
@@ -231,7 +230,8 @@ final class TabDataStoreTests: XCTestCase {
                                 faviconURL: "https://test.com/favicon.ico",
                                 isPrivate: false,
                                 lastUsedTime: Date(),
-                                createdAtTime: Date()))
+                                createdAtTime: Date(),
+                                temporaryDocumentSession: [:]))
         }
         return tabs
     }

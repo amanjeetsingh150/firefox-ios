@@ -15,6 +15,10 @@ class RootViewController: UIViewController,
                           SearchSuggestionDelegate,
                           SettingsDelegate,
                           Themeable {
+    private struct UX {
+        static let addressToolbarContainerHorizontalPadding: CGFloat = 16.0
+    }
+
     var currentWindowUUID: UUID?
     var themeManager: ThemeManager
     var themeObserver: NSObjectProtocol?
@@ -33,7 +37,7 @@ class RootViewController: UIViewController,
     private var model = RootViewControllerModel()
 
     // MARK: - Init
-    init(engineProvider: EngineProvider = AppContainer.shared.resolve(),
+    init(engineProvider: EngineProvider,
          windowUUID: UUID?,
          themeManager: ThemeManager = AppContainer.shared.resolve()) {
         self.browserVC = BrowserViewController(engineProvider: engineProvider)
@@ -101,9 +105,11 @@ class RootViewController: UIViewController,
             statusBarFiller.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
             addressToolbarContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            addressToolbarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            addressToolbarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor,
+                                                             constant: UX.addressToolbarContainerHorizontalPadding),
             addressToolbarContainer.bottomAnchor.constraint(equalTo: browserVC.view.topAnchor),
-            addressToolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            addressToolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor,
+                                                              constant: -UX.addressToolbarContainerHorizontalPadding)
         ])
 
         model.addressToolbarDelegate = self
@@ -286,6 +292,16 @@ class RootViewController: UIViewController,
 
     func scrollToTop() {
         browserVC.scrollToTop()
+    }
+
+    func loadPopupWebSource() {
+        let path = URL(fileURLWithPath: Bundle.main.path(forResource: "testPopUp", ofType: "html") ?? "")
+        browserVC.loadUrlOrSearch(SearchTerm(term: path.absoluteString))
+    }
+
+    func loadPrintWebSource() {
+        let path = URL(fileURLWithPath: Bundle.main.path(forResource: "testPrintPreview", ofType: "html") ?? "")
+        browserVC.loadUrlOrSearch(SearchTerm(term: path.absoluteString))
     }
 
     func showErrorPage(page: ErrorPageViewController) {

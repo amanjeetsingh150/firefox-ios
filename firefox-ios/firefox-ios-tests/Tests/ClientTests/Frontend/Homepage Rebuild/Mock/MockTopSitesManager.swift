@@ -4,32 +4,30 @@
 
 import Foundation
 import Storage
+import XCTest
 
 @testable import Client
 
 final class MockTopSitesManager: TopSitesManagerInterface {
-    var getOtherSitesCalledCount = 0
-    var fetchSponsoredSitesCalledCount = 0
     var recalculateTopSitesCalledCount = 0
-
-    var removeTopSiteCalledCount = 0
     var pinTopSiteCalledCount = 0
-    var unpinTopSiteCalledCount = 0
+
+    // We add these completions since this method is called asynchronously
+    var removeTopSiteCalled: () -> Void = {}
+    var unpinTopSiteCalled: () -> Void = {}
 
     func getOtherSites() async -> [TopSiteConfiguration] {
-        getOtherSitesCalledCount += 1
         return createSites(count: 15, subtitle: ": otherSites")
     }
 
     func fetchSponsoredSites() async -> [Site] {
-        fetchSponsoredSitesCalledCount += 1
-
         let contiles = MockSponsoredProvider.defaultSuccessData
         return contiles.compactMap { Site.createSponsoredSite(fromContile: $0) }
     }
 
     func recalculateTopSites(otherSites: [TopSiteConfiguration], sponsoredSites: [Site]) -> [TopSiteConfiguration] {
         recalculateTopSitesCalledCount += 1
+        XCTAssertTrue(Thread.isMainThread)
         return createSites(subtitle: ": total top sites")
     }
 
@@ -43,15 +41,15 @@ final class MockTopSitesManager: TopSitesManagerInterface {
         return sites
     }
 
-    func removeTopSite(_ site: Site) {
-        removeTopSiteCalledCount += 1
+    func removeTopSite(_ site: Site) async {
+        removeTopSiteCalled()
     }
 
     func pinTopSite(_ site: Site) {
         pinTopSiteCalledCount += 1
     }
 
-    func unpinTopSite(_ site: Site) {
-        unpinTopSiteCalledCount += 1
+    func unpinTopSite(_ site: Site) async {
+        unpinTopSiteCalled()
     }
 }

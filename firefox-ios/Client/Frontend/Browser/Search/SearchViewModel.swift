@@ -17,16 +17,15 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
     private var profile: Profile
     private var tabManager: TabManager
     private var suggestClient: SearchSuggestClient?
-    private var highlightManager: HistoryHighlightsManagerProtocol
 
     var remoteClientTabs = [ClientTabsSearchWrapper]()
     var filteredRemoteClientTabs = [ClientTabsSearchWrapper]()
     var filteredOpenedTabs = [Tab]()
-    var searchHighlights = [HighlightItem]()
     var firefoxSuggestions = [RustFirefoxSuggestion]()
     let model: SearchEnginesManager
     var suggestions: [String]? = []
-    static var userAgent: String?
+    // TODO: FXIOS-12588 This global property is not concurrency safe
+    nonisolated(unsafe) static var userAgent: String?
     var searchFeature: FeatureHolder<Search>
     private var searchTelemetry: SearchTelemetry
 
@@ -139,7 +138,6 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
                || hasHistoryAndBookmarksSuggestions
                || !filteredOpenedTabs.isEmpty
                || (!filteredRemoteClientTabs.isEmpty && shouldShowSyncedTabsSuggestions)
-               || !searchHighlights.isEmpty
                || (!firefoxSuggestions.isEmpty && (shouldShowNonSponsoredSuggestions
                                                    || shouldShowSponsoredSuggestions))
     }
@@ -148,8 +146,7 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
          profile: Profile,
          model: SearchEnginesManager,
          tabManager: TabManager,
-         featureConfig: FeatureHolder<Search> = FxNimbus.shared.features.search,
-         highlightManager: HistoryHighlightsManagerProtocol = HistoryHighlightsManager()
+         featureConfig: FeatureHolder<Search> = FxNimbus.shared.features.search
     ) {
         self.isPrivate = isPrivate
         self.isBottomSearchBar = isBottomSearchBar
@@ -157,7 +154,6 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
         self.model = model
         self.tabManager = tabManager
         self.searchFeature = featureConfig
-        self.highlightManager = highlightManager
         self.searchTelemetry = SearchTelemetry(tabManager: tabManager)
     }
 
@@ -172,20 +168,6 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
         }
     }
 
-    private func loadSearchHighlights() {
-        guard featureFlags.isFeatureEnabled(.searchHighlights, checking: .buildOnly) else { return }
-
-        highlightManager.searchHighlightsData(
-            searchQuery: searchQuery,
-            profile: profile,
-            tabs: tabManager.tabs,
-            resultCount: 3) { results in
-            guard let results = results else { return }
-            self.searchHighlights = results
-            self.delegate?.reloadTableView()
-        }
-    }
-
     func querySuggestClient() {
         suggestClient?.cancelPendingRequest()
 
@@ -196,8 +178,9 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
             return
         }
 
-        loadSearchHighlights()
-        _ = loadFirefoxSuggestions()
+        Task {
+            await loadFirefoxSuggestions()
+        }
 
         let tempSearchQuery = searchQuery
         suggestClient?.query(searchQuery,
@@ -229,44 +212,49 @@ class SearchViewModel: FeatureFlaggable, LoaderListener {
         })
     }
 
-    func loadFirefoxSuggestions() -> Task<(), Never>? {
+    /// Provides suggestions from external suggestion providers other than the local ones (history, bookmarks, etc.). For now
+    /// this includes suggestions from `amp` (sponsored ads) and `wikipedia`. Application Services supports the other ones.
+    /// This behaviour is currently geo-locked to the US, so to debug locally ensure your simulator region is set to US.
+    @MainActor
+    func loadFirefoxSuggestions() async {
         let includeNonSponsored = shouldShowNonSponsoredSuggestions
         let includeSponsored = shouldShowSponsoredSuggestions
+
         guard featureFlags.isFeatureEnabled(.firefoxSuggestFeature, checking: .buildAndUser)
                 && (includeNonSponsored || includeSponsored) else {
             if !firefoxSuggestions.isEmpty {
                 firefoxSuggestions = []
                 delegate?.reloadTableView()
             }
-            return nil
+            return
         }
 
         profile.firefoxSuggest?.interruptReader()
 
         let tempSearchQuery = searchQuery
-        let providers = [.amp, .ampMobile, .wikipedia]
+        let providers = [.amp, .wikipedia]
             .filter { NimbusFirefoxSuggestFeatureLayer().isSuggestionProviderAvailable($0) }
             .filter {
                 switch $0 {
                 case .amp: includeSponsored
-                case .ampMobile: includeSponsored
                 case .wikipedia: includeNonSponsored
                 default: false
                 }
             }
-        return Task { [weak self] in
-            guard let self,
-                  let suggestions = try? await self.profile.firefoxSuggest?.query(
-                    tempSearchQuery,
-                    providers: providers,
-                    limit: maxNumOfFirefoxSuggestions
-            ) else { return }
-            await MainActor.run {
-                guard self.searchQuery == tempSearchQuery, self.firefoxSuggestions != suggestions else { return }
-                self.firefoxSuggestions = suggestions
-                self.delegate?.reloadTableView()
-            }
-        }
+
+        // TODO: FXIOS-12610 Profile should be refactored so it is **not** `Sendable`. That will cause future issues with
+        // passing `firefoxSuggest` out of this `@MainActor` isolated context.
+        guard let suggestions = try? await profile.firefoxSuggest?.query(
+            tempSearchQuery,
+            providers: providers,
+            limit: maxNumOfFirefoxSuggestions
+        ),
+              searchQuery == tempSearchQuery,
+              firefoxSuggestions != suggestions
+        else { return }
+
+        firefoxSuggestions = suggestions
+        delegate?.reloadTableView()
     }
 
     func searchTabs(for searchString: String) {

@@ -4,23 +4,42 @@
 
 import Common
 import Foundation
-import MenuKit
-import Shared
+import SummarizeKit
 
 protocol MainMenuCoordinatorDelegate: AnyObject {
+    @MainActor
     func editBookmarkForCurrentTab()
-    func openURLInNewTab(_ url: URL?)
-    func openNewTab(inPrivateMode: Bool)
+
+    @MainActor
     func showLibraryPanel(_ panel: Route.HomepanelSection)
+
+    @MainActor
     func showSettings(at destination: Route.SettingsSection)
+
+    @MainActor
     func showFindInPage()
+
+    @MainActor
     func showSignInView(fxaParameters: FxASignInViewParameters?)
+
+    @MainActor
     func updateZoomPageBarVisibility()
+
+    @MainActor
     func presentSavePDFController()
+
+    @MainActor
+    func presentSiteProtections()
+
+    @MainActor
     func showPrintSheet()
 
     /// Open the share sheet to share the currently selected `Tab`.
+    @MainActor
     func showShareSheetForCurrentlySelectedTab()
+
+    @MainActor
+    func showSummarizePanel(_ trigger: SummarizerTrigger, config: SummarizerConfig?)
 }
 
 class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
@@ -40,17 +59,24 @@ class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
         super.init(router: router)
     }
 
+    func startWithNavController() {
+        let mainMenuViewController = createMainMenuViewController()
+
+        let mainMenuNavController = UINavigationController(rootViewController: mainMenuViewController)
+        mainMenuNavController.isNavigationBarHidden = true
+
+        if let sheetPresentationController = mainMenuNavController.sheetPresentationController {
+            sheetPresentationController.detents = [.medium(), .large()]
+        }
+        mainMenuNavController.sheetPresentationController?.prefersEdgeAttachedInCompactHeight = true
+        mainMenuNavController.sheetPresentationController?.prefersGrabberVisible = true
+        router.present(mainMenuNavController, animated: true, completion: nil)
+    }
+
     func start() {
         router.setRootViewController(
             createMainMenuViewController(),
             hideBar: true
-        )
-    }
-
-    func showDetailViewController() {
-        router.push(
-            createMainMenuDetailViewController(),
-            animated: true
         )
     }
 
@@ -71,63 +97,65 @@ class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
         router.dismiss(animated: animated, completion: { [weak self] in
             guard let self else { return }
 
-            switch destination.destination {
-            case .bookmarks:
-                self.navigationHandler?.showLibraryPanel(.bookmarks)
-
-            case .customizeHomepage:
-                self.navigationHandler?.showSettings(at: .homePage)
-
-            case .downloads:
-                self.navigationHandler?.showLibraryPanel(.downloads)
-
-            case .editBookmark:
-                self.navigationHandler?.editBookmarkForCurrentTab()
-
-            case .findInPage:
-                self.navigationHandler?.showFindInPage()
-
-            case .goToURL:
-                self.navigationHandler?.openURLInNewTab(destination.url)
-
-            case .history:
-                self.navigationHandler?.showLibraryPanel(.history)
-
-            case .newTab:
-                self.navigationHandler?.openNewTab(inPrivateMode: false)
-
-            case .newPrivateTab:
-                self.navigationHandler?.openNewTab(inPrivateMode: true)
-
-            case .passwords:
-                self.navigationHandler?.showSettings(at: .password)
-
-            case .settings:
-                self.navigationHandler?.showSettings(at: .general)
-
-            case .syncSignIn:
-                let fxaParameters = FxASignInViewParameters(
-                    launchParameters: FxALaunchParams(entrypoint: .browserMenu, query: [:]),
-                    flowType: .emailLoginFlow,
-                    referringPage: .appMenu
-                )
-                self.navigationHandler?.showSignInView(fxaParameters: fxaParameters)
-
-            case .printSheet:
-                self.navigationHandler?.showPrintSheet()
-
-            case .shareSheet:
-                self.navigationHandler?.showShareSheetForCurrentlySelectedTab()
-
-            case .saveAsPDF:
-                self.navigationHandler?.presentSavePDFController()
-
-            case .zoom:
-                self.navigationHandler?.updateZoomPageBarVisibility()
-            }
+            self.handleDestination(destination)
 
             removeCoordinatorFromParent()
         })
+    }
+
+    private func handleDestination(_ destination: MenuNavigationDestination) {
+        switch destination.destination {
+        case .bookmarks:
+            navigationHandler?.showLibraryPanel(.bookmarks)
+
+        case .downloads:
+            navigationHandler?.showLibraryPanel(.downloads)
+
+        case .editBookmark:
+            navigationHandler?.editBookmarkForCurrentTab()
+
+        case .findInPage:
+            navigationHandler?.showFindInPage()
+
+        case .history:
+            navigationHandler?.showLibraryPanel(.history)
+
+        case .passwords:
+            navigationHandler?.showSettings(at: .password)
+
+        case .settings:
+            navigationHandler?.showSettings(at: .general)
+
+        case .syncSignIn:
+            let fxaParameters = FxASignInViewParameters(
+                launchParameters: FxALaunchParams(entrypoint: .browserMenu, query: [:]),
+                flowType: .emailLoginFlow,
+                referringPage: .appMenu
+            )
+            navigationHandler?.showSignInView(fxaParameters: fxaParameters)
+
+        case .printSheetV2:
+            navigationHandler?.showPrintSheet()
+
+        case .shareSheet:
+            navigationHandler?.showShareSheetForCurrentlySelectedTab()
+
+        case .saveAsPDFV2:
+            navigationHandler?.presentSavePDFController()
+
+        case .zoom:
+            navigationHandler?.updateZoomPageBarVisibility()
+
+        case .siteProtections:
+            navigationHandler?.presentSiteProtections()
+
+        case .defaultBrowser:
+            DefaultApplicationHelper().openSettings()
+
+        case .webpageSummary(let config):
+            dismissMenuModal(animated: true)
+            navigationHandler?.showSummarizePanel(.mainMenu, config: config)
+        }
     }
 
     // MARK: - Private helpers
@@ -136,11 +164,5 @@ class MainMenuCoordinator: BaseCoordinator, FeatureFlaggable {
         let mainMenuViewController = MainMenuViewController(windowUUID: windowUUID, profile: profile)
         mainMenuViewController.coordinator = self
         return mainMenuViewController
-    }
-
-    private func createMainMenuDetailViewController() -> MainMenuDetailsViewController {
-        let detailVC = MainMenuDetailsViewController(windowUUID: windowUUID)
-        detailVC.coordinator = self
-        return detailVC
     }
 }

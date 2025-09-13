@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import MozillaAppServices
-import Storage
 import XCTest
 
 @testable import Client
@@ -59,6 +58,7 @@ final class BookmarksDataAdaptorTests: XCTestCase {
 
     // MARK: - Bookmark Notifications
 
+    @MainActor
     func testBookmarksUpdateFromNotification() {
         initializeSubject()
 

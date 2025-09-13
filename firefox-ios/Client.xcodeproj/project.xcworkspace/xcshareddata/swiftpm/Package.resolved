@@ -1,4 +1,5 @@
 {
+  "originHash" : "fd9e7ee0a5a4a51afa470f26a1227faf19a6a9a8d18a6fe0350eae566b77a495",
   "pins" : [
     {
       "identity" : "a-star",
@@ -16,6 +17,15 @@
       "state" : {
         "revision" : "c3b601df0ff22b06b6d5ff4943faf05c0bd3f9bb",
         "version" : "7.1.1"
+      }
+    },
+    {
+      "identity" : "down",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/johnxnguyen/Down.git",
+      "state" : {
+        "revision" : "f34b166be1f1db4aa8f573067e901d72f2a6be57",
+        "version" : "0.11.0"
       }
     },
     {
@@ -41,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mozilla/glean-swift",
       "state" : {
-        "revision" : "be4fbca81f9e1da5f9b91e8bd245a8dee53cc57f",
-        "version" : "63.0.0"
+        "revision" : "ef4ef0d2344800abf7e7d4f23c62c1d6acd10ffe",
+        "version" : "65.0.3"
       }
     },
     {
@@ -88,15 +98,6 @@
       "state" : {
         "branch" : "master",
         "revision" : "f56a6e483163a761adc8cd25c337db0ed1eac524"
-      }
-    },
-    {
-      "identity" : "rust-components-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mozilla/rust-components-swift.git",
-      "state" : {
-        "revision" : "4da5aeac8d197dd6839b78d42aebe1d3a7fb44e0",
-        "version" : "137.0.20250221050225"
       }
     },
     {
@@ -163,5 +164,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

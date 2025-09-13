@@ -6,7 +6,6 @@
 import Foundation
 import XCTest
 import WebKit
-import Shared
 import Common
 import Storage
 
@@ -120,6 +119,7 @@ class FormAutofillHelperTests: XCTestCase {
         XCTAssertEqual(json["tel"] as? String, "+16509030800")
     }
 
+    @MainActor
     func testUserContentControllerDidReceiveScriptMessage_withAddressHandler() {
         // Arrange
         let formAutofillHelper = FormAutofillHelper(tab: tab)
@@ -308,6 +308,7 @@ class FormAutofillHelperTests: XCTestCase {
         XCTAssertTrue(handlerNames!.contains(FormAutofillHelper.HandlerName.addressFormTelemetryMessageHandler.rawValue))
     }
 
+    @MainActor
     func testUserContentControllerDidReceiveScriptMessage_withCreditCardHandler() {
         let formAutofillHelper = FormAutofillHelper(tab: tab)
 

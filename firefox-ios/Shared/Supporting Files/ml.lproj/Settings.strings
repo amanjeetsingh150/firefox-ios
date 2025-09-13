@@ -10,6 +10,9 @@
 /* Title text for the content unavailable view informing users they can create or add new addresses. %@ is the name of the app. */
 "Addresses.Settings.SaveToFirefox.Title.v130" = "%@ -ലേക്കു് കരുതിവയ്ക്കുക";
 
+/* Description text for the content unavailable view informing users they can create or add new addresses. */
+"Addresses.Settings.SecureSaveInfo.Description.v130" = "പിന്നീടു് പെട്ടന്നു് വിവരം ഉപയോഗിക്കാൻ താങ്ങളുടെ വിവരത്തിനെ സുരക്ഷിതമായി കരുതിവയ്ക്കുക.";
+
 /* On the autofill settings screen, a label under the title label to add additional context for user in regards to what the toggle switch that allow saving and autofilling of addresses for webpages does, letting users know that this action includes phone numbers and email addresses. */
 "Addresses.Settings.Switch.Description.v124" = "ഫോൺ നമ്പറുകളും ഇ-തപാൽ വിലാസങ്ങളും ഉൾപ്പെടുന്നു";
 
@@ -55,8 +58,56 @@
 /* Label used as an item in Settings screen. When touched, it will take user to address autofill settings page to that will allow user to add or modify saved addresses to allow for autofill in a webpage. */
 "Settings.AddressAutofill.Title.v126" = "വിലാസങ്ങള്‍";
 
+/* Default section header title under page zoom settings. Indicates the default value for all websites */
+"Settings.Appearance.Zoom.Default.Title.v140" = "തനിമട്ട്";
+
+/* Button to reset specific zoom site levels back to default */
+"Settings.Appearance.Zoom.Reset.Button.v140" = "വെബിട ക്രമീകരണങ്ങൾ വീണ്ടും സജ്ജമാക്കുക";
+
+/* Page zoom section header title in Appearance settings */
+"Settings.Appearance.Zoom.SectionHeader.v140" = "വലിപ്പക്ക്രമീകരണങ്ങൾ";
+
+/* Specific site settings section footer title under page zoom settings. Explain how to add elements to the list */
+"Settings.Appearance.Zoom.SpecificSiteZoom.Footer.v140" = "പട്ടികയിൽ ചേൎക്കാൻ വെബ്ബിടത്തിലേക്കു് ചെന്നിട്ടു് താൾ വലിപ്പം കുറിപ്പടി വഴി ക്രമീകരിക്കുക";
+
+/* Specific site settings section header title under page zoom settings. List all websites with custom zoom level */
+"Settings.Appearance.Zoom.SpecificSiteZoom.Title.v140" = "പ്രത്യേക വെബിട ക്രമീകരണങ്ങൾ";
+
+/* Page zoom settings title in Appearance settings */
+"Settings.Appearance.Zoom.Title.v140" = "താൾ വലിപ്പം";
+
+/* Zoom level title under page zoom settings to select the default zoom level for all websites */
+"Settings.Appearance.Zoom.ZoomLevelTitle.v140" = "വലിപ്പം നില";
+
+/* In the settings menu, in the General section, this is the title for Autofills & Passwords customization section. */
+"Settings.AutofillAndPassword.Title.v137" = "തനപൂരിപ്പിക്കലുകളും ഒളിവാക്കുകളും";
+
 /* Label used as an item in Settings screen. When touched, it will take user to credit card settings page to that will allows to add or modify saved credit cards to allow for autofill in a webpage. */
 "Settings.AutofillCreditCard.Title.v122" = "പണം കൊടുക്കൽ മുറകൾ";
+
+/* In the settings menu, in the Autoplay customization section, this label indicates that selecting this will allow audio and video content to autoplay. */
+"Settings.Autoplay.AllowAudioAndVideo.v137" = "ശബ്ദവും ദൃശ്യവും അനുവദിക്കുക";
+
+/* In the settings menu, in the Autoplay customization section, this label indicates that selecting this will block audio from autoplaying. */
+"Settings.Autoplay.BlockAudio.v137" = "ഒച്ച തടയുക";
+
+/* In the settings menu, in the Autoplay customization section, this label indicates that selecting this will block audio and video content from autoplaying. */
+"Settings.Autoplay.BlockAudioAndVideo.v137" = "ഒച്ചയും കാഴ്ചയും തടയുക";
+
+/* In the settings menu, this label indicates that there is an option of customizing the Autoplay behaviour. */
+"Settings.Autoplay.SettingsTitle.v137" = "തന്നെതാനെ പ്ലേ ചെയ്യുക";
+
+/* This is the title for Links customization under the Browsing settings section. */
+"Settings.Browsing.Links.v137" = "കണ്ണികള്‍";
+
+/* This is the title for Media customization under the Browsing settings section. */
+"Settings.Browsing.Media.v137" = "മാദ്ധ്യമം";
+
+/* This is the title for Tabs customization under the Browsing settings section. */
+"Settings.Browsing.Tabs.v137" = "ടാബുകള്‍";
+
+/* In the settings menu, in the General section, this is the title for Browsing customization section. */
+"Settings.Browsing.Title.v137" = "തിരച്ചിൽ";
 
 /* Title for a link that explains how Mozilla send crash reports. */
 "Settings.CrashReports.Link.v135" = "കൂടുതൽ അറിയുക.";
@@ -67,6 +118,9 @@
 /* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Message.v135" = "തകർച്ച റിപ്പോർട്ടുകൾ അന്വേഷിയന്ത്രത്തിന്റെ കൂടെയുള്ള എല്ലാ കുഴപ്പങ്ങളും കണ്ടെത്താനും പരിഹരിക്കാനും സഹായിക്കാരുണ്ടു്.";
 
+/* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
+"Settings.CrashReports.Message.v136" = "ഇതു് അന്വേഷിയന്ത്ര കുഴപ്പങ്ങളെ കണ്ടുപിടിക്കാനും അവയെ പരിഹരിക്കാനും തുണയ്ക്കുന്നു.";
+
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Title.v135" = "തകർച്ച വിവരങ്ങൾ തന്നെതാന്നെ അയയ്ക്കുക";
 
@@ -76,7 +130,7 @@
 /* Title for a link that explains how Mozilla send daily usage ping. */
 "Settings.DailyUsagePing.Link.v136" = "കൂടുതല്‍ അറിയുക";
 
-/* On the Settings screen, this is the subtitle text for a toggle which controls sending daily usage ping. Placeholder will be replaced the company name of Mozilla. */
+/* On the Settings screen, this is the subtitle text for a toggle which controls sending daily usage ping. %@ is the company name (e.g. Mozilla). */
 "Settings.DailyUsagePing.Message.v135" = "സജീവ ഉപയോക്താക്കളുടെ കണക്കെടുക്കാൻ %@ സഹായിക്കുന്നു.";
 
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending daily usage ping. */
@@ -88,17 +142,23 @@
 /* This is the title for the setting that toggles Sync related notifications in the settings menu under the Notifications section. */
 "Settings.Notifications.SyncNotificationsTitle.v112" = "സമന്വയം";
 
+/* This is the description for the setting that toggles Tips and Features feature in the settings menu under the Notifications section. %@ is the app name (e.g. Firefox). */
+"Settings.Notifications.TipsAndFeaturesNotificationsStatus.v112" = "ഏറ്റവും ഉതവുന്ന സവിശേഷതകളെക്കുറിച്ചും %@-നു് മുഴുവൻ ഉപയോഗിക്കാനും അറിയുക.";
+
 /* This is the title for the setting that toggles Tips and Features feature in the settings menu under the Notifications section. */
 "Settings.Notifications.TipsAndFeaturesNotificationsTitle.v112" = "നുറുങ്ങുകളും സവിശേഷതകളും";
 
 /* In the settings menu, in the Privacy section, this is the title for Notifications customization section. */
 "Settings.Notifications.Title.v112" = "അറിയിപ്പുകള്‍";
 
-/* This is the title informing the user needs to turn on notifications in iOS Settings. The placeholder will be replaced with the app name. */
+/* This is the title informing the user that they need to turn on notifications in iOS Settings. %@ is the app name (e.g. Firefox). */
 "Settings.Notifications.TurnOnNotificationsMessage.v112" = "%@-ൽ അറിയിപ്പുകൾ തുടങ്ങിവയ്ക്കാൻ താങ്ങളുടെ ഉപകരണ ക്രമീകരണത്തിലേക്ക് പോവുക";
 
-/* This is the title informing the user needs to turn on notifications in iOS Settings. */
+/* This is the title informing the user that they need to turn on notifications in iOS Settings. */
 "Settings.Notifications.TurnOnNotificationsTitle.v112" = "അറിയിപ്പുകൾ തുടങ്ങി വയ്ക്കുക";
+
+/* Show Firefox Browser Privacy Notice page from the Privacy section in the settings. See https://www.mozilla.org/privacy/firefox/ */
+"Settings.PrivacyNotice.Title.v137" = "സ്വകാര്യത അറിയിപ്പു്";
 
 /* Accessibility label for default search engine setting. */
 "Settings.Search.Accessibility.DefaultSearchEngine.v121" = "തനതുതിരച്ചിൽയന്ത്രം";
@@ -139,11 +199,26 @@
 /* In the Search page of the Settings menu, the title for the setting to enable synced tabs. */
 "Settings.Search.Suggest.SearchSyncedTabs.Title.v124" = "സമന്വയിപ്പിച്ച ടാബുകൾ തിരയുക";
 
+/* In the Search page of the Settings menu, the title for setting to enable Suggestions from the web in Firefox. */
+"Settings.Search.Suggest.ShowNonSponsoredSuggestions.Title.v124.v2" = "ഗോളാന്തരവലയിൽ നിന്നുള്ള നിർദ്ദേശങ്ങൾ";
+
 /* Title for a link that explains what Mozilla means by Studies */
 "Settings.Studies.Link.v136" = "കൂടുതല്‍ അറിയുക";
 
+/* A short description that explains that Mozilla is running studies */
+"Settings.Studies.Message.v136" = "എല്ലാവൎക്കും കിട്ടുന്നതിനു് മുമ്പെ പുതിയ സവിശേഷകൾ ഉപയോഗിച്ചു നോക്കുക.";
+
 /* Label used as a toggle item in Settings. When this is off, the user is opting out of all studies. */
 "Settings.Studies.Title.v136" = "പാഠനങ്ങൾ സ്ഥാപിച്ചിട്ടു് അവയെ നടത്തുക";
+
+/* This is the section title for the gestures features under the Summarize settings section. */
+"Settings.Summarize.GesturesSection.Title.v142" = "ആംഗ്യങ്ങൾ";
+
+/* This is the title for the setting that toggles the Summarize feature under the Summarize settings section. */
+"Settings.Summarize.SummarizePagesTitle.v142" = "താൾ വിവരം ചുരുക്കിപ്പറയുക";
+
+/* In the settings menu, in the General section, this is the title for the Summarize settings section. */
+"Settings.Summarize.Title.v142" = "താൾ ചുരുക്കം";
 
 /* Title for a link that explains how Mozilla send technical and interaction data. */
 "Settings.TechnicalData.Link.v135" = "കൂടുതൽ അറിയുക.";
@@ -156,4 +231,7 @@
 
 /* On the Settings screen, this is the title text for a toggle which controls sending technical and interaction data. */
 "Settings.TechnicalData.Title.v136" = "സാങ്കേതിയും ഇടപാടുനീയ ദത്ത അയയ്ക്കുക";
+
+/* Terms of Use settings section title */
+"Settings.TermsOfUse.Title.v137" = "ഉപയോഗനിബന്ധനകള്‍";
 

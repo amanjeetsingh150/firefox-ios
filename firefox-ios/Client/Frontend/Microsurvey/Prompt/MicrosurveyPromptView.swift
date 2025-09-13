@@ -97,14 +97,14 @@ final class MicrosurveyPromptView: UIView, ThemeApplicable, Notifiable {
 
     @objc
     func closeMicroSurvey() {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyPromptAction(windowUUID: windowUUID, actionType: MicrosurveyPromptActionType.closePrompt)
         )
     }
 
     @objc
     func openMicroSurvey() {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyPromptAction(windowUUID: windowUUID, actionType: MicrosurveyPromptActionType.continueToSurvey)
         )
     }
@@ -118,8 +118,11 @@ final class MicrosurveyPromptView: UIView, ThemeApplicable, Notifiable {
         self.windowUUID = windowUUID
         self.notificationCenter = notificationCenter
         super.init(frame: .zero)
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
         configure(with: state)
         setupView()
         guard !inOverlayMode else { return }
@@ -214,7 +217,7 @@ final class MicrosurveyPromptView: UIView, ThemeApplicable, Notifiable {
     // MARK: Notifiable
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             adjustIconSize()
         default: break
         }

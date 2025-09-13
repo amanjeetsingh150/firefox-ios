@@ -14,7 +14,7 @@ struct JumpBackInSectionState: StateType, Equatable, Hashable {
     let mostRecentSyncedTab: JumpBackInSyncedTabConfiguration?
     let shouldShowSection: Bool
 
-    let sectionHeaderState = SectionHeaderState(
+    let sectionHeaderState = SectionHeaderConfiguration(
         title: .FirefoxHomeJumpBackInSectionTitle,
         a11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.SectionTitles.jumpBackIn,
         isButtonHidden: false,
@@ -27,7 +27,11 @@ struct JumpBackInSectionState: StateType, Equatable, Hashable {
         windowUUID: WindowUUID
     ) {
         // TODO: FXIOS-11412 / 11226 - Move profile dependency and show section also based on feature flags
-        let shouldShowSection = profile.prefs.boolForKey(PrefsKeys.FeatureFlags.JumpBackInSection) ?? true
+        let isStoriesRedesignEnabled = LegacyFeatureFlagsManager.shared.isFeatureEnabled(.homepageStoriesRedesign,
+                                                                                         checking: .buildOnly)
+        let isJumpBackInSectionPrefEnabled = profile.prefs.boolForKey(PrefsKeys.HomepageSettings.JumpBackInSection) ?? true
+        let shouldShowSection = isStoriesRedesignEnabled ? false : isJumpBackInSectionPrefEnabled
+
         self.init(
             windowUUID: windowUUID,
             jumpBackInTabs: [],

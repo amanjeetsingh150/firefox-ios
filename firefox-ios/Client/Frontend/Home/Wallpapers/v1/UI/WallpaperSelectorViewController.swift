@@ -5,7 +5,6 @@
 import UIKit
 import Common
 import ComponentLibrary
-import Shared
 
 class WallpaperSelectorViewController: WallpaperBaseViewController, Themeable {
     private struct UX {
@@ -18,7 +17,7 @@ class WallpaperSelectorViewController: WallpaperBaseViewController, Themeable {
     private var viewModel: WallpaperSelectorViewModel
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
 
@@ -36,7 +35,7 @@ class WallpaperSelectorViewController: WallpaperBaseViewController, Themeable {
     }
 
     private lazy var instructionLabel: UILabel = .build { label in
-        label.font = FXFontStyles.Regular.caption1.scaledFont()
+        label.font = FXFontStyles.Regular.footnote.scaledFont()
         label.adjustsFontForContentSizeCategory = true
         label.text = .Onboarding.Wallpaper.SelectorDescription
         label.textAlignment = .center
@@ -78,8 +77,10 @@ class WallpaperSelectorViewController: WallpaperBaseViewController, Themeable {
     // MARK: - View setup & lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
         setupView()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewWillAppear(_ animated: Bool) {

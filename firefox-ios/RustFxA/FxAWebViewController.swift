@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 @preconcurrency import WebKit
-import Account
 import Common
 import Shared
 
@@ -109,7 +108,9 @@ class FxAWebViewController: UIViewController {
 
     deinit {
         webView.removeObserver(self, forKeyPath: KVOConstants.URL.rawValue)
-        endPairingConnectionBackgroundTask()
+        Task { @MainActor [backgroundTaskID] in
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+        }
     }
 
     // MARK: Background task

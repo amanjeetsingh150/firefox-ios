@@ -4,7 +4,6 @@
 
 import Common
 import Foundation
-import Storage
 import Shared
 
 // MARK: - PhotonActionSheetViewDelegate
@@ -173,13 +172,13 @@ class PhotonActionSheetView: UIView, UIGestureRecognizerDelegate, ThemeApplicabl
 
     @objc
     private func didClick(_ gestureRecognizer: UITapGestureRecognizer?) {
-        guard let item = item,
+        guard var item = item,
               let handler = item.tapHandler
         else { return }
 
         isSelected = (gestureRecognizer?.state == .began) || (gestureRecognizer?.state == .changed)
 
-        item.isEnabled = !item.isEnabled
+        item = SingleActionViewModel.copy(item, isEnabled: item.isEnabled)
 
         // Notify the delegate then wait until all animations are completed before handling the item
         // (Note: The iOS16 system find interactor will only work if the settings menu dismiss animation has completed)
@@ -209,6 +208,7 @@ class PhotonActionSheetView: UIView, UIGestureRecognizerDelegate, ThemeApplicabl
 
         accessibilityIdentifier = item.accessibilityId ?? item.iconString
         accessibilityLabel = item.currentTitle
+        accessibilityTraits = .button
 
         if item.isFlipped {
             transform = CGAffineTransform(scaleX: 1, y: -1)
@@ -344,9 +344,11 @@ class PhotonActionSheetView: UIView, UIGestureRecognizerDelegate, ThemeApplicabl
                 GeneralizedImageFetcher().getImageFor( url: actionIconUrl) { image in
                     guard let image = image else { return }
 
-                    self.statusIcon.image = image.createScaled(PhotonActionSheet.UX.iconSize)
-                        .withRenderingMode(.alwaysOriginal)
-                    self.statusIcon.layer.cornerRadius = PhotonActionSheet.UX.iconSize.width / 2
+                    DispatchQueue.main.async {
+                        self.statusIcon.image = image.createScaled(PhotonActionSheet.UX.iconSize)
+                            .withRenderingMode(.alwaysOriginal)
+                        self.statusIcon.layer.cornerRadius = PhotonActionSheet.UX.iconSize.width / 2
+                    }
                 }
             }
         case .TabsButton:

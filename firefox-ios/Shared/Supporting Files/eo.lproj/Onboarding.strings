@@ -1,7 +1,7 @@
 /* The title of the button on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. */
 "DefaultBrowserPopup.ButtonTitle.v114" = "Iri al agordoj";
 
-/* The footer label on the Default Browser Popup, which is below all the instructions asking the users if their Firefox browser is the default browser. If it is then close this message and tap skip. The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
+/* The footer label on the Default Browser Popup, which is below all the instructions asking the users if their browser is the default browser. %@ is the app name (e.g. Firefox). If it is then close this message and tap skip. The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
 "DefaultBrowserPopup.DescriptionFooter.v124" = "*Ĉu %@ esta jam via norma retumilo?* Fermu tiun ĉi mesaĝon kaj tuŝetu Ignori.";
 
 /* The first label on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
@@ -10,13 +10,13 @@
 /* The second label on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
 "DefaultBrowserPopup.SecondLabel.v114" = "2. Tuŝetu *Norma retumila programo*";
 
-/* The third label on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. Placeholder is the app name. The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
+/* The third label on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. %@ is the app name (e.g. Firefox). The *text inside asterisks* denotes part of the string to bold, please leave the text inside the '*' so that it is bolded correctly. */
 "DefaultBrowserPopup.ThirdLabel.v114" = "3. Elektu *%@*";
 
 /* The title on the Default Browser Popup, which is a card with instructions telling the user how to set Firefox as their default browser. */
 "DefaultBrowserPopup.Title.v114" = "Ŝanĝi vian norman retumilon";
 
-/* String used to describe the option to continue to the next onboarding card in Firefox Onboarding screens. Placeholder is for the app name. */
+/* String used to describe the option to continue to the next onboarding card in Firefox Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Customization.Intro.Continue.Action.v123" = "Personecigi %@";
 
 /* String used to describe the description label of the customization onboarding page in our Onboarding screens. */
@@ -25,7 +25,7 @@
 /* String used to describe the option to skip the customization cards in Firefox Onboarding screens and start browsing. */
 "Onboarding.Customization.Intro.Skip.Action.v123" = "Komenci retumi";
 
-/* String used to describe the title of the customization onboarding page in our Onboarding screens. Placeholder is for the app name. */
+/* String used to describe the title of the customization onboarding page in our Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Customization.Intro.Title.v123" = "%@ transdonas al vi la regadon";
 
 /* String used to describe the option to save the user setting and continue to the next onboarding in Firefox Onboarding screens. */
@@ -48,6 +48,9 @@
 
 /* String used to describe the title of the theme customization onboarding page in our Onboarding screens. */
 "Onboarding.Customization.Theme.Title.v123" = "Elektu etoson";
+
+/* String used to describe the title of the theme customization onboarding page in our Onboarding screens. */
+"Onboarding.Customization.Theme.Title.v143" = "Elektu vian etoson";
 
 /* On the toolbar customization onboarding card, the string used to describe the option to set the toolbar at the bottom of the screen. */
 "Onboarding.Customization.Toolbar.Bottom.Action.v123" = "Malsupre";
@@ -76,22 +79,103 @@
 /* Describes an action on some of the Onboarding screen, including the wallpaper onboarding screen. This string will be on a button so user can skip that onboarding page. */
 "Onboarding.LaterAction.v115" = "Ignori";
 
+/* String used to describe the option to save the user setting and continue to the next onboarding in Firefox Onboarding screens. */
+"Onboarding.Modern.Customization.Theme.Continue.Action.v140" = "Daŭrigi";
+
+/* On the toolbar customization onboarding card, the string used to describe the option to set the toolbar at the bottom of the screen. */
+"Onboarding.Modern.Customization.Toolbar.Bottom.Action.v140" = "Malsupre";
+
+/* String used to describe the title of the toolbar customization onboarding page in our Onboarding screens. */
+"Onboarding.Modern.Customization.Toolbar.Title.v140" = "Elekti la lokon, kien meti vian adresan strion";
+
+/* On the toolbar customization onboarding card, the string used to describe the option to set the toolbar at the top of the screen. */
+"Onboarding.Modern.Customization.Toolbar.Top.Action.v140" = "Supre";
+
+/* String used to describe Firefox on the Sync onboarding page for the current version of our onboarding screens. */
+"Onboarding.Modern.Sync.Description.v140" = "Aliru viajn legosignojn, historion kaj pasvortojn en iu ajn aparato.";
+
+/* String used to describes the option to skip the Sync sign in during onboarding for the current version in Firefox Onboarding screens. */
+"Onboarding.Modern.Sync.SignIn.Action.v140" = "Komenci speguli";
+
+/* String used to describes the option to skip the Sync sign in during onboarding for the current version in Firefox Onboarding screens. */
+"Onboarding.Modern.Sync.Skip.Action.v140" = "Ne nun";
+
+/* String used to describes the title of what Firefox is on the Sync onboarding page for current version in our Onboarding screens. */
+"Onboarding.Modern.Sync.Title.v140" = "Tuj rekomencu kie vi haltis";
+
+/* Title for the confirmation button for Terms of Service agreement, in the Terms of Service screen. */
+"Onboarding.Modern.TermsOfService.AgreementButtonTitle.v140" = "Daŭrigi";
+
+/* Title for the Manage button link, in the Terms of Service screen for redirecting the user to the Manage data collection preferences screen. */
+"Onboarding.Modern.TermsOfService.ManageLink.v140" = "Administri";
+
+/* Agreement text for sending diagnostic and interaction data to Mozilla in the Terms of Service screen. %1$@ is the app name (e.g. Firefox), %2$@ is company name (e.g. Mozilla), %3$@ is a Manage link button which redirect the user to another screen in order to manage the data collection preferences. */
+"Onboarding.Modern.TermsOfService.ManagePreferenceAgreement.v140" = "Por helpi plibonigi la retumilon, %1$@ sendas diagnozajn kaj interagajn datumojn al %2$@. %3$@";
+
+/* Agreement text for Privacy Notice in the Terms of Service screen. %1$@ is the app name (e.g. Firefox), %2$@ is for the Privacy Notice link button that redirect the user to the Privacy Notice page. */
+"Onboarding.Modern.TermsOfService.PrivacyNoticeAgreement.v140" = "%1$@ zorgas pri via privateco. Pli da informo en nia %2$@";
+
+/* Title for the Privacy Notice button link, in the Terms of Service screen for redirecting the user to the Privacy Notice page. */
+"Onboarding.Modern.TermsOfService.PrivacyNoticeLink.v140" = "Rimarko pri privateco.";
+
+/* A text that indicate to the user, a link button is available to be clicked for reading more information about the option that is going to choose in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.LearnMore.v140" = "Pli da informo";
+
+/* Description for the send crash reports switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. %@ is for the Learn more button link, to open a link where user can find more information about this send crash reports option. */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.SendCrashReportsDescription.v140" = "Raportoj pri paneo helpas nin diagnozi kaj solvi problemojn en la retumilo. %@";
+
+/* Title for the send crash reports switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.SendCrashReportsTitle.v140" = "Aŭtomate sendi raportojn pri paneoj";
+
+/* Description for the technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. %1$@ is the app name (e.g. Firefox), %2$@ is for the Learn more button link, to open a link where user can find more information about this send technical and interaction data option. */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.SendTechnicalDataDescription.v140" = "Informoj pri via aparato, ĝia aparataro kaj kiel vi uzas %1$@ helpas plibonigi trajtojn, efikecon kaj stabilecon por ĉiuj. %2$@";
+
+/* Title for the send technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. %@ is the company name (e.g. Mozilla). */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.SendTechnicalDataTitle.v140" = "Sendi teknikajn kaj interagajn datumojn al %@";
+
+/* Title for the Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. Data like crash reports or technical and interaction data. %@ is the app name (e.g. Firefox). */
+"Onboarding.Modern.TermsOfService.PrivacyPreferences.Title.v140" = "Helpu nin plibonigi %@";
+
+/* Subtitle for the Terms of Service screen in the onboarding process. The '\n' symbols denote empty lines separating the first link parameter from the rest of the text. */
+"Onboarding.Modern.TermsOfService.Subtitle.v140" = "Fulmrapida ŝargado de retejoj\nAŭtomata protekto kontraŭ spurado\nSpegulado en ĉiuj viaj aparatoj";
+
+/* Agreement text for Terms of Service in the Terms of Service screen. %@ is the Terms of Service link button that redirect the user to the Terms of Service page. */
+"Onboarding.Modern.TermsOfService.TermsOfServiceAgreement.v140" = "Se vi daŭrigas vi akceptas la %@";
+
+/* Title for the Terms of Service screen in the onboarding process. */
+"Onboarding.Modern.TermsOfService.Title.v140" = "Plibonigu vian retumon";
+
+/* Title for the Terms of Use button link, in the Terms of Use screen for redirecting the user to the Terms of Use page. %@ is the app name (e.g. Firefox). */
+"Onboarding.Modern.TermsOfUse.TermsOfUseLink.v140" = "Kondiĉoj de uzo de %@.";
+
+/* Describes the action on the first onboarding page in our Onboarding screen. This indicates that the user will set their default browser to Firefox. */
+"Onboarding.Modern.Welcome.ActionTreatementA.v140" = "Difini kiel norma retumilo";
+
+/* String used to describe Firefox on the welcome onboarding page for the current version of our onboarding screens. */
+"Onboarding.Modern.Welcome.Description.v140" = "Unu elekto protektos vin, kien ajn vi iras en la reto. Vi ĉiam povos ŝanĝi ĝin poste.";
+
+/* Describes the action on the first onboarding page in our Onboarding screen. This string will be on a button so user can skip this onboarding card. */
+"Onboarding.Modern.Welcome.Skip.v140" = "Ne nun";
+
+/* String used to describes the title of what Firefox is on the welcome onboarding page for current version in our Onboarding screens. */
+"Onboarding.Modern.Welcome.Title.v140" = "Adiaŭu trudajn reklamojn";
+
 /* String used to describe the option to continue to ask for the notification permission in Firefox Onboarding screens. */
 "Onboarding.Notification.Continue.Action.v114" = "Daŭrigi";
 
-/* String used to describe the description of the notification onboarding page in our Onboarding screens. Placeholder is for the app name. */
+/* String used to describe the description of the notification onboarding page in our Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Notification.Description.v120" = "Sekure sendu langetojn inter viaj aparatoj kaj malkovru aliajn privatecajn trajtojn en %@.";
 
 /* String used to describe the option to skip the notification permission in Firefox Onboarding screens. */
 "Onboarding.Notification.Skip.Action.v115" = "Ignori";
 
-/* String used to describe the title of the notification onboarding page in our Onboarding screens. Placeholder is for the app name. */
+/* String used to describe the title of the notification onboarding page in our Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Notification.Title.v120" = "Sciigoj helpas vin resti sekura kun %@";
 
 /* String used to describe the option to continue to ask for the notification permission in Firefox Onboarding screens. */
 "Onboarding.Notification.TurnOnNotifications.Action.v114" = "Ŝalti sciigojn";
 
-/* String used to describes the description of what Firefox is on the Sync onboarding page for current version in our Onboarding screens. Placeholder is for the app name. */
+/* String used to describes the description of what Firefox is on the Sync onboarding page for current version in our Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Sync.Description.v123" = "Dum spegulado %@ ĉifras viajn pasvortojn, legosignojn kaj pli.";
 
 /* String used to describes the option to skip the Sync sign in during onboarding for the current version in Firefox Onboarding screens. */
@@ -109,13 +193,16 @@
 /* Title for the confirmation button for Terms of Service agreement, in the Terms of Service screen. */
 "Onboarding.TermsOfService.AgreementButtonTitle.v136" = "Konsenti kaj daŭrigi";
 
+/* Title for the confirmation button for Terms of Service agreement, in the Terms of Service screen. */
+"Onboarding.TermsOfService.AgreementButtonTitle.v140" = "Daŭrigi";
+
 /* Title for the Manage button link, in the Terms of Service screen for redirecting the user to the Manage data collection preferences screen. */
 "Onboarding.TermsOfService.ManageLink.v135" = "Administri";
 
-/* Agreement text for sends diagnostic and interaction data to Mozilla in the Terms of Service screen. First placeholder is for the app name. The second placeholder will be replaced the company name of Mozilla. The last placeholder is for for the Manage link button which redirect the user to another screen in order to manage the data collection preferences. */
+/* Agreement text for sending diagnostic and interaction data to Mozilla in the Terms of Service screen. %1$@ is the app name (e.g. Firefox), %2$@ is company name (e.g. Mozilla), %3$@ is a Manage link button which redirect the user to another screen in order to manage the data collection preferences. */
 "Onboarding.TermsOfService.ManagePreferenceAgreement.v135" = "Por helpi plibonigi la retumilon, %1$@ sendas diagnozajn kaj interagajn datumojn al %2$@. %3$@";
 
-/* Agreement text for Privacy Notice in the Terms of Service screen. First placeholder is for the app name. The second placeholder is for the Privacy Notice link button that redirect the user to the Privacy Notice page */
+/* Agreement text for Privacy Notice in the Terms of Service screen. %1$@ is the app name (e.g. Firefox), %2$@ is for the Privacy Notice link button that redirect the user to the Privacy Notice page. */
 "Onboarding.TermsOfService.PrivacyNoticeAgreement.v135" = "%1$@ zorgas pri via privateco. Pli da informo en nia %2$@";
 
 /* Title for the Privacy Notice button link, in the Terms of Service screen for redirecting the user to the Privacy Notice page. */
@@ -133,28 +220,28 @@
 /* Title for the send crash reports switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. */
 "Onboarding.TermsOfService.PrivacyPreferences.SendCrashReportsTitle.v135" = "Aŭtomate sendi raportojn pri paneo";
 
-/* Description for the technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. First placeholder is for the app name. The second placeholder is for the Learn more button link, to open a link where user can find more information about this send technical and interaction data option. */
+/* Description for the technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. %1$@ is the app name (e.g. Firefox), %2$@ is for the Learn more button link, to open a link where user can find more information about this send technical and interaction data option. */
 "Onboarding.TermsOfService.PrivacyPreferences.SendTechnicalDataDescription.v135" = "Informoj pri via aparato, ĝia aparataro kaj kiel vi uzas %1$@ helpas plibonigi trajtojn, efikecon kaj stabilecon por ĉiuj. %2$@";
 
-/* Title for the send technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. Placeholder will be replaced the company name of Mozilla. */
+/* Title for the send technical and interaction data switch option in Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. %@ is the company name (e.g. Mozilla). */
 "Onboarding.TermsOfService.PrivacyPreferences.SendTechnicalDataTitle.v135" = "Sendi teknikajn kaj interagajn datumojn al %@";
 
-/* Title for the Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. Data like crash reports or technical and interaction data. Placeholder is for the app name. */
+/* Title for the Manage Privacy Preferences screen, where user can choose from the option to send data to Firefox or not. Data like crash reports or technical and interaction data. %@ is the app name (e.g. Firefox). */
 "Onboarding.TermsOfService.PrivacyPreferences.Title.v135" = "Helpu nin plibonigi %@";
 
 /* Subtitle for the Terms of Service screen in the onboarding process. */
 "Onboarding.TermsOfService.Subtitle.v136" = "Rapida kaj sekura retumo";
 
-/* Agreement text for Terms of Service in the Terms of Service screen. Placeholder is for the Terms of Service link button that redirect the user to the Terms of Service page */
+/* Agreement text for Terms of Service in the Terms of Service screen. %@ is the Terms of Service link button that redirect the user to the Terms of Service page. */
 "Onboarding.TermsOfService.TermsOfServiceAgreement.v135" = "Se vi daŭrigas vi akceptas la %@";
 
-/* Title for the Terms of Service button link, in the Terms of Service screen for redirecting the user to the Terms of Service page. Placeholder is for the app name. */
+/* Title for the Terms of Service button link, in the Terms of Service screen for redirecting the user to the Terms of Service page. %@ is the app name (e.g. Firefox). */
 "Onboarding.TermsOfService.TermsOfServiceLink.v135" = "kondiĉojn de uzo de %@.";
 
-/* Title for the Terms of Service screen in the onboarding process. Placeholder is for app name. */
+/* Title for the Terms of Service screen in the onboarding process. %@ is the app name (e.g. Firefox). */
 "Onboarding.TermsOfService.Title.v135" = "Bonvenon al %@";
 
-/* Title for the Terms of Use button link, in the Terms of Use screen for redirecting the user to the Terms of Use page. Placeholder is for the app name. */
+/* Title for the Terms of Use button link, in the Terms of Use screen for redirecting the user to the Terms of Use page. %@ is the app name (e.g. Firefox). */
 "Onboarding.TermsOfUse.TermsOfUseLink.v136" = "Kondiĉoj de uzo de %@.";
 
 /* Accessibility label for the wallpaper onboarding modal displayed on top of the homepage. This describes to the user that which type of wallpaper they are seeing. */
@@ -172,7 +259,7 @@
 /* Title for the wallpaper onboarding modal displayed on top of the homepage. This describes to the user that they can choose different wallpapers. */
 "Onboarding.Wallpaper.SelectorTitle.v114" = "Provu koloran tuŝeton";
 
-/* Title for the wallpaper onboarding page in our Onboarding screens. This describes to the user that they can choose different wallpapers. Placeholder is for app name. */
+/* Title for the wallpaper onboarding page in our Onboarding screens. This describes to the user that they can choose different wallpapers. %@ is the app name (e.g. Firefox). */
 "Onboarding.Wallpaper.Title.v114" = "Elektu ekranfonon por %@";
 
 /* Describes the action on the first onboarding page in our Onboarding screen. This string will be on a button so user can continue the onboarding. */
@@ -181,13 +268,13 @@
 /* Describes the action on the first onboarding page in our Onboarding screen. This indicates that the user will set their default browser to Firefox. */
 "Onboarding.Welcome.ActionTreatementA.v114" = "Difini kiel norma retumilo";
 
-/* Accessibility label for close button that dismisses the welcome onboarding screen. Placeholder is for the app name. */
+/* Accessibility label for close button that dismisses the welcome onboarding screen. %@ is the app name (e.g. Firefox). */
 "Onboarding.Welcome.Close.AccessibilityLabel.v121" = "Fermi kaj eliri el la bonveno de %@";
 
 /* String used to describes the description of what Firefox is on the welcome onboarding page for current version in our Onboarding screens. */
 "Onboarding.Welcome.Description.TreatementA.v120" = "Nia retumilo, subtenata de nenprofitcela organizo, helpas eviti ke entreprenoj kaŝe sekvu vin tra la reto.";
 
-/* String used to describes the description of what Firefox is on the welcome onboarding page for current version in our Onboarding screens. Placeholder is for the app name. */
+/* String used to describes the description of what Firefox is on the welcome onboarding page for current version in our Onboarding screens. %@ is the app name (e.g. Firefox). */
 "Onboarding.Welcome.Description.v120" = "Nia retumilo, subtenata de nenprofitcela organizo, helpas eviti ke entreprenoj kaŝe sekvu vin tra la reto.";
 
 /* String used to describe the title of link button is on the welcome onboarding page for current version in our Onboarding screens. */

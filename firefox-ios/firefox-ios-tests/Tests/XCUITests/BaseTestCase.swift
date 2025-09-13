@@ -37,6 +37,7 @@ class BaseTestCase: XCTestCase {
                            LaunchArguments.SkipETPCoverSheet,
                            LaunchArguments.StageServer,
                            LaunchArguments.SkipDefaultBrowserOnboarding,
+                           LaunchArguments.SkipTermsOfUse,
                            LaunchArguments.DeviceName,
                            "\(LaunchArguments.ServerPort)\(serverPort)",
                            LaunchArguments.SkipContextualHints,
@@ -70,7 +71,11 @@ class BaseTestCase: XCTestCase {
         if icon.exists {
             icon.press(forDuration: 1.5)
             springboard.buttons["Remove App"].waitAndTap()
+            mozWaitForElementToNotExist(springboard.buttons["Remove App"])
+            mozWaitForElementToExist(springboard.alerts.firstMatch)
             springboard.alerts.buttons["Delete App"].waitAndTap()
+            mozWaitForElementToNotExist(springboard.alerts.buttons["Delete App"])
+            mozWaitForElementToExist(springboard.alerts.firstMatch)
             springboard.alerts.buttons["Delete"].waitAndTap()
         }
     }
@@ -79,6 +84,9 @@ class BaseTestCase: XCTestCase {
         navigator = createScreenGraph(for: self, with: app).navigator()
         userState = navigator.userState
     }
+
+    /// To be overriden to setup experiment variables for `FeatureFlaggedTestSuite`
+    func setUpExperimentVariables() {}
 
     func setUpApp() {
         setUpLaunchArguments()
@@ -95,6 +103,10 @@ class BaseTestCase: XCTestCase {
         } else {
             app.launchArguments = [LaunchArguments.PerformanceTest] + launchArguments
         }
+
+        // FXIOS-13129: Remove these arguments once we migrate existing tests to support homepage redesign
+        app.launchArguments.append("\(LaunchArguments.LoadExperiment)\("homepageRedesignOff")")
+        app.launchArguments.append("\(LaunchArguments.ExperimentFeatureName)\("homepage-redesign-feature")")
     }
 
     override func setUp() {
@@ -142,7 +154,7 @@ class BaseTestCase: XCTestCase {
     func waitForExistence(
         _ element: XCUIElement,
         timeout: TimeInterval = TIMEOUT,
-        file: String = #file,
+        file: String = #filePath,
         line: UInt = #line
     ) {
         waitFor(element, with: "exists == true", timeout: timeout, file: file, line: line)
@@ -166,7 +178,7 @@ class BaseTestCase: XCTestCase {
     func waitForNoExistence(
         _ element: XCUIElement,
         timeoutValue: TimeInterval = TIMEOUT,
-        file: String = #file,
+        file: String = #filePath,
         line: UInt = #line
     ) {
         waitFor(element, with: "exists != true", timeout: timeoutValue, file: file, line: line)
@@ -185,7 +197,7 @@ class BaseTestCase: XCTestCase {
         }
     }
 
-    func waitForValueContains(_ element: XCUIElement, value: String, file: String = #file, line: UInt = #line) {
+    func waitForValueContains(_ element: XCUIElement, value: String, file: String = #filePath, line: UInt = #line) {
         waitFor(element, with: "value CONTAINS '\(value)'", file: file, line: line)
     }
 
@@ -239,7 +251,7 @@ class BaseTestCase: XCTestCase {
         )
         app.buttons["Save"].tapIfExists()
         navigator.goto(BrowserTabMenu)
-        navigator.goto(SaveBrowserTabMenu)
+        // navigator.goto(SaveBrowserTabMenu)
         navigator.performAction(Action.Bookmark)
     }
 
@@ -316,11 +328,11 @@ class BaseTestCase: XCTestCase {
     }
 
      func selectOptionFromContextMenu(option: String) {
-        app.tables["Context Menu"].cells.otherElements[option].waitAndTap()
+       app.tables["Context Menu"].cells.buttons[option].waitAndTap()
         mozWaitForElementToNotExist(app.tables["Context Menu"])
     }
 
-    func loadWebPage(_ url: String, waitForLoadToFinish: Bool = true, file: String = #file, line: UInt = #line) {
+    func loadWebPage(_ url: String, waitForLoadToFinish: Bool = true, file: String = #filePath, line: UInt = #line) {
         let app = XCUIApplication()
         UIPasteboard.general.string = url
         app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 2.0)
@@ -410,20 +422,25 @@ class BaseTestCase: XCTestCase {
         XCTAssertEqual(result, .completed, "Element did not become hittable in time.")
     }
 
+    // Theme settings has been replaced with Appearance screen
     func switchThemeToDarkOrLight(theme: String) {
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
+        if !app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].isHittable {
+            app.buttons["Done"].waitAndTap()
+        }
         navigator.nowAt(BrowserTab)
+        // Dismiss new changes pop up if exists
+        app.buttons["Close"].tapIfExists()
         navigator.goto(SettingsScreen)
         navigator.goto(DisplaySettings)
-        mozWaitForElementToExist(app.switches["SystemThemeSwitchValue"])
-        if (app.switches["SystemThemeSwitchValue"].value as? String) == "1" {
-            navigator.performAction(Action.SystemThemeSwitch)
+        sleep(3)
+        if !app.navigationBars["Appearance"].exists {
+            navigator.goto(DisplaySettings)
         }
-        mozWaitForElementToExist(app.cells.staticTexts["Dark"])
+        mozWaitForElementToExist(app.navigationBars["Appearance"])
         if theme == "Dark" {
-            app.cells.staticTexts["Dark"].waitAndTap()
+            navigator.performAction(Action.SelectDarkTheme)
         } else {
-            app.cells.staticTexts["Light"].waitAndTap()
+            navigator.performAction(Action.SelectLightTheme)
         }
         app.buttons["Settings"].waitAndTap()
         navigator.nowAt(SettingsScreen)
@@ -431,15 +448,16 @@ class BaseTestCase: XCTestCase {
     }
 
     func openNewTabAndValidateURLisPaste(url: String) {
-        if iPad() {
-            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
-        } else {
-            app.buttons[AccessibilityIdentifiers.Toolbar.homeButton].waitAndTap()
-        }
-        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 1.5)
-        mozWaitForElementToExist(app.tables["Context Menu"])
-        app.tables.otherElements[AccessibilityIdentifiers.Photon.pasteAction].waitAndTap()
+        app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
+        app.buttons["Cancel"].waitAndTap()
         let urlBar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+        let pasteAction = app.tables.buttons[AccessibilityIdentifiers.Photon.pasteAction]
+        urlBar.press(forDuration: 2)
+        if !pasteAction.exists {
+            urlBar.press(forDuration: 2)
+        }
+        mozWaitForElementToExist(app.tables["Context Menu"])
+        pasteAction.waitAndTap()
         mozWaitForValueContains(urlBar, value: url)
     }
 

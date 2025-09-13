@@ -3,8 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Redux
-
-@testable import Client
+import Foundation
 
 /// A mock Store used to test redux middlewares.
 ///
@@ -24,12 +23,15 @@ class MockStoreForMiddleware<State: StateType>: DefaultDispatchStore {
     /// is useful when the middleware is making an asynchronous call and we want to wait for an expectation to be fulfilled.
     var dispatchCalled: (() -> Void)?
 
+    /// Called when subscriber calls subscribe to the mock store.
+    var subscribeCallCount = 0
+
     init(state: State) {
         self.state = state
     }
 
     func subscribe<S>(_ subscriber: S) where S: Redux.StoreSubscriber, State == S.SubscriberStateType {
-        // TODO: if you need it
+        subscribeCallCount += 1
     }
 
     func subscribe<SubState, S>(
@@ -40,7 +42,7 @@ class MockStoreForMiddleware<State: StateType>: DefaultDispatchStore {
             ) -> Redux.Subscription<SubState>
         )?
     ) where SubState == S.SubscriberStateType, S: Redux.StoreSubscriber {
-        // TODO: if you need it
+        subscribeCallCount += 1
     }
 
     func unsubscribe<S>(_ subscriber: S) where S: Redux.StoreSubscriber, State == S.SubscriberStateType {
@@ -54,6 +56,15 @@ class MockStoreForMiddleware<State: StateType>: DefaultDispatchStore {
     /// We implemented the lock to ensure that this is thread safe
     /// since actions can be dispatch in concurrent tasks
     func dispatch(_ action: Redux.Action) {
+        lock.lock()
+        defer { lock.unlock() }
+        dispatchedActions.append(action)
+        dispatchCalled?()
+    }
+
+    /// We implemented the lock to ensure that this is thread safe
+    /// since actions can be dispatch in concurrent tasks
+    func dispatchLegacy(_ action: Redux.Action) {
         lock.lock()
         defer { lock.unlock() }
         dispatchedActions.append(action)

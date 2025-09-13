@@ -26,7 +26,7 @@ protocol WallpaperManagerInterface {
 }
 
 /// The primary interface for the wallpaper feature.
-class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
+class WallpaperManager: WallpaperManagerInterface {
     enum ThumbnailFilter {
         case none
         case thumbnailsAvailable
@@ -82,9 +82,9 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
     /// Doesn't need overlayState to check for CFR because the state was previously check
     func canOnboardingBeShown(using profile: Profile) -> Bool {
         let cfrHintUtility = ContextualHintEligibilityUtility(with: profile, overlayState: nil)
-        let toolbarCFRShown = !cfrHintUtility.canPresent(.toolbarLocation)
+        let toolbarUpdateCFRShown = !cfrHintUtility.canPresent(.toolbarUpdate)
         let jumpBackInCFRShown = !cfrHintUtility.canPresent(.jumpBackIn)
-        let cfrsHaveBeenShown = toolbarCFRShown && jumpBackInCFRShown
+        let cfrsHaveBeenShown = toolbarUpdateCFRShown && jumpBackInCFRShown
 
         guard cfrsHaveBeenShown,
               hasEnoughThumbnailsToShow,
@@ -110,15 +110,6 @@ class WallpaperManager: WallpaperManagerInterface, FeatureFlaggable {
         do {
             let storageUtility = WallpaperStorageUtility()
             try storageUtility.store(wallpaper)
-            if featureFlags.isFeatureEnabled(.homepageRebuild, checking: .buildOnly) {
-                let wallpaperConfig = WallpaperConfiguration(wallpaper: wallpaper)
-                let action = WallpaperAction(
-                    wallpaperConfiguration: wallpaperConfig,
-                    windowUUID: .unavailable,
-                    actionType: WallpaperMiddlewareActionType.wallpaperDidChange
-                )
-                store.dispatch(action)
-            }
             NotificationCenter.default.post(name: .WallpaperDidChange, object: nil)
             completion(.success(()))
         } catch {

@@ -3,8 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
-import Shared
-import Storage
 import Common
 import UIKit
 @testable import Client
@@ -84,6 +82,7 @@ class SurveySurfaceManagerTests: XCTestCase {
         XCTAssertEqual(messageManager.onMessageDismissedCalled, 0)
     }
 
+    @MainActor
     func testManager_didTapTakeSurvey_called() {
         let manager = setupStandardConditions()
         XCTAssertTrue(manager.shouldShowSurveySurface)
@@ -107,7 +106,7 @@ class SurveySurfaceManagerTests: XCTestCase {
 
 // MARK: - Helpers
 extension SurveySurfaceManagerTests {
-    func createSubject(file: StaticString = #file,
+    func createSubject(file: StaticString = #filePath,
                        line: UInt = #line
     ) -> SurveySurfaceManager {
         let subject = SurveySurfaceManager(windowUUID: windowUUID, and: messageManager)

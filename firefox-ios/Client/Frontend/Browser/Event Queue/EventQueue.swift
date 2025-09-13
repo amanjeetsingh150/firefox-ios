@@ -27,7 +27,7 @@ public enum QueueEventState: Int {
 
 /// A queue that provides synchronization between different areas of the codebase and coordinates
 /// actions that depend on one or more events or app states. For example events see: AppEvent.swift.
-public final class EventQueue<QueueEventType: Hashable> {
+public final class EventQueue<QueueEventType: Hashable & Sendable> {
     public struct EnqueuedAction {
         let token: ActionToken
         let action: EventQueueAction
@@ -58,7 +58,7 @@ public final class EventQueue<QueueEventType: Hashable> {
     /// particular action; if so, any subsequent calls to this function will _not_ enqueue
     /// that action again if it is already pending execution. This provides a convenience
     /// for de-duplicating calls that might accidentally enqueue the same action twice.
-    /// 
+    ///
     /// - Parameters:
     ///   - events: the dependent events.
     ///   - token: an optional UUID that identifies the specific work being enqueued. If

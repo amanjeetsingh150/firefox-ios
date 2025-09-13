@@ -24,6 +24,13 @@ class UpdateViewModelTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: PrefsKeys.NimbusUserEnabledFeatureTestsOverride)
     }
 
+    func testContainsSyncableAccounts_returnsMockValue() {
+        profile.hasSyncableAccountMock = true
+        let subject = createSubject()
+
+        XCTAssertTrue(subject.containsSyncableAccount())
+    }
+
     // MARK: Enable cards
     func testEnabledCards_ForHasSyncAccount() {
         profile.hasSyncableAccountMock = true
@@ -31,7 +38,7 @@ class UpdateViewModelTests: XCTestCase {
         let expectation = expectation(description: "The hasAccount var has value")
 
         subject.hasSyncableAccount {
-            subject.setupViewControllerDelegates(with: MockOnboardinCardDelegateController(),
+            subject.setupViewControllerDelegates(with: MockOnboardingCardDelegateController(),
                                                  for: self.windowUUID)
 
             XCTAssertEqual(subject.availableCards.count, 2)
@@ -48,7 +55,7 @@ class UpdateViewModelTests: XCTestCase {
         let expectation = expectation(description: "The hasAccount var has value")
 
         subject.hasSyncableAccount {
-            subject.setupViewControllerDelegates(with: MockOnboardinCardDelegateController(),
+            subject.setupViewControllerDelegates(with: MockOnboardingCardDelegateController(),
                                                  for: self.windowUUID)
 
             XCTAssertEqual(subject.availableCards.count, 2)
@@ -66,7 +73,7 @@ class UpdateViewModelTests: XCTestCase {
         let expectation = expectation(description: "The hasAccount var has value")
 
         subject.hasSyncableAccount {
-            subject.setupViewControllerDelegates(with: MockOnboardinCardDelegateController(),
+            subject.setupViewControllerDelegates(with: MockOnboardingCardDelegateController(),
                                                  for: self.windowUUID)
 
             XCTAssertEqual(subject.shouldShowSingleCard, false)
@@ -78,7 +85,7 @@ class UpdateViewModelTests: XCTestCase {
     func testHasSingleCard_ForSyncAccountDisabled() {
         profile.hasSyncableAccountMock = false
         let subject = createSubject()
-        subject.setupViewControllerDelegates(with: MockOnboardinCardDelegateController(),
+        subject.setupViewControllerDelegates(with: MockOnboardingCardDelegateController(),
                                              for: self.windowUUID)
 
         XCTAssertEqual(subject.shouldShowSingleCard, false)
@@ -173,7 +180,7 @@ class UpdateViewModelTests: XCTestCase {
     // MARK: - Private Helpers
     func createSubject(
         hasOnboardingCards: Bool = true,
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) -> UpdateViewModel {
         let onboardingModel = createOnboardingViewModel(withCards: hasOnboardingCards)
@@ -195,7 +202,7 @@ class UpdateViewModelTests: XCTestCase {
         ]
 
         return OnboardingViewModel(cards: withCards ? cards : [],
-                                   isDismissable: true)
+                                   isDismissible: true)
     }
 
     func createCard(index: Int) -> OnboardingCardInfoModel {

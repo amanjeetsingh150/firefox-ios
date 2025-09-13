@@ -1,7 +1,7 @@
 name: "Firefox: import translations"
 on:
   schedule:
-    - cron: '0 11 * * 1'
+    - cron: '0 11 * * 4'
   workflow_dispatch:
     inputs:
       branchName:
@@ -14,7 +14,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.9]
+        python-version: [3.11]
         xcode: ["16.2"]
     steps:
     - uses: actions/checkout@v4

@@ -45,6 +45,7 @@ class LegacyLabelButtonHeaderView: UICollectionReusableView, ReusableCell {
         label.font = FXFontStyles.Bold.title3.scaledFont()
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
+        label.accessibilityTraits.insert(.header)
     }
 
     private lazy var moreButton: ActionButton = .build { button in
@@ -70,8 +71,11 @@ class LegacyLabelButtonHeaderView: UICollectionReusableView, ReusableCell {
         addSubview(stackView)
 
         setupLayout()
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
     }
 
     private func setupLayout() {
@@ -99,10 +103,6 @@ class LegacyLabelButtonHeaderView: UICollectionReusableView, ReusableCell {
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: - Helper functions
@@ -174,7 +174,7 @@ extension LegacyLabelButtonHeaderView: ThemeApplicable {
 extension LegacyLabelButtonHeaderView: Notifiable {
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             adjustLayout()
         default: break
         }

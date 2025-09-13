@@ -5,6 +5,7 @@
 import XCTest
 @testable import Client
 
+@MainActor
 final class TabsCoordinatorTests: XCTestCase {
     private var mockRouter: MockRouter!
 
@@ -27,7 +28,7 @@ final class TabsCoordinatorTests: XCTestCase {
     }
 
     // MARK: - Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> TabsCoordinator {
         let subject = TabsCoordinator(router: mockRouter)
 

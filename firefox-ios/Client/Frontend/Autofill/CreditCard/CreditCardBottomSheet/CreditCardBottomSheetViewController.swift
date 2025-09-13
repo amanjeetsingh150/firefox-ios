@@ -5,7 +5,6 @@
 import Common
 import ComponentLibrary
 import Foundation
-import Shared
 import Storage
 import UIKit
 
@@ -15,6 +14,7 @@ class CreditCardBottomSheetViewController: UIViewController,
                                            BottomSheetChild,
                                            Themeable {
     // MARK: UX
+    @MainActor
     struct UX {
         static let containerPadding: CGFloat = 18.0
         static let tableMargin: CGFloat = 0
@@ -35,7 +35,7 @@ class CreditCardBottomSheetViewController: UIViewController,
 
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     private var viewModel: CreditCardBottomSheetViewModel
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -124,23 +124,21 @@ class CreditCardBottomSheetViewController: UIViewController,
     // MARK: View Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
+
         addSubviews()
         setupView()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         updateConstraints()
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: View Setup

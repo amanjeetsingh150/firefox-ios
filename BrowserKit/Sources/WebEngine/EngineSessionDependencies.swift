@@ -4,14 +4,30 @@
 
 import Foundation
 
-/// Dependencies injected during engine session creation.
+/// Dependencies injected during engine session creation that can be session specific.
 public struct EngineSessionDependencies {
-    var webviewParameters: WKWebviewParameters
+    var webviewParameters: WKWebViewParameters
     var telemetryProxy: EngineTelemetryProxy?
+    weak var readerModeDelegate: WKReaderModeDelegate?
 
-    public init(webviewParameters: WKWebviewParameters,
+    public init(webviewParameters: WKWebViewParameters,
+                readerModeDelegate: WKReaderModeDelegate? = nil,
                 telemetryProxy: EngineTelemetryProxy? = nil) {
         self.webviewParameters = webviewParameters
+        self.readerModeDelegate = readerModeDelegate
         self.telemetryProxy = telemetryProxy
+    }
+
+    static func empty() -> EngineSessionDependencies {
+        return EngineSessionDependencies(webviewParameters: WKWebViewParameters())
+    }
+}
+
+/// Dependencies that are global to the engine and isn't session specific.
+public struct EngineDependencies {
+    var readerModeConfiguration: ReaderModeConfiguration
+
+    public init(readerModeConfiguration: ReaderModeConfiguration) {
+        self.readerModeConfiguration = readerModeConfiguration
     }
 }

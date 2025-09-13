@@ -3,9 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
-import Common
 
-class FindInPageTests: BaseTestCase {
+class FindInPageTests: FeatureFlaggedTestBase {
     private func openFindInPageFromMenu(openSite: String) {
         navigator.openURL(openSite)
         waitUntilPageLoad()
@@ -29,11 +28,10 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323463
     func testFindInLargeDoc() {
+        app.launch()
         navigator.openURL("http://localhost:\(serverPort)/test-fixture/find-in-page-test.html")
         waitUntilPageLoad()
-        // Workaround until FxSGraph is fixed to allow the previous way with goto
         navigator.nowAt(BrowserTab)
-
         mozWaitForElementToNotExist(app.staticTexts["Fennec pasted from XCUITests-Runner"])
         navigator.goto(FindInPage)
 
@@ -52,6 +50,7 @@ class FindInPageTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306851
     // Smoketest
     func testFindFromMenu() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
 
@@ -102,6 +101,7 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323705
     func testFindInPageTwoWordsSearch() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
         // Enter some text to start finding
@@ -118,8 +118,8 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323714
     func testFindInPageTwoWordsSearchLargeDoc() {
+        app.launch()
         navigator.openURL("http://localhost:\(serverPort)/test-fixture/find-in-page-test.html")
-        // Workaround until FxSGraph is fixed to allow the previous way with goto
         waitUntilPageLoad()
         navigator.nowAt(BrowserTab)
         navigator.goto(FindInPage)
@@ -137,6 +137,7 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323718
     func testFindInPageResultsPageShowHideContent() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
         // Enter some text to start finding
@@ -153,6 +154,7 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323801
     func testQueryWithNoMatches() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
 
@@ -168,6 +170,7 @@ class FindInPageTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323802
     func testBarDisappearsWhenReloading() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
 
@@ -186,7 +189,9 @@ class FindInPageTests: BaseTestCase {
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2323803
-    func testBarDisappearsWhenOpeningTabsTray() {
+    func testBarDisappearsWhenOpeningTabsTray_tabTrayExperimentOff() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
 
@@ -203,8 +208,29 @@ class FindInPageTests: BaseTestCase {
         XCTAssertFalse(app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton].exists)
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2323803
+    func testBarDisappearsWhenOpeningTabsTray_tabTrayExperimentOn() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
+        app.launch()
+        userState.url = path(forTestPage: "test-mozilla-book.html")
+        openFindInPageFromMenu(openSite: userState.url!)
+
+        // Dismiss keyboard
+        app.buttons[AccessibilityIdentifiers.FindInPage.findInPageCloseButton].waitAndTap()
+        navigator.nowAt(BrowserTab)
+
+        // Going to tab tray and back to the website hides the search field.
+        navigator.goto(TabTray)
+
+        app.cells.elementContainingText("The Book of Mozilla").waitAndTap()
+        XCTAssertFalse(app.searchFields["find.searchField"].exists)
+        XCTAssertFalse(app.buttons[AccessibilityIdentifiers.FindInPage.findNextButton].exists)
+        XCTAssertFalse(app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton].exists)
+    }
+
     // https://mozilla.testrail.io/index.php?/cases/view/2323467
     func testFindFromLongTap() {
+        app.launch()
         userState.url = path(forTestPage: "test-mozilla-book.html")
         openFindInPageFromMenu(openSite: userState.url!)
         let textToFind = "from"

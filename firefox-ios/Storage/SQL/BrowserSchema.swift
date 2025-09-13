@@ -741,6 +741,7 @@ open class BrowserSchema: Schema {
         )
         """
 
+    // swiftlint:disable:next function_body_length
     public func create(_ db: SQLiteDBConnection) -> Bool {
         let favicons = """
             CREATE TABLE IF NOT EXISTS favicons (
@@ -964,6 +965,7 @@ open class BrowserSchema: Schema {
                self.prepopulateRootFolders(db)
     }
 
+    // swiftlint:disable:next function_body_length
     public func update(_ db: SQLiteDBConnection, from: Int) -> Bool {
         let to = self.version
         if from == to {

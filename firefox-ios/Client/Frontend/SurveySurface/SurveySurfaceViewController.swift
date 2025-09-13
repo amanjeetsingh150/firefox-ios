@@ -9,6 +9,7 @@ import Shared
 import UIKit
 
 protocol SurveySurfaceViewControllerDelegate: AnyObject {
+    @MainActor
     func didFinish()
 }
 
@@ -33,7 +34,7 @@ class SurveySurfaceViewController: UIViewController, Themeable {
     var viewModel: SurveySurfaceViewModel
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var imageViewYConstraint: NSLayoutConstraint?
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -109,9 +110,10 @@ class SurveySurfaceViewController: UIViewController, Themeable {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        listenForThemeChange(view)
         setupView()
         updateContent()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 

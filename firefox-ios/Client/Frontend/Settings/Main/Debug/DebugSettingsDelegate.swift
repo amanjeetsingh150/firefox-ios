@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Shared
 
 /// Child settings pages debug actions
 protocol DebugSettingsDelegate: AnyObject, SharedSettingsDelegate {
@@ -13,4 +12,5 @@ protocol DebugSettingsDelegate: AnyObject, SharedSettingsDelegate {
     func pressedFirefoxSuggest()
     func pressedOpenFiftyTabs()
     func pressedDebugFeatureFlags()
+    func pressedAddShortcuts()
 }

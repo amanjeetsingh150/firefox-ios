@@ -5,18 +5,25 @@
 import Foundation
 import Storage
 import XCTest
-import Shared
 import Glean
+import Common
+import Shared
 
 @testable import Client
 
-class BrowserViewControllerTests: XCTestCase {
+class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
     var profile: MockProfile!
     var tabManager: MockTabManager!
-    var browserViewController: BrowserViewController!
+    var screenshotHelper: MockScreenshotHelper!
+    var browserCoordinator: MockBrowserCoordinator!
+    var mockStore: MockStoreForMiddleware<AppState>!
+    var appStartupTelemetry: MockAppStartupTelemetry!
+    var appState: AppState!
 
     override func setUp() {
         super.setUp()
+        setIsSwipingTabsEnabled(false)
+        setIsHostedSummarizerEnabled(false)
         DependencyHelperMock().bootstrapDependencies()
         TelemetryContextualIdentifier.setupContextId()
         // Due to changes allow certain custom pings to implement their own opt-out
@@ -27,16 +34,26 @@ class BrowserViewControllerTests: XCTestCase {
 
         profile = MockProfile()
         tabManager = MockTabManager()
-        browserViewController = BrowserViewController(profile: profile, tabManager: tabManager)
+        browserCoordinator = MockBrowserCoordinator()
+        appStartupTelemetry = MockAppStartupTelemetry()
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
+        setupStore()
     }
 
     override func tearDown() {
         TelemetryContextualIdentifier.clearUserDefaults()
+        profile.shutdown()
+        profile = nil
+        tabManager = nil
+        appStartupTelemetry = nil
+        Glean.shared.resetGlean(clearStores: true)
         DependencyHelperMock().reset()
+        resetStore()
         super.tearDown()
     }
 
     func testTrackVisibleSuggestion() {
+        let subject = createSubject()
         let expectation = expectation(description: "The Firefox Suggest ping was sent")
 
         GleanMetrics.Pings.shared.fxSuggest.testBeforeNextSubmit { _ in
@@ -51,10 +68,13 @@ class BrowserViewControllerTests: XCTestCase {
             XCTAssertEqual(GleanMetrics.FxSuggest.advertiser.testGetValue(), "test advertiser")
             XCTAssertEqual(GleanMetrics.FxSuggest.iabCategory.testGetValue(), "999 - Test Category")
             XCTAssertEqual(GleanMetrics.FxSuggest.reportingUrl.testGetValue(), "https://example.com/ios_test_impression_reporting_url")
+            XCTAssertEqual(GleanMetrics.FxSuggest.country.testGetValue(), "US")
             expectation.fulfill()
         }
 
-        browserViewController.trackVisibleSuggestion(telemetryInfo: .firefoxSuggestion(
+        let locale = Locale(identifier: "en-US")
+        let telemetry = FxSuggestTelemetry(locale: locale)
+        subject.trackVisibleSuggestion(telemetryInfo: .firefoxSuggestion(
             RustFirefoxSuggestionTelemetryInfo.amp(
                 blockId: 1,
                 advertiser: "test advertiser",
@@ -64,8 +84,456 @@ class BrowserViewControllerTests: XCTestCase {
             ),
             position: 3,
             didTap: false
-        ))
+        ), suggestTelemetry: telemetry)
 
         wait(for: [expectation], timeout: 5.0)
+    }
+
+    func testAppWillResignActiveNotification_takesScreenshot_ifNoViewIsPresented() {
+        let subject = createSubject()
+        tabManager.selectedTab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        subject.appWillResignActiveNotification()
+        XCTAssertTrue(screenshotHelper.takeScreenshotCalled)
+    }
+
+    func testAppWillResignActiveNotification_doesNotTakeScreenshot_ifAViewIsPresented() {
+        // Using the mock BVC here so we can "present" a view controller without loading it
+        // into the window. The function under test `appWillResignActiveNotification` is not stubbed out
+        let mockBVC = MockBrowserViewController(profile: profile, tabManager: tabManager)
+        screenshotHelper = MockScreenshotHelper(controller: mockBVC)
+        mockBVC.screenshotHelper = screenshotHelper
+        mockBVC.viewControllerToPresent = UIViewController()
+        tabManager.selectedTab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        mockBVC.appWillResignActiveNotification()
+        XCTAssertFalse(screenshotHelper.takeScreenshotCalled)
+    }
+
+    func testOpenURLInNewTab_withPrivateModeEnabled() {
+        let subject = createSubject()
+
+        subject.openURLInNewTab(nil, isPrivate: true)
+        XCTAssertTrue(tabManager.addTabWasCalled)
+        XCTAssertNotNil(tabManager.selectedTab)
+        guard let selectedTab = tabManager.selectedTab else {
+            XCTFail("selected tab was nil")
+            return
+        }
+        XCTAssertTrue(selectedTab.isPrivate)
+    }
+
+    @MainActor
+    func testDidSelectedTabChange_appliesExpectedUIModeToAllUIElements_whenToolbarRefactorDisabled() {
+        let subject = createSubject()
+        let topTabsViewController = TopTabsViewController(tabManager: tabManager, profile: profile)
+        let testTab = Tab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: testTab)
+        testTab.webView = mockTabWebView
+        setupNimbusToolbarRefactorTesting(isEnabled: false)
+
+        subject.topTabsViewController = topTabsViewController
+        subject.tabManager(tabManager, didSelectedTabChange: testTab, previousTab: nil, isRestoring: false)
+
+        XCTAssertEqual(topTabsViewController.privateModeButton.tintColor, DarkTheme().colors.iconOnColor)
+        XCTAssertFalse(subject.toolbar.privateModeBadge.badge.isHidden)
+    }
+
+    @MainActor
+    func testDidSelectedTabChange_appliesExpectedUIModeToTopTabsViewController_whenToolbarRefactorEnabled() {
+        let subject = createSubject()
+        let topTabsViewController = TopTabsViewController(tabManager: tabManager, profile: profile)
+        let testTab = Tab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: testTab)
+        testTab.webView = mockTabWebView
+        setupNimbusToolbarRefactorTesting(isEnabled: true)
+
+        subject.topTabsViewController = topTabsViewController
+
+        subject.tabManager(tabManager, didSelectedTabChange: testTab, previousTab: nil, isRestoring: false)
+
+        XCTAssertEqual(topTabsViewController.privateModeButton.tintColor, DarkTheme().colors.iconOnColor)
+        XCTAssertTrue(subject.toolbar.privateModeBadge.badge.isHidden)
+    }
+
+    func test_didSelectedTabChange_fromHomepageToHomepage_triggersAppropriateDispatchAction() throws {
+        let subject = createSubject()
+        let testTab = Tab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID)
+        testTab.url = URL(string: "internal://local/about/home")!
+        let mockTabWebView = MockTabWebView(tab: testTab)
+        testTab.webView = mockTabWebView
+        setupNimbusHomepageRebuildForTesting(isEnabled: true)
+
+        let expectation = XCTestExpectation(description: "General browser action is dispatched")
+        mockStore.dispatchCalled = {
+            expectation.fulfill()
+        }
+        subject.tabManager(tabManager, didSelectedTabChange: testTab, previousTab: testTab, isRestoring: false)
+        wait(for: [expectation])
+
+        let actionCalled = try XCTUnwrap(mockStore.dispatchedActions[2] as? GeneralBrowserAction)
+        let actionType = try XCTUnwrap(actionCalled.actionType as? GeneralBrowserActionType)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 5)
+        XCTAssertEqual(actionType, GeneralBrowserActionType.didSelectedTabChangeToHomepage)
+    }
+
+    func testViewDidLoad_addsHomepage_whenSwipingTabsEnabled() {
+        let subject = createSubject()
+        setIsSwipingTabsEnabled(true)
+
+        subject.loadViewIfNeeded()
+
+        XCTAssertEqual(browserCoordinator.showHomepageCalled, 1)
+    }
+
+    func testUpdateReaderModeState_whenSummarizeFeatureOn_dispatchesToolbarMiddlewareAction() throws {
+        setIsHostedSummarizerEnabled(true)
+        let expectation = XCTestExpectation(description: "expect mock store to dispatch an action")
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        tab.webView = MockTabWebView(tab: tab)
+
+        mockStore.dispatchCalled = {
+            expectation.fulfill()
+        }
+        subject.updateReaderModeState(for: tab, readerModeState: .active)
+        wait(for: [expectation])
+
+        let action = try XCTUnwrap(mockStore.dispatchedActions.first as? ToolbarMiddlewareAction)
+        XCTAssertEqual(action.readerModeState, .active)
+    }
+    // TODO(FXIOS-13126): Fix and uncomment this test
+//    func testUpdateReaderModeState_whenSummarizeFeatureOff_dispatchesToolbarAction() throws {
+//        let expectation = XCTestExpectation(description: "expect mock store to dispatch an action")
+//        let subject = createSubject()
+//        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+//
+//        mockStore.dispatchCalled = {
+//            expectation.fulfill()
+//        }
+//        subject.updateReaderModeState(for: tab, readerModeState: .active)
+//        wait(for: [expectation])
+//
+//        let action = try XCTUnwrap(mockStore.dispatchedActions.first as? ToolbarMiddlewareAction)
+//        XCTAssertEqual(action.readerModeState, .active)
+//    }
+
+    // MARK: - Handle PDF
+
+    func testHandlePDFDownloadRequest_doesntDocumentLoadingView_whenTabNotSelected() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let request = URLRequest(url: URL(fileURLWithPath: "test"))
+
+        subject.handlePDFDownloadRequest(request: request, tab: tab, filename: "test")
+        XCTAssertEqual(browserCoordinator.showDocumentLoadingCalled, 0)
+    }
+
+    func testHandlePDFDownloadRequest_showDocumentLoadingView_whenTabSelected() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let request = URLRequest(url: URL(fileURLWithPath: "test"))
+
+        tabManager.selectedTab = tab
+        subject.handlePDFDownloadRequest(request: request, tab: tab, filename: "test")
+
+        XCTAssertEqual(browserCoordinator.showDocumentLoadingCalled, 1)
+    }
+
+    func testHandlePDFDownloadRequest_callsEnqueueDocumentOnTab() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let request = URLRequest(url: URL(fileURLWithPath: "test"))
+
+        subject.handlePDFDownloadRequest(request: request, tab: tab, filename: "test")
+
+        XCTAssertEqual(tab.enqueueDocumentCalled, 1)
+        XCTAssertNotNil(tab.temporaryDocument)
+    }
+
+    // MARK: - Start At Home
+    func test_browserDidBecomeActive_triggersAppropriateDispatchAction() throws {
+        let subject = createSubject()
+        let expectation = XCTestExpectation(description: "Start at home action is dispatched")
+        mockStore.dispatchCalled = {
+            expectation.fulfill()
+        }
+        subject.browserDidBecomeActive()
+        wait(for: [expectation])
+
+        let actionCalled = try XCTUnwrap(mockStore.dispatchedActions.first as? StartAtHomeAction)
+        let actionType = try XCTUnwrap(actionCalled.actionType as? StartAtHomeActionType)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 1)
+        XCTAssertEqual(actionType, StartAtHomeActionType.didBrowserBecomeActive)
+    }
+
+    // MARK: - Shake motion
+    func testMotionEnded_withShakeGestureEnabled_showsSummaryPanel() throws {
+        profile.prefs.setBool(true, forKey: PrefsKeys.Summarizer.shakeGestureEnabled)
+        setupSummarizedShakeGestureForTesting(isEnabled: true)
+        let subject = createSubject()
+        let expectation = XCTestExpectation(description: "General browser action is dispatched")
+        mockStore.dispatchCalled = {
+            expectation.fulfill()
+        }
+        tabManager.selectedTab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        subject.motionEnded(.motionShake, with: nil)
+        wait(for: [expectation], timeout: 1)
+
+        let actionCalled = try XCTUnwrap(mockStore.dispatchedActions.first as? GeneralBrowserAction)
+        let actionType = try XCTUnwrap(actionCalled.actionType as? GeneralBrowserActionType)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 1)
+        XCTAssertEqual(actionType, GeneralBrowserActionType.shakeMotionEnded)
+    }
+
+    func testMotionEnded_withShakeGestureDisabled_doesNotShowSummaryPanel() async {
+        profile.prefs.setBool(false, forKey: PrefsKeys.Summarizer.shakeGestureEnabled)
+        setupSummarizedShakeGestureForTesting(isEnabled: false)
+        let subject = createSubject()
+        tabManager.selectedTab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        subject.motionEnded(.motionShake, with: nil)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        let showSummarizerWasDispatched = mockStore.dispatchedActions.contains { action in
+            guard let action = action as? GeneralBrowserAction,
+                  let actionType = action.actionType as? GeneralBrowserActionType else { return false }
+            if case .showSummarizer = actionType { return true }
+            return false
+        }
+        XCTAssertFalse(showSummarizerWasDispatched)
+    }
+
+    func testMotionEnded_withGestureNotShake_doesntShowSummarizePanel() {
+        let subject = createSubject()
+
+        subject.motionEnded(.remoteControlBeginSeekingBackward, with: nil)
+
+        XCTAssertEqual(browserCoordinator.showSummarizePanelCalled, 0)
+    }
+    // MARK: - Zero Search State
+
+    func test_tapOnHomepageSearchBarAction_withBVCState_triggersGeneralBrowserAction() throws {
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            NavigationBrowserAction(
+                navigationDestination: NavigationDestination(.zeroSearch),
+                windowUUID: .XCTestDefaultUUID,
+                actionType: NavigationBrowserActionType.tapOnHomepageSearchBar
+            )
+        )
+        subject.newState(state: newState)
+
+        let actionCalled = try XCTUnwrap(
+            mockStore.dispatchedActions.first(where: { $0 is GeneralBrowserAction }) as? GeneralBrowserAction
+        )
+        let actionType = try XCTUnwrap(actionCalled.actionType as? GeneralBrowserActionType)
+        XCTAssertEqual(actionType, GeneralBrowserActionType.enteredZeroSearchScreen)
+        XCTAssertEqual(actionCalled.windowUUID, .XCTestDefaultUUID)
+    }
+
+    func test_didTapButtonToolbarAction_withHomepageSearch_andSearchButtonType_triggersGeneralBrowserAction() throws {
+        setupStoreForSearchBar()
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            ToolbarMiddlewareAction(
+                buttonType: .search,
+                windowUUID: .XCTestDefaultUUID,
+                actionType: ToolbarMiddlewareActionType.didTapButton
+            )
+        )
+        subject.newState(state: newState)
+
+        let actionCalled = try XCTUnwrap(
+            mockStore.dispatchedActions.first(where: { $0 is GeneralBrowserAction }) as? GeneralBrowserAction
+        )
+        let actionType = try XCTUnwrap(actionCalled.actionType as? GeneralBrowserActionType)
+        XCTAssertEqual(actionType, GeneralBrowserActionType.enteredZeroSearchScreen)
+        XCTAssertEqual(actionCalled.windowUUID, .XCTestDefaultUUID)
+    }
+
+    func test_didTapButtonToolbarAction_withHomepageSearch_andNoSearchButtonType_triggersGeneralBrowserAction() {
+        setupStoreForSearchBar()
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            ToolbarMiddlewareAction(
+                windowUUID: .XCTestDefaultUUID,
+                actionType: ToolbarMiddlewareActionType.didTapButton
+            )
+        )
+        subject.newState(state: newState)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 0)
+    }
+
+    func test_didTapButtonToolbarAction_withoutHomepageSearch_andSearchButtonType_doesNotTriggersGeneralBrowserAction() {
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            ToolbarMiddlewareAction(
+                buttonType: .search,
+                windowUUID: .XCTestDefaultUUID,
+                actionType: ToolbarMiddlewareActionType.didTapButton
+            )
+        )
+        subject.newState(state: newState)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 0)
+    }
+
+    func test_didTapButtonToolbarAction_withoutHomepageSearch_andNoSearchButtonType_doesNotTriggersGeneralBrowserAction() {
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            ToolbarMiddlewareAction(
+                windowUUID: .XCTestDefaultUUID,
+                actionType: ToolbarMiddlewareActionType.didTapButton
+            )
+        )
+        subject.newState(state: newState)
+
+        XCTAssertEqual(mockStore.dispatchedActions.count, 0)
+    }
+
+    func testNewState_whenSummarizeDisplayRequested() {
+        let subject = createSubject()
+
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
+            GeneralBrowserAction(windowUUID: .XCTestDefaultUUID,
+                                 actionType: GeneralBrowserActionType.showSummarizer)
+        )
+        subject.newState(state: newState)
+
+        XCTAssertEqual(browserCoordinator.showSummarizePanelCalled, 1)
+    }
+
+    private func createSubject() -> BrowserViewController {
+        let subject = BrowserViewController(profile: profile,
+                                            tabManager: tabManager,
+                                            appStartupTelemetry: appStartupTelemetry)
+        screenshotHelper = MockScreenshotHelper(controller: subject)
+        subject.screenshotHelper = screenshotHelper
+        subject.navigationHandler = browserCoordinator
+        subject.browserDelegate = browserCoordinator
+        trackForMemoryLeaks(subject)
+        return subject
+    }
+
+    private func setupNimbusToolbarRefactorTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.toolbarRefactorFeature.with { _, _ in
+            return ToolbarRefactorFeature(enabled: isEnabled)
+        }
+    }
+
+    private func setupNimbusHomepageRebuildForTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.homepageRebuildFeature.with { _, _ in
+            return HomepageRebuildFeature(enabled: isEnabled)
+        }
+    }
+
+    private func setIsSwipingTabsEnabled(_ isEnabled: Bool) {
+        FxNimbus.shared.features.toolbarRefactorFeature.with { _, _ in
+            return ToolbarRefactorFeature(swipingTabs: isEnabled)
+        }
+    }
+
+    private func setIsHostedSummarizerEnabled(_ isEnabled: Bool) {
+        FxNimbus.shared.features.hostedSummarizerFeature.with { _, _ in
+            return HostedSummarizerFeature(enabled: isEnabled)
+        }
+    }
+
+    private func setupSummarizedShakeGestureForTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.hostedSummarizerFeature.with { _, _ in
+            return HostedSummarizerFeature(enabled: isEnabled, shakeGesture: isEnabled)
+        }
+    }
+
+    /// We need to set up the state for the homepage search bar in order to test method that relies on this state.
+    func setupStoreForSearchBar() {
+        let initialHomepageState = HomepageState
+            .reducer(
+                HomepageState(windowUUID: .XCTestDefaultUUID),
+                HomepageAction(
+                    windowUUID: .XCTestDefaultUUID,
+                    actionType: HomepageActionType.initialize
+                )
+            )
+        let newHomepageState = HomepageState
+            .reducer(
+                initialHomepageState,
+                HomepageAction(
+                    isSearchBarEnabled: true,
+                    windowUUID: .XCTestDefaultUUID,
+                    actionType: HomepageMiddlewareActionType.configuredSearchBar
+                )
+            )
+        mockStore = MockStoreForMiddleware(state: AppState(
+            activeScreens: ActiveScreensState(
+                screens: [
+                    .browserViewController(
+                        BrowserViewControllerState(
+                            windowUUID: .XCTestDefaultUUID
+                        )
+                    ),
+                    .homepage(
+                        newHomepageState
+                    )
+                ]
+            )
+        ))
+        StoreTestUtilityHelper.setupStore(with: mockStore)
+    }
+
+    // MARK: StoreTestUtility
+    func setupAppState() -> Client.AppState {
+        let appState = AppState(
+            activeScreens: ActiveScreensState(
+                screens: [
+                    .browserViewController(
+                        BrowserViewControllerState(
+                            windowUUID: .XCTestDefaultUUID
+                        )
+                    )
+                ]
+            )
+        )
+        self.appState = appState
+        return appState
+    }
+
+    func setupStore() {
+        mockStore = MockStoreForMiddleware(state: setupAppState())
+        StoreTestUtilityHelper.setupStore(with: mockStore)
+    }
+
+    func resetStore() {
+        StoreTestUtilityHelper.resetStore()
+    }
+}
+
+class MockScreenshotHelper: ScreenshotHelper {
+    var takeScreenshotCalled = false
+
+    override func takeScreenshot(_ tab: Tab,
+                                 windowUUID: WindowUUID,
+                                 screenshotBounds: CGRect) {
+        takeScreenshotCalled = true
+    }
+}
+
+class MockAppStartupTelemetry: AppStartupTelemetry {
+    var sendStartupTelemetryCalled = 0
+
+    func sendStartupTelemetry() {
+        sendStartupTelemetryCalled += 1
     }
 }

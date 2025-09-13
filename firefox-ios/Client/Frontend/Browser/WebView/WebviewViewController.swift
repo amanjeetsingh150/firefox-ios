@@ -5,35 +5,20 @@
 import Foundation
 import Shared
 import WebKit
+import WebEngine
 import Common
 
 class WebviewViewController: UIViewController,
                              ContentContainable,
                              ScreenshotableView,
-                             Themeable,
-                             InjectedThemeUUIDIdentifiable {
-    private struct UX {
-        static let documentLoadingViewAnimationDuration: CGFloat = 0.3
-    }
-    private var documentLoadingView: TemporaryDocumentLoadingView?
+                             FullscreenDelegate {
     private var webView: WKWebView
     var contentType: ContentType = .webview
-    var themeManager: ThemeManager
-    var notificationCenter: NotificationProtocol
-    var themeObserver: NSObjectProtocol?
-    let windowUUID: WindowUUID
-    var currentWindowUUID: WindowUUID? {
-        return windowUUID
-    }
+    // TODO: FXIOS-12158 Add back after investigating why video player is broken
+//    var isFullScreen = false
 
-    init(webView: WKWebView,
-         windowUUID: WindowUUID,
-         themeManager: ThemeManager = AppContainer.shared.resolve(),
-         notificationCenter: NotificationProtocol = NotificationCenter.default) {
+    init(webView: WKWebView) {
         self.webView = webView
-        self.windowUUID = windowUUID
-        self.themeManager = themeManager
-        self.notificationCenter = notificationCenter
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -44,7 +29,6 @@ class WebviewViewController: UIViewController,
     override func viewDidLoad() {
         super.viewDidLoad()
         setupWebView()
-        listenForThemeChange(view)
     }
 
     private func setupWebView() {
@@ -54,38 +38,11 @@ class WebviewViewController: UIViewController,
 
     func update(webView: WKWebView) {
         self.webView = webView
+
+        // Avoid updating constraints while on fullscreen mode
+        // TODO: FXIOS-12158 Add back after investigating why video player is broken
+//        guard !isFullScreen else { return }
         setupWebView()
-        guard let documentLoadingView else { return }
-        view.bringSubviewToFront(documentLoadingView)
-    }
-
-    func showDocumentLoadingView() {
-        guard documentLoadingView == nil else { return }
-        let documentLoadingView = TemporaryDocumentLoadingView(frame: view.bounds)
-        documentLoadingView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(documentLoadingView)
-        documentLoadingView.pinToSuperview()
-
-        documentLoadingView.animateLoadingAppearanceIfNeeded()
-        self.documentLoadingView = documentLoadingView
-        applyTheme()
-    }
-
-    func removeDocumentLoadingView() {
-        guard let documentLoadingView else { return }
-        UIView.animate(withDuration: UX.documentLoadingViewAnimationDuration) {
-            documentLoadingView.alpha = 0.0
-        } completion: { _ in
-            documentLoadingView.removeFromSuperview()
-            self.documentLoadingView = nil
-        }
-    }
-
-    // MARK: - Themeable
-
-    func applyTheme() {
-        let theme = themeManager.getCurrentTheme(for: windowUUID)
-        documentLoadingView?.applyTheme(theme: theme)
     }
 
     // MARK: - ScreenshotableView
@@ -109,5 +66,20 @@ class WebviewViewController: UIViewController,
                 completionHandler(nil)
             }
         }
+    }
+
+    // MARK: - FullscreenDelegate
+
+    func enteringFullscreen() {
+        // TODO: FXIOS-12158 Add back after investigating why video player is broken
+//        isFullScreen = true
+//        webView.translatesAutoresizingMaskIntoConstraints = true
+//        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    }
+
+    func exitingFullscreen() {
+        // TODO: FXIOS-12158 Add back after investigating why video player is broken
+//        setupWebView()
+//        isFullScreen = false
     }
 }

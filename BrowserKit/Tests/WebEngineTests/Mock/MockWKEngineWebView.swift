@@ -10,9 +10,9 @@ import WebKit
 /// to mock all methods.
 @available(iOS 16.0, *)
 class MockWKEngineWebView: UIView, WKEngineWebView {
-    var delegate: WKEngineWebViewDelegate?
-    var uiDelegate: WKUIDelegate?
-    var navigationDelegate: WKNavigationDelegate?
+    weak var delegate: WKEngineWebViewDelegate?
+    weak var uiDelegate: WKUIDelegate?
+    weak var navigationDelegate: WKNavigationDelegate?
 
     var engineConfiguration: WKEngineConfiguration
     var interactionState: Any?
@@ -37,20 +37,25 @@ class MockWKEngineWebView: UIView, WKEngineWebView {
     var stopLoadingCalled = 0
     var goBackCalled = 0
     var goForwardCalled = 0
+    var goToCalled = 0
+    var getBackListCalled = 0
+    var getForwardListCalled = 0
+    var getCurrentBackForwardItemCalled = 0
     var removeAllUserScriptsCalled = 0
     var removeFromSuperviewCalled = 0
-    var addObserverCalled = 0
-    var removeObserverCalled = 0
+    var closeCalled = 0
     var evaluateJavaScriptCalled = 0
     var savedJavaScript: String?
     var javascriptResult: (Result<Any, Error>)?
     var pageZoom: CGFloat = 1.0
+    var viewPrintFormatterCalled = 0
 
     var loadFileReadAccessURL: URL?
 
     required init?(frame: CGRect,
-                   configurationProvider: WKEngineConfigurationProvider) {
-        self.engineConfiguration = configurationProvider.createConfiguration()
+                   configurationProvider: WKEngineConfigurationProvider,
+                   parameters: WKWebViewParameters) {
+        self.engineConfiguration = configurationProvider.createConfiguration(parameters: parameters)
         super.init(frame: frame)
     }
 
@@ -90,6 +95,26 @@ class MockWKEngineWebView: UIView, WKEngineWebView {
         return nil
     }
 
+    func go(to item: WKBackForwardListItem) -> WKNavigation? {
+        goToCalled += 1
+        return nil
+    }
+
+    func backList() -> [WKBackForwardListItem] {
+        getBackListCalled += 1
+        return []
+    }
+
+    func forwardList() -> [WKBackForwardListItem] {
+        getForwardListCalled += 1
+        return []
+    }
+
+    func currentBackForwardListItem() -> WKBackForwardListItem? {
+        getCurrentBackForwardItemCalled += 1
+        return nil
+    }
+
     func removeAllUserScripts() {
         removeAllUserScriptsCalled += 1
     }
@@ -98,22 +123,19 @@ class MockWKEngineWebView: UIView, WKEngineWebView {
         removeFromSuperviewCalled += 1
     }
 
-    override func addObserver(_ observer: NSObject,
-                              forKeyPath keyPath: String,
-                              options: NSKeyValueObservingOptions,
-                              context: UnsafeMutableRawPointer?) {
-        addObserverCalled += 1
+    func close() {
+        closeCalled += 1
     }
 
-    override func removeObserver(_ observer: NSObject,
-                                 forKeyPath keyPath: String) {
-        removeObserverCalled += 1
+    override func viewPrintFormatter() -> UIViewPrintFormatter {
+        viewPrintFormatterCalled += 1
+        return UIViewPrintFormatter()
     }
 
     func evaluateJavaScript(_ javaScript: String,
                             in frame: WKFrameInfo?,
                             in contentWorld: WKContentWorld,
-                            completionHandler: ((Result<Any, Error>) -> Void)?) {
+                            completionHandler: (@MainActor @Sendable (Result<Any, Error>) -> Void)?) {
         evaluateJavaScriptCalled += 1
         savedJavaScript = javaScript
 

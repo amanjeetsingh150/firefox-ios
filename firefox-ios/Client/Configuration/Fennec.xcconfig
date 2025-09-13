@@ -4,6 +4,7 @@
 
 #include "Common.xcconfig"
 #include "Debug.xcconfig"
+#include "version.xcconfig"
 
 INFOPLIST_FILE = Client/Info.plist
 MOZ_BUNDLE_DISPLAY_NAME = Fennec ($(USER))
@@ -16,3 +17,5 @@ CHANNEL = developer
 OTHER_SWIFT_FLAGS = $(OTHER_SWIFT_FLAGS_common) -DMOZ_CHANNEL_$(CHANNEL)
 MOZ_INTERNAL_URL_SCHEME = fennec
 OTHER_LDFLAGS = -ObjC -fprofile-instr-generate -Xlinker -no_application_extension
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+ENABLE_NS_ASSERTIONS = YES

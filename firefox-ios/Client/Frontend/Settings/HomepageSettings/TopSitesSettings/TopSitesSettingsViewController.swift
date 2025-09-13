@@ -38,15 +38,23 @@ class TopSitesSettingsViewController: SettingsTableViewController, FeatureFlagga
                     prefKey: PrefsKeys.UserFeatureFlagPrefs.TopSiteSection,
                     defaultValue: true,
                     titleText: .Settings.Homepage.Shortcuts.ShortcutsToggle
-                ),
+                ) { isOn in
+                    store.dispatchLegacy(
+                        TopSitesAction(
+                            isEnabled: isOn,
+                            windowUUID: self.windowUUID,
+                            actionType: TopSitesActionType.toggleShowSectionSetting
+                        )
+                    )
+                },
                 BoolSetting(
                     prefs: profile.prefs,
                     theme: themeManager.getCurrentTheme(for: windowUUID),
-                    prefKey: PrefsKeys.UserFeatureFlagPrefs.SponsoredShortcuts,
-                    defaultValue: true,
+                    prefKey: PrefsKeys.FeatureFlags.SponsoredShortcuts,
+                    defaultValue: featureFlags.isFeatureEnabled(.hntSponsoredShortcuts, checking: .userOnly),
                     titleText: .Settings.Homepage.Shortcuts.SponsoredShortcutsToggle
                 ) { _ in
-                    store.dispatch(
+                    store.dispatchLegacy(
                         TopSitesAction(
                             windowUUID: self.windowUUID,
                             actionType: TopSitesActionType.toggleShowSponsoredSettings
@@ -76,7 +84,7 @@ extension TopSitesSettingsViewController {
         override var status: NSAttributedString {
             let defaultValue = TopSitesRowCountSettingsController.defaultNumberOfRows
             let numberOfRows = profile?.prefs.intForKey(PrefsKeys.NumberOfTopSiteRows) ?? defaultValue
-            store.dispatch(
+            store.dispatchLegacy(
                 TopSitesAction(
                     numberOfRows: Int(numberOfRows),
                     windowUUID: self.windowUUID,

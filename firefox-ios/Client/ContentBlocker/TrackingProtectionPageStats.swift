@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import Shared
 import Common
 
 struct TPPageStats {
@@ -98,7 +97,10 @@ class TPStatsBlocklistChecker {
 
 // The 'unless-domain' and 'if-domain' rules use wildcard expressions, convert this to regex.
 func wildcardContentBlockerDomainToRegex(domain: String) -> String? {
-    struct Memo { static var domains = [String: String]() }
+    struct Memo {
+        // TODO: FXIOS-12586 This global property is not concurrency safe
+        nonisolated(unsafe) static var domains = [String: String]()
+    }
 
     if let memoized = Memo.domains[domain] {
         return memoized

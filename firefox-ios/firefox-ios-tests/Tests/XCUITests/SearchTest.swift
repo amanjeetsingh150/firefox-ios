@@ -14,10 +14,10 @@ private let SuggestedSite4 = "foobar buffer length"
 private let SuggestedSite5 = "foobar burn cd"
 private let SuggestedSite6 = "foobar bomb baby"
 
-class SearchTests: BaseTestCase {
+class SearchTests: FeatureFlaggedTestBase {
     private func typeOnSearchBar(text: String) {
-        app.textFields.firstMatch.waitAndTap()
-        app.textFields.firstMatch.tapAndTypeText(text)
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].waitAndTap()
+        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].tapAndTypeText(text)
     }
 
     private func suggestionsOnOff() {
@@ -34,7 +34,7 @@ class SearchTests: BaseTestCase {
         typeOnSearchBar(text: typeText)
 
         // In the search suggestion, "text" should be displayed
-        let predicate = NSPredicate(format: "label CONTAINS[c] %@", "http://localhost:")
+        let predicate = NSPredicate(format: "label CONTAINS[c] %@", "localhost")
         let elementQuery = app.staticTexts.containing(predicate)
         mozWaitForElementToExist(elementQuery.element)
     }
@@ -42,6 +42,7 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2436093
     func testPromptPresence() {
         // Suggestion is on by default (starting on Oct 24th 2017), so the prompt should not appear
+        app.launch()
         navigator.goto(URLBarOpen)
         typeOnSearchBar(text: "foobar")
         mozWaitForElementToNotExist(app.staticTexts[LabelPrompt])
@@ -89,6 +90,7 @@ class SearchTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2436094
     func testDoNotShowSuggestionsWhenEnteringURL() {
+        app.launch()
         // According to bug 1192155 if a string contains /, do not show suggestions, if there a space an a string,
         // the suggestions are shown again
         navigator.goto(URLBarOpen)
@@ -124,13 +126,18 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2436095
     func testCopyPasteComplete() {
         // Copy, Paste and Go to url
+        app.launch()
         navigator.goto(URLBarOpen)
         typeOnSearchBar(text: "www.mozilla.org")
-        if iPad() {
+        if #available(iOS 17, *), ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 17
+            || iPad() {
             urlBarAddress.waitAndTap()
             urlBarAddress.waitAndTap()
         } else {
-            urlBarAddress.press(forDuration: 5)
+            urlBarAddress.press(forDuration: 1)
+        }
+        if !app.menuItems["Select All"].waitForExistence(timeout: 3) {
+            urlBarAddress.waitAndTap()
         }
         app.menuItems["Select All"].waitAndTap()
         app.menuItems["Copy"].waitAndTap()
@@ -168,6 +175,11 @@ class SearchTests: BaseTestCase {
     private func changeSearchEngine(searchEngine: String) {
         sleep(2)
         mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
+        // issue 28625: iOS 15 may not open the menu fully.
+        if #unavailable(iOS 16) {
+            navigator.goto(BrowserTabMenu)
+            app.swipeUp()
+        }
         navigator.goto(SearchSettings)
         // Open the list of default search engines and select the desired
         app.tables.cells.element(boundBy: 0).waitAndTap()
@@ -183,6 +195,7 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306940
     // Smoketest
     func testSearchEngine() {
+        app.launch()
         navigator.nowAt(NewTabScreen)
         // Change to the each search engine and verify the search uses it
         changeSearchEngine(searchEngine: "Bing")
@@ -194,6 +207,7 @@ class SearchTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2353246
     func testDefaultSearchEngine() {
+        app.launch()
         navigator.nowAt(NewTabScreen)
         navigator.goto(SearchSettings)
         XCTAssert(app.tables.staticTexts["Google"].exists)
@@ -201,6 +215,7 @@ class SearchTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2436091
     func testSearchWithFirefoxOption() {
+        app.launch()
         navigator.nowAt(NewTabScreen)
         navigator.openURL(path(forTestPage: "test-mozilla-book.html"))
         waitUntilPageLoad()
@@ -242,6 +257,7 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2436092
     // Smoketest
     func testSearchStartAfterTypingTwoWords() {
+        app.launch()
         navigator.goto(URLBarOpen)
         mozWaitForElementToExist(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField])
         app.typeText("foo bar")
@@ -253,6 +269,7 @@ class SearchTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2306943
     func testSearchIconOnAboutHome() throws {
+        app.launch()
         if iPad() {
             throw XCTSkip("iPad does not have search icon")
         } else {
@@ -273,9 +290,12 @@ class SearchTests: BaseTestCase {
             waitUntilPageLoad()
 
             // Reload icon is displayed.
-            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.homeButton])
-            XCTAssertEqual(app.buttons[AccessibilityIdentifiers.Toolbar.homeButton].label, "Home")
-            app.buttons[AccessibilityIdentifiers.Toolbar.homeButton].waitAndTap()
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
+            XCTAssertEqual(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].label, "New Tab")
+            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
+            mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton])
+            app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].waitAndTap()
+            mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Toolbar.searchButton])
             XCTAssertEqual(app.buttons[AccessibilityIdentifiers.Toolbar.searchButton].label, "Search")
             app.buttons[AccessibilityIdentifiers.Toolbar.searchButton].waitAndTap()
 
@@ -289,6 +309,7 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306989
     // Smoketest
     func testOpenTabsInSearchSuggestions() throws {
+        app.launch()
         if #unavailable(iOS 16) {
             throw XCTSkip("Test fails intermittently for iOS 15")
         }
@@ -310,6 +331,7 @@ class SearchTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306886
     // SmokeTest
     func testBottomVIewURLBar() throws {
+        app.launch()
         if iPad() {
             throw XCTSkip("Toolbar option not available for iPad")
         } else {
@@ -323,7 +345,7 @@ class SearchTests: BaseTestCase {
             let customizeHomepageElement = AccessibilityIdentifiers.FirefoxHomepage.MoreButtons.customizeHomePage
             let customizeHomepage = app.cells.otherElements.buttons[customizeHomepageElement]
             let menuSettingsButton = app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
-            scrollToElement(customizeHomepage)
+            app.swipeUp()
             mozWaitForElementToExist(customizeHomepage)
             let urlBar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
             XCTAssertTrue(urlBar.isBelow(element: customizeHomepage))
@@ -365,6 +387,7 @@ class SearchTests: BaseTestCase {
         guard #available(iOS 17.0, *) else { return }
 
         // Tap on URL Bar and type "g"
+        app.launch()
         navigator.nowAt(NewTabScreen)
         typeTextAndValidateSearchSuggestions(text: "g", isSwitchOn: true)
 
@@ -405,6 +428,38 @@ class SearchTests: BaseTestCase {
         typeTextAndValidateSearchSuggestions(text: "g", isSwitchOn: true)
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2576803
+    func testFirefoxSuggest() {
+        // In history: mozilla.org
+        app.launch()
+        navigator.openURL("https://www.mozilla.org/en-US/")
+        waitUntilPageLoad()
+
+        // Bookmark The Book of Mozilla (on localhost)
+        navigator.openNewURL(urlString: "localhost:\(serverPort)/test-fixture/test-mozilla-book.html")
+        waitUntilPageLoad()
+        navigator.goto(BrowserTabMenu)
+        // navigator.goto(SaveBrowserTabMenu)
+        navigator.performAction(Action.Bookmark)
+
+        // Close all tabs so that the search result does not include
+        // current tabs.
+        navigator.performAction(Action.AcceptRemovingAllTabs)
+
+        // Type partial match ("mo") of the history and the bookmark
+        navigator.goto(NewTabScreen)
+        typeOnSearchBar(text: "mo")
+
+        // Google Search appears
+        mozWaitForElementToExist(app.tables["SiteTable"].otherElements["Google Search"])
+        mozWaitForElementToExist(app.tables["SiteTable"].buttons[StandardImageIdentifiers.Large.appendUpLeft])
+
+        // Firefox Suggest appears
+        mozWaitForElementToExist(app.tables["SiteTable"].otherElements["Firefox Suggest"])
+        mozWaitForElementToExist(app.tables["SiteTable"].staticTexts["The Book of Mozilla"]) // Bookmark
+        mozWaitForElementToExist(app.tables["SiteTable"].staticTexts["www.mozilla.org/"]) // History
+    }
+
     private func turnOnOffSearchSuggestions(turnOnSwitch: Bool) {
         let showSearchSuggestions = app.switches[AccessibilityIdentifiers.Settings.Search.showSearchSuggestions]
         mozWaitForElementToExist(showSearchSuggestions)
@@ -427,16 +482,20 @@ class SearchTests: BaseTestCase {
     private func typeTextAndValidateSearchSuggestions(text: String, isSwitchOn: Bool) {
         typeOnSearchBar(text: text)
         // Search suggestions are shown
+        let appendArrowBtn = app.tables.cells.buttons.matching(identifier: "appendUpLeftLarge")
         if isSwitchOn {
             mozWaitForElementToExist(app.staticTexts.elementContainingText("google"))
+            mozWaitForElementToExist(app.tables["SiteTable"].staticTexts["Google Search"])
             XCTAssertTrue(app.staticTexts.elementContainingText("google").exists)
             mozWaitForElementToExist(app.tables.cells.staticTexts["g"])
-            XCTAssertTrue(app.tables.cells.count >= 4)
+            XCTAssertTrue(appendArrowBtn.count == 3)
         } else {
             mozWaitForElementToNotExist(app.tables.buttons[StandardImageIdentifiers.Large.appendUpLeft])
             mozWaitForElementToExist(app.tables["SiteTable"].staticTexts["Firefox Suggest"])
             mozWaitForElementToExist(app.tables.cells.firstMatch)
-            XCTAssertTrue(app.tables.cells.count <= 3)
+            // If "Append Arrow buttons" are missing, then google search suggestions are missing
+            mozWaitForElementToNotExist(appendArrowBtn.element)
+            mozWaitForElementToNotExist(app.tables.cells.staticTexts["g"])
         }
     }
 
@@ -447,91 +506,93 @@ class SearchTests: BaseTestCase {
         XCTAssert(keyboardCount > 0, "The keyboard is not shown")
     }
 
-// TODO: Add UI Tests back when felt privay simplified UI feature flag is enabled or when
-// we support feature flags for tests
-//    func testPrivateModeSearchSuggestsOnOffAndGeneralSearchSuggestsOn() {
-//        navigator.nowAt(NewTabScreen)
-//        navigator.goto(SearchSettings)
-//        navigator.nowAt(SearchSettings)
-//
-//        // By default, disable search suggest in private mode
-//        let privateModeSearchSuggestSwitch = app.otherElements.tables.cells[
-//            AccessibilityIdentifiers.Settings.Search.disableSearchSuggestsInPrivateMode
-//        ]
-//        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
-//
-//        app.navigationBars["Search"].buttons["Settings"].tap()
-//        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
-//
-//        navigator.nowAt(NewTabScreen)
-//        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-//        navigator.goto(URLBarOpen)
-//        urlBarAddress.typeText("ex")
-//
-//        let dimmingView = app.otherElements[AccessibilityIdentifiers.PrivateMode.dimmingView]
-//        mozWaitForElementToExist(dimmingView)
-//
-//        // Enable search suggest in private mode
-//        navigator.goto(SearchSettings)
-//        navigator.nowAt(SearchSettings)
-//
-//        mozWaitForElementToNotExist(app.tables["SiteTable"])
-//        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
-//        privateModeSearchSuggestSwitch.tap()
-//
-//        app.navigationBars["Search"].buttons["Settings"].tap()
-//        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
-//
-//        navigator.nowAt(NewTabScreen)
-//        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-//        navigator.goto(URLBarOpen)
-//        urlBarAddress.typeText("ex")
-//
-//        mozWaitForElementToNotExist(dimmingView)
-//        mozWaitForElementToExist(app.tables["SiteTable"])
-//    }
-//
-//    func testPrivateModeSearchSuggestsOnOffAndGeneralSearchSuggestsOff() {
-//        // Disable general search suggests
-//        suggestionsOnOff()
-//        navigator.nowAt(NewTabScreen)
-//        navigator.goto(SearchSettings)
-//        navigator.nowAt(SearchSettings)
-//
-//        // By default, disable search suggest in private mode
-//        let privateModeSearchSuggestSwitch = app.otherElements.tables.cells[
-//            AccessibilityIdentifiers.Settings.Search.disableSearchSuggestsInPrivateMode
-//        ]
-//        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
-//
-//        app.navigationBars["Search"].buttons["Settings"].tap()
-//        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
-//
-//        navigator.nowAt(NewTabScreen)
-//        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-//        navigator.goto(URLBarOpen)
-//        urlBarAddress.typeText("ex")
-//
-//        let dimmingView = app.otherElements[AccessibilityIdentifiers.PrivateMode.dimmingView]
-//        mozWaitForElementToExist(dimmingView)
-//
-//        // Enable search suggest in private mode
-//        navigator.goto(SearchSettings)
-//        navigator.nowAt(SearchSettings)
-//
-//        mozWaitForElementToNotExist(app.tables["SiteTable"])
-//        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
-//        privateModeSearchSuggestSwitch.tap()
-//
-//        app.navigationBars["Search"].buttons["Settings"].tap()
-//        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
-//
-//        navigator.nowAt(NewTabScreen)
-//        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-//        navigator.goto(URLBarOpen)
-//        urlBarAddress.typeText("ex")
-//
-//        mozWaitForElementToNotExist(dimmingView)
-//        mozWaitForElementToExist(app.tables["SiteTable"])
-//    }
+    func testPrivateModeSearchSuggestsOnOffAndGeneralSearchSuggestsOn_feltPrivacySimplifiedUIExperimentOn() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
+        addLaunchArgument(jsonFileName: "feltPrivacySimplifiedUIOn", featureName: "felt-privacy-feature")
+        app.launch()
+        navigator.goto(SearchSettings)
+        navigator.nowAt(SearchSettings)
+
+        // By default, disable search suggest in private mode
+        let privateModeSearchSuggestSwitch = app.otherElements.tables.cells[
+            AccessibilityIdentifiers.Settings.Search.showPrivateSuggestions
+        ].switches.firstMatch
+        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
+
+        app.navigationBars["Search"].buttons["Settings"].tap()
+        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
+
+        navigator.nowAt(NewTabScreen)
+        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+        navigator.goto(URLBarOpen)
+        urlBarAddress.typeText("ex")
+
+        let dimmingView = app.otherElements[AccessibilityIdentifiers.PrivateMode.dimmingView]
+        mozWaitForElementToExist(dimmingView)
+
+        // Enable search suggest in private mode
+        navigator.goto(SearchSettings)
+        navigator.nowAt(SearchSettings)
+
+        mozWaitForElementToNotExist(app.tables["SiteTable"])
+        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
+        privateModeSearchSuggestSwitch.tap()
+
+        app.navigationBars["Search"].buttons["Settings"].tap()
+        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
+
+        navigator.nowAt(NewTabScreen)
+        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+        navigator.goto(URLBarOpen)
+        urlBarAddress.typeText("ex")
+
+        mozWaitForElementToNotExist(dimmingView)
+        mozWaitForElementToExist(app.tables["SiteTable"])
+    }
+
+    func testPrivateModeSearchSuggestsOnOffAndGeneralSearchSuggestsOff_feltPrivacySimplifiedUIExperimentOn() {
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
+        addLaunchArgument(jsonFileName: "feltPrivacySimplifiedUIOn", featureName: "felt-privacy-feature")
+        app.launch()
+        // Disable general search suggests
+        navigator.goto(SearchSettings)
+        navigator.nowAt(SearchSettings)
+        app.tables.switches["Show Search Suggestions"].waitAndTap()
+
+        // By default, disable search suggest in private mode
+        let privateModeSearchSuggestSwitch = app.otherElements.tables.cells[
+            AccessibilityIdentifiers.Settings.Search.showPrivateSuggestions
+        ].switches.firstMatch
+        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
+
+        app.navigationBars["Search"].buttons["Settings"].tap()
+        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
+
+        navigator.nowAt(NewTabScreen)
+        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+        navigator.goto(URLBarOpen)
+        urlBarAddress.typeText("ex")
+
+        let dimmingView = app.otherElements[AccessibilityIdentifiers.PrivateMode.dimmingView]
+        mozWaitForElementToExist(dimmingView)
+
+        // Enable search suggest in private mode
+        navigator.goto(SearchSettings)
+        navigator.nowAt(SearchSettings)
+
+        mozWaitForElementToNotExist(app.tables["SiteTable"])
+        mozWaitForElementToExist(privateModeSearchSuggestSwitch)
+        privateModeSearchSuggestSwitch.tap()
+
+        app.navigationBars["Search"].buttons["Settings"].tap()
+        app.navigationBars["Settings"].buttons[AccessibilityIdentifiers.Settings.navigationBarItem].tap()
+
+        navigator.nowAt(NewTabScreen)
+        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+        navigator.goto(URLBarOpen)
+        urlBarAddress.typeText("ex")
+
+        mozWaitForElementToNotExist(dimmingView)
+        mozWaitForElementToExist(app.tables["SiteTable"])
+    }
 }

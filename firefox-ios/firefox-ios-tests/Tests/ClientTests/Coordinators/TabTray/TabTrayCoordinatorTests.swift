@@ -5,6 +5,7 @@
 import XCTest
 @testable import Client
 
+@MainActor
 final class TabTrayCoordinatorTests: XCTestCase {
     private var mockRouter: MockRouter!
     private var profile: MockProfile!
@@ -71,7 +72,7 @@ final class TabTrayCoordinatorTests: XCTestCase {
 
     // MARK: - Helpers
     private func createSubject(panelType: TabTrayPanelType = .tabs,
-                               file: StaticString = #file,
+                               file: StaticString = #filePath,
                                line: UInt = #line) -> TabTrayCoordinator {
         let subject = TabTrayCoordinator(router: mockRouter,
                                          tabTraySection: panelType,

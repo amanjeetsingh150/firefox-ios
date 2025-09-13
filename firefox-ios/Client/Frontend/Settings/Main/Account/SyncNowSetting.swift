@@ -27,14 +27,11 @@ class SyncNowSetting: WithAccountSetting {
         self.notificationCenter = notificationCenter
         super.init(settings: settings)
 
+        // FIXME: FXIOS-12995 Use Notifiable
         notificationCenter.addObserver(self,
                                        selector: #selector(stopRotateSyncIcon),
                                        name: .ProfileDidFinishSyncing,
                                        object: nil)
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     private lazy var timestampFormatter: DateFormatter = {
@@ -193,6 +190,7 @@ class SyncNowSetting: WithAccountSetting {
 
     override func onConfigureCell(_ cell: UITableViewCell, theme: Theme) {
         super.onConfigureCell(cell, theme: theme)
+
         cell.textLabel?.attributedText = title
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.lineBreakMode = .byWordWrapping
@@ -224,6 +222,13 @@ class SyncNowSetting: WithAccountSetting {
         }
         cell.accessoryType = accessoryType
         cell.isUserInteractionEnabled = !(profile?.syncManager?.isSyncing ?? false) && DeviceInfo.hasConnectivity()
+
+        configureImageCell(for: cell)
+    }
+
+    private func configureImageCell(for cell: UITableViewCell) {
+        // Reset imageview to avoid showing wrong image
+        cell.imageView?.image = nil
 
         // Animation that loops continuously until stopped
         continuousRotateAnimation.fromValue = 0.0

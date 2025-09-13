@@ -3,10 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
-import Storage
 
 @testable import Client
 
+@MainActor
 final class LibraryCoordinatorTests: XCTestCase {
     private var mockRouter: MockRouter!
     private var delegate: MockLibraryCoordinatorDelegate!

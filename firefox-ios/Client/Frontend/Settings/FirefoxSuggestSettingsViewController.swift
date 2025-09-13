@@ -4,7 +4,6 @@
 
 import Common
 import Foundation
-import Shared
 import UIKit
 
 /// A view controller that manages the hidden Firefox Suggest debug settings.
@@ -70,7 +69,7 @@ class ForceFirefoxSuggestIngestSetting: Setting {
                        level: .info,
                        category: .storage)
             do {
-                try await self.profile?.firefoxSuggest?.ingest()
+                try await self.profile?.firefoxSuggest?.ingest(emptyOnly: false)
                 logger.log("Successfully ingested new suggestions",
                            level: .info,
                            category: .storage)

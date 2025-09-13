@@ -9,16 +9,19 @@ import Shared
 
 // Delegate for coordinator to be able to handle navigation
 protocol PrivateHomepageDelegate: AnyObject {
+    @MainActor
     func homePanelDidRequestToOpenInNewTab(with url: URL, isPrivate: Bool, selectNewTab: Bool)
+
+    @MainActor
     func switchMode()
 }
 
 // Displays the view for the private homepage when users create a new tab in private browsing
-final class PrivateHomepageViewController:
-    UIViewController,
-    ContentContainable,
-    Themeable,
-    FeatureFlaggable {
+final class PrivateHomepageViewController: UIViewController,
+                                           ContentContainable,
+                                           Screenshotable,
+                                           Themeable,
+                                           FeatureFlaggable {
     enum UX {
         static let scrollContainerStackSpacing: CGFloat = 24
         static let defaultScrollContainerPadding: CGFloat = 16
@@ -35,7 +38,7 @@ final class PrivateHomepageViewController:
 
     // MARK: Theming Variables
     var themeManager: Common.ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: Common.NotificationProtocol
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -51,25 +54,12 @@ final class PrivateHomepageViewController:
     private var containerWidthConstraint: NSLayoutConstraint?
 
     // MARK: UI Elements
-    private lazy var gradient: CAGradientLayer = {
-        let gradient = CAGradientLayer()
-        gradient.type = .axial
-        gradient.startPoint = CGPoint(x: 1, y: 0)
-        gradient.endPoint = CGPoint(x: 0, y: 1)
-        gradient.locations = [0, 0.5, 1]
-        return gradient
-    }()
+    private lazy var gradient = CAGradientLayer()
 
     private let scrollView: UIScrollView = .build()
 
     private var headerViewModel: HomepageHeaderCellViewModel {
-        return HomepageHeaderCellViewModel(
-            isPrivate: true,
-            showiPadSetup: shouldUseiPadSetup(),
-            showPrivateModeToggle: !shouldUseiPadSetup(),
-            action: { [weak self] in
-                self?.parentCoordinator?.switchMode()
-            })
+        return HomepageHeaderCellViewModel(showiPadSetup: shouldUseiPadSetup())
     }
 
     private let scrollContainer: UIStackView = .build { stackView in
@@ -91,10 +81,10 @@ final class PrivateHomepageViewController:
         return messageCard
     }()
 
-    private lazy var homepageHeaderCell: LegacyHomepageHeaderCell = {
-        let header = LegacyHomepageHeaderCell()
+    private lazy var homepageHeaderCell: HomepageHeaderCell = {
+        let header = HomepageHeaderCell()
         header.applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-        header.configure(with: headerViewModel)
+        header.configure(headerState: HeaderState(windowUUID: windowUUID))
         return header
     }()
 
@@ -122,7 +112,7 @@ final class PrivateHomepageViewController:
         setupLayout()
         setupDismissKeyboard()
 
-        listenForThemeChange(view)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
@@ -131,9 +121,15 @@ final class PrivateHomepageViewController:
         updateConstraintsForMultitasking()
         if previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass
             || previousTraitCollection?.verticalSizeClass != traitCollection.verticalSizeClass {
-            homepageHeaderCell.configure(with: headerViewModel)
+            homepageHeaderCell.configure(headerState: HeaderState(windowUUID: windowUUID))
         }
         applyTheme()
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        coordinator.animate { _ in
+            self.gradient.frame = CGRect(origin: .zero, size: size)
+        }
     }
 
     deinit {
@@ -146,6 +142,8 @@ final class PrivateHomepageViewController:
         scrollContainer.addArrangedSubview(privateMessageCardCell)
         scrollContainer.accessibilityElements = [homepageHeaderCell.contentView, privateMessageCardCell]
 
+        setupGradient(gradient)
+        gradient.frame = view.bounds
         view.layer.addSublayer(gradient)
         view.addSubview(scrollView)
         scrollView.addSubview(scrollContainer)
@@ -163,6 +161,13 @@ final class PrivateHomepageViewController:
         ])
 
         setupConstraintsForMultitasking()
+    }
+
+    private func setupGradient(_ gradient: CAGradientLayer) {
+        gradient.type = .axial
+        gradient.startPoint = CGPoint(x: 1, y: 0)
+        gradient.endPoint = CGPoint(x: 0, y: 1)
+        gradient.locations = [0, 0.5, 1]
     }
 
     // Constraints for trailing and leading padding on iPad (regular) should be larger than that of compact layout
@@ -200,11 +205,6 @@ final class PrivateHomepageViewController:
         constraint?.isActive = true
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        gradient.frame = view.bounds
-    }
-
     func applyTheme() {
         let theme = themeManager.getCurrentTheme(for: windowUUID)
         gradient.colors = theme.colors.layerHomepage.cgColors
@@ -235,5 +235,35 @@ final class PrivateHomepageViewController:
     @objc
     private func dismissKeyboard() {
         overlayManager.finishEditing(shouldCancelLoading: false)
+    }
+
+    // MARK: - Screenshotable
+
+    func screenshot(bounds: CGRect) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: bounds.size)
+
+        return renderer.image { context in
+            // Draw the background gradient separately, so the potential safe area coordinates is filled with the
+            // gradient
+            let renderedGradient = CAGradientLayer()
+            setupGradient(renderedGradient)
+            renderedGradient.colors = themeManager.getCurrentTheme(for: windowUUID).colors.layerHomepage.cgColors
+            renderedGradient.frame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
+            renderedGradient.render(in: context.cgContext)
+
+            view.drawHierarchy(
+                in: CGRect(
+                    x: bounds.origin.x,
+                    y: -bounds.origin.y,
+                    width: bounds.width,
+                    height: view.bounds.height
+                ),
+                afterScreenUpdates: false
+            )
+        }
+    }
+
+    func screenshot(quality: CGFloat) -> UIImage? {
+        screenshot(bounds: view.bounds)
     }
 }

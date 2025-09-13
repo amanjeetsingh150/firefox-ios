@@ -12,6 +12,7 @@ final class TopsSitesSectionStateTests: XCTestCase {
     override func setUp() {
         super.setUp()
         DependencyHelperMock().bootstrapDependencies()
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: MockProfile())
     }
 
     override func tearDown() {
@@ -24,6 +25,20 @@ final class TopsSitesSectionStateTests: XCTestCase {
 
         XCTAssertEqual(initialState.windowUUID, .XCTestDefaultUUID)
         XCTAssertEqual(initialState.topSitesData, [])
+    }
+
+    func test_initialState_withShortcutsLibraryEnabled_showsHeaderButton() {
+        setupNimbusShortcutsLibraryTesting(isEnabled: true)
+        let initialState = createSubject()
+
+        XCTAssertEqual(initialState.sectionHeaderState.isButtonHidden, false)
+    }
+
+    func test_initialState_withShortcutsLibraryDisabled_hidesHeaderButton() {
+        setupNimbusShortcutsLibraryTesting(isEnabled: false)
+        let initialState = createSubject()
+
+        XCTAssertEqual(initialState.sectionHeaderState.isButtonHidden, true)
     }
 
     func test_retrievedUpdatedStoriesAction_returnsExpectedState() throws {
@@ -106,7 +121,8 @@ final class TopsSitesSectionStateTests: XCTestCase {
         XCTAssertTrue(newState.shouldShowSection)
     }
 
-    func test_numberOfTilesPerRow_returnsExpectedState() {
+    // MARK: numberOfTilesPerRow
+    func test_viewWillTransition_numberOfTilesPerRow_returnsExpectedState() {
         let initialState = createSubject()
         let reducer = topSiteReducer()
 
@@ -116,6 +132,40 @@ final class TopsSitesSectionStateTests: XCTestCase {
                 numberOfTopSitesPerRow: 8,
                 windowUUID: .XCTestDefaultUUID,
                 actionType: HomepageActionType.viewWillTransition
+            )
+        )
+
+        XCTAssertEqual(newState.windowUUID, .XCTestDefaultUUID)
+        XCTAssertEqual(newState.numberOfTilesPerRow, 8)
+    }
+
+    func test_viewDidLayoutSubviews_numberOfTilesPerRow_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = topSiteReducer()
+
+        let newState = reducer(
+            initialState,
+            HomepageAction(
+                numberOfTopSitesPerRow: 8,
+                windowUUID: .XCTestDefaultUUID,
+                actionType: HomepageActionType.viewDidLayoutSubviews
+            )
+        )
+
+        XCTAssertEqual(newState.windowUUID, .XCTestDefaultUUID)
+        XCTAssertEqual(newState.numberOfTilesPerRow, 8)
+    }
+
+    func test_initialize_numberOfTilesPerRow_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = topSiteReducer()
+
+        let newState = reducer(
+            initialState,
+            HomepageAction(
+                numberOfTopSitesPerRow: 8,
+                windowUUID: .XCTestDefaultUUID,
+                actionType: HomepageActionType.initialize
             )
         )
 
@@ -144,5 +194,11 @@ final class TopsSitesSectionStateTests: XCTestCase {
             sites.append(TopSiteConfiguration(site: site))
         }
         return sites
+    }
+
+    private func setupNimbusShortcutsLibraryTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.homepageRedesignFeature.with { _, _ in
+            return HomepageRedesignFeature(shortcutsLibrary: isEnabled)
+        }
     }
 }

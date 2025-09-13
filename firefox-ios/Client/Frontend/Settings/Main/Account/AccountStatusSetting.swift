@@ -19,14 +19,11 @@ class AccountStatusSetting: WithAccountSetting {
         self.settingsDelegate = settingsDelegate
         super.init(settings: settings)
 
+        // FIXME: FXIOS-12995 Use Notifiable
         notificationCenter.addObserver(self,
                                        selector: #selector(updateAccount),
                                        name: .FirefoxAccountProfileChanged,
                                        object: nil)
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     @objc
@@ -88,14 +85,16 @@ class AccountStatusSetting: WithAccountSetting {
                 .tinted(withColor: theme.colors.iconPrimary)
 
             guard let str = RustFirefoxAccounts.shared.userProfile?.avatarUrl,
-                  let actionIconUrl = URL(string: str, invalidCharacters: false)
+                  let actionIconUrl = URL(string: str)
             else { return }
 
             GeneralizedImageFetcher().getImageFor(url: actionIconUrl) { image in
                 guard let avatar = image else { return }
 
-                imageView.image = avatar.createScaled(CGSize(width: 30, height: 30))
-                    .withRenderingMode(.alwaysOriginal)
+                DispatchQueue.main.async {
+                    imageView.image = avatar.createScaled(CGSize(width: 30, height: 30))
+                        .withRenderingMode(.alwaysOriginal)
+                }
             }
         }
     }

@@ -16,34 +16,32 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
     private var homeTopSite: TopSiteConfiguration?
 
     struct UX {
-        static let titleOffset: CGFloat = 4
-        static let iconSize = CGSize(width: 36, height: 36)
         static let imageBackgroundSize = CGSize(width: 60, height: 60)
-        static let pinAlignmentSpacing: CGFloat = 2
         static let pinIconSize = CGSize(width: 12, height: 12)
+        static let pinBackgroundSize = CGSize(width: 16, height: 16)
+        static let pinBackgroundCornerRadius: CGFloat = pinBackgroundSize.width / 2
+        static let pinBackgroundShadowOffset = CGSize(width: 1, height: 1)
+        static let pinBackgroundShadowOpacity: Float = 1.0
+        static let pinBackgroundShadowRadius: CGFloat = 4.0
         static let textSafeSpace: CGFloat = 6
-        static let bottomSpace: CGFloat = 8
-        static let imageTopSpace: CGFloat = 12
-        static let imageBottomSpace: CGFloat = 12
-        static let imageLeadingTrailingSpace: CGFloat = 12
+        static let faviconCornerRadius: CGFloat = 16
+        static let faviconTransparentBackgroundInset: CGFloat = 8
+        static let transparencyThreshold: CGFloat = 15
     }
 
     private var rootContainer: UIView = .build { view in
         view.backgroundColor = .clear
-        view.layer.cornerRadius = HomepageViewModel.UX.generalCornerRadius
+        view.layer.cornerRadius = UX.faviconCornerRadius
     }
 
-    lazy var imageView: FaviconImageView = .build { _ in }
+    private lazy var imageView: FaviconImageView = {
+        let imageView = FaviconImageView { [weak self] in
+            self?.configureFaviconWithTransparency()
+        }
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
 
-    // Holds the title and the pin image of the top site
-    private lazy var titlePinWrapper: UIStackView = .build { stackView in
-        stackView.backgroundColor = .clear
-        stackView.axis = .horizontal
-        stackView.alignment = .top
-        stackView.distribution = .fillProportionally
-    }
-
-    // Holds the titlePinWrapper and the Sponsored text for a sponsored tile
     private lazy var descriptionWrapper: UIStackView = .build { stackView in
         stackView.backgroundColor = .clear
         stackView.axis = .vertical
@@ -51,18 +49,19 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
         stackView.distribution = .fillProportionally
     }
 
-    private lazy var pinViewHolder: UIView = .build { view in
+    private lazy var pinImageBackgroundView: UIView = .build { view in
+        view.backgroundColor = LightTheme().colors.layer2
+        view.layer.cornerRadius = UX.pinBackgroundCornerRadius
         view.isHidden = true
     }
 
     private lazy var pinImageView: UIImageView = .build { imageView in
-        imageView.image = UIImage.templateImageNamed(StandardImageIdentifiers.Small.pinBadgeFill)
-        imageView.isHidden = true
+        imageView.image = UIImage(named: StandardImageIdentifiers.Large.pinFill)
     }
 
     private lazy var titleLabel: UILabel = .build { titleLabel in
         titleLabel.textAlignment = .center
-        titleLabel.font = FXFontStyles.Regular.caption1.scaledFont()
+        titleLabel.font = FXFontStyles.Bold.caption1.scaledFont()
         titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.preferredMaxLayoutWidth = UX.imageBackgroundSize.width + HomepageViewModel.UX.shadowRadius
         titleLabel.backgroundColor = .clear
@@ -71,7 +70,7 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
 
     private lazy var sponsoredLabel: UILabel = .build { sponsoredLabel in
         sponsoredLabel.textAlignment = .center
-        sponsoredLabel.font = FXFontStyles.Regular.caption2.scaledFont()
+        sponsoredLabel.font = FXFontStyles.Regular.caption1.scaledFont()
         sponsoredLabel.adjustsFontForContentSizeCategory = true
         sponsoredLabel.preferredMaxLayoutWidth = UX.imageBackgroundSize.width + HomepageViewModel.UX.shadowRadius
     }
@@ -94,6 +93,8 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
     }
 
     private var textColor: UIColor?
+    private var imageViewConstraints: [NSLayoutConstraint] = []
+    private var theme: Theme?
 
     // MARK: - Inits
 
@@ -114,8 +115,8 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
 
         titleLabel.text = nil
         sponsoredLabel.text = nil
-        pinViewHolder.isHidden = true
-        pinImageView.isHidden = true
+        pinImageBackgroundView.isHidden = true
+        imageViewConstraints.forEach { $0.constant = 0 }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -128,9 +129,15 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
 
         rootContainer.setNeedsLayout()
         rootContainer.layoutIfNeeded()
-
         rootContainer.layer.shadowPath = UIBezierPath(roundedRect: rootContainer.bounds,
-                                                      cornerRadius: HomepageViewModel.UX.generalCornerRadius).cgPath
+                                                      cornerRadius: UX.faviconCornerRadius).cgPath
+
+        pinImageBackgroundView.layer.shadowPath = UIBezierPath(roundedRect: pinImageBackgroundView.bounds,
+                                                               cornerRadius: UX.pinBackgroundCornerRadius).cgPath
+        pinImageBackgroundView.layer.shadowColor = theme?.colors.shadowStrong.cgColor
+        pinImageBackgroundView.layer.shadowOpacity = UX.pinBackgroundShadowOpacity
+        pinImageBackgroundView.layer.shadowOffset = UX.pinBackgroundShadowOffset
+        pinImageBackgroundView.layer.shadowRadius = UX.pinBackgroundShadowRadius
     }
 
     // MARK: - Public methods
@@ -139,6 +146,7 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
                    position: Int,
                    theme: Theme,
                    textColor: UIColor?) {
+        self.theme = theme
         homeTopSite = topSite
         titleLabel.text = topSite.title
         accessibilityLabel = topSite.accessibilityLabel
@@ -149,7 +157,7 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
 
         switch topSite.type {
         case .sponsoredSite(let siteInfo):
-            if let url = URL(string: siteInfo.imageURL, invalidCharacters: false) {
+            if let url = URL(string: siteInfo.imageURL) {
                 imageResource = .remoteURL(url: url)
             }
         case .pinnedSite, .suggestedSite:
@@ -169,12 +177,14 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
         }
 
         let viewModel = FaviconImageViewModel(siteURLString: siteURLString,
-                                              siteResource: imageResource)
+                                              siteResource: imageResource,
+                                              faviconCornerRadius: UX.faviconCornerRadius)
         imageView.setFavicon(viewModel)
         self.textColor = textColor
 
         configurePinnedSite(topSite)
         configureSponsoredSite(topSite)
+        configureFaviconWithTransparency()
 
         applyTheme(theme: theme)
     }
@@ -182,37 +192,24 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
     // MARK: - Setup Helper methods
 
     private func setupLayout() {
-        titlePinWrapper.addArrangedSubview(pinViewHolder)
-        titlePinWrapper.addArrangedSubview(titleLabel)
-        pinViewHolder.addSubview(pinImageView)
+        pinImageBackgroundView.addSubview(pinImageView)
 
-        descriptionWrapper.addArrangedSubview(titlePinWrapper)
+        descriptionWrapper.addArrangedSubview(titleLabel)
         descriptionWrapper.addArrangedSubview(sponsoredLabel)
 
         rootContainer.addSubview(imageView)
         rootContainer.addSubview(selectedOverlay)
+        rootContainer.addSubview(pinImageBackgroundView)
         contentView.addSubview(rootContainer)
         contentView.addSubview(descriptionWrapper)
 
         NSLayoutConstraint.activate([
             rootContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
             rootContainer.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            rootContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: UX.imageBackgroundSize.width),
-            rootContainer.heightAnchor.constraint(greaterThanOrEqualToConstant: UX.imageBackgroundSize.height),
+            rootContainer.widthAnchor.constraint(equalToConstant: UX.imageBackgroundSize.width),
+            rootContainer.heightAnchor.constraint(equalToConstant: UX.imageBackgroundSize.height),
 
-            imageView.topAnchor.constraint(equalTo: rootContainer.topAnchor,
-                                           constant: UX.imageTopSpace),
-            imageView.leadingAnchor.constraint(equalTo: rootContainer.leadingAnchor,
-                                               constant: UX.imageLeadingTrailingSpace),
-            imageView.trailingAnchor.constraint(equalTo: rootContainer.trailingAnchor,
-                                                constant: -UX.imageLeadingTrailingSpace),
-            imageView.bottomAnchor.constraint(equalTo: rootContainer.bottomAnchor,
-                                              constant: -UX.imageBottomSpace),
-            imageView.widthAnchor.constraint(equalToConstant: UX.iconSize.width),
-            imageView.heightAnchor.constraint(equalToConstant: UX.iconSize.height),
-
-            descriptionWrapper.topAnchor.constraint(equalTo: rootContainer.bottomAnchor,
-                                                    constant: UX.textSafeSpace),
+            descriptionWrapper.topAnchor.constraint(equalTo: rootContainer.bottomAnchor, constant: UX.textSafeSpace),
             descriptionWrapper.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             descriptionWrapper.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             descriptionWrapper.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
@@ -222,23 +219,30 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
             selectedOverlay.trailingAnchor.constraint(equalTo: rootContainer.trailingAnchor),
             selectedOverlay.bottomAnchor.constraint(equalTo: rootContainer.bottomAnchor),
 
-            pinViewHolder.bottomAnchor.constraint(equalTo: titleLabel.firstBaselineAnchor,
-                                                  constant: UX.pinAlignmentSpacing),
-            pinViewHolder.leadingAnchor.constraint(equalTo: pinImageView.leadingAnchor),
-            pinViewHolder.trailingAnchor.constraint(equalTo: pinImageView.trailingAnchor,
-                                                    constant: UX.titleOffset),
-            pinViewHolder.topAnchor.constraint(equalTo: pinImageView.topAnchor),
-
+            pinImageView.centerXAnchor.constraint(equalTo: pinImageBackgroundView.centerXAnchor),
+            pinImageView.centerYAnchor.constraint(equalTo: pinImageBackgroundView.centerYAnchor),
             pinImageView.widthAnchor.constraint(equalToConstant: UX.pinIconSize.width),
             pinImageView.heightAnchor.constraint(equalToConstant: UX.pinIconSize.height),
+
+            pinImageBackgroundView.topAnchor.constraint(equalTo: rootContainer.topAnchor, constant: -4),
+            pinImageBackgroundView.leadingAnchor.constraint(equalTo: rootContainer.leadingAnchor, constant: -4),
+            pinImageBackgroundView.widthAnchor.constraint(equalToConstant: UX.pinBackgroundSize.width),
+            pinImageBackgroundView.heightAnchor.constraint(equalToConstant: UX.pinBackgroundSize.height),
         ])
+
+        imageViewConstraints = [
+            imageView.topAnchor.constraint(equalTo: rootContainer.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: rootContainer.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: rootContainer.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: rootContainer.bottomAnchor),
+        ]
+        NSLayoutConstraint.activate(imageViewConstraints)
     }
 
     private func configurePinnedSite(_ topSite: TopSiteConfiguration) {
         guard topSite.isPinned else { return }
 
-        pinViewHolder.isHidden = false
-        pinImageView.isHidden = false
+        pinImageBackgroundView.isHidden = false
     }
 
     private func configureSponsoredSite(_ topSite: TopSiteConfiguration) {
@@ -247,11 +251,28 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
         sponsoredLabel.text = topSite.sponsoredText
     }
 
+    // Add insets to favicons with transparent backgrounds
+    private func configureFaviconWithTransparency() {
+        guard let image = imageView.image,
+              let percentTransparent = image.percentTransparent,
+              percentTransparent > UX.transparencyThreshold else { return }
+
+        self.imageViewConstraints.forEach { constraint in
+            if constraint.firstAttribute == .trailing || constraint.firstAttribute == .bottom {
+                constraint.constant = -UX.faviconTransparentBackgroundInset
+            } else {
+                constraint.constant = UX.faviconTransparentBackgroundInset
+            }
+            // Inner corner radius = outer corner radius - inset
+            self.imageView.layer.cornerRadius = UX.faviconCornerRadius - UX.faviconTransparentBackgroundInset
+        }
+    }
+
     private func setupShadow(theme: Theme) {
-        rootContainer.layer.cornerRadius = HomepageViewModel.UX.generalCornerRadius
+        rootContainer.layer.cornerRadius = UX.faviconCornerRadius
         rootContainer.layer.shadowPath = UIBezierPath(roundedRect: rootContainer.bounds,
-                                                      cornerRadius: HomepageViewModel.UX.generalCornerRadius).cgPath
-        rootContainer.layer.shadowColor = theme.colors.shadowDefault.cgColor
+                                                      cornerRadius: UX.faviconCornerRadius).cgPath
+        rootContainer.layer.shadowColor = theme.colors.shadowStrong.cgColor
         rootContainer.layer.shadowOpacity = HomepageViewModel.UX.shadowOpacity
         rootContainer.layer.shadowOffset = HomepageViewModel.UX.shadowOffset
         rootContainer.layer.shadowRadius = HomepageViewModel.UX.shadowRadius
@@ -261,9 +282,8 @@ class TopSiteCell: UICollectionViewCell, ReusableCell {
 // MARK: ThemeApplicable
 extension TopSiteCell: ThemeApplicable {
     func applyTheme(theme: Theme) {
-        pinImageView.tintColor = textColor ?? theme.colors.iconPrimary
         titleLabel.textColor = textColor ?? theme.colors.textPrimary
-        sponsoredLabel.textColor = textColor ?? theme.colors.textSecondary
+        sponsoredLabel.textColor = textColor ?? theme.colors.textPrimary
         selectedOverlay.backgroundColor = theme.colors.layer5Hover.withAlphaComponent(0.25)
 
         adjustBlur(theme: theme)
@@ -275,7 +295,7 @@ extension TopSiteCell: Blurrable {
     func adjustBlur(theme: Theme) {
         if shouldApplyWallpaperBlur {
             rootContainer.layoutIfNeeded()
-            rootContainer.addBlurEffectWithClearBackgroundAndClipping(using: .systemThickMaterial)
+            rootContainer.addBlurEffect(using: .systemThickMaterial)
         } else {
             // If blur is disabled set background color
             rootContainer.removeVisualEffectView()

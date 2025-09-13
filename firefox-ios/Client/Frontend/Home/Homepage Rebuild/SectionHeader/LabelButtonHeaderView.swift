@@ -13,7 +13,8 @@ class LabelButtonHeaderView: UICollectionReusableView,
                              Notifiable {
     struct UX {
         static let inBetweenSpace: CGFloat = 12
-        static let bottomSpace: CGFloat = 10
+        static let topSpacing: CGFloat = 32
+        static let bottomSpace: CGFloat = 16
         static let bottomButtonSpace: CGFloat = 6
         static let leadingInset: CGFloat = 0
     }
@@ -31,6 +32,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
         label.font = FXFontStyles.Bold.title3.scaledFont()
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
+        label.accessibilityTraits.insert(.header)
     }
 
     private(set) lazy var moreButton: ActionButton = .build { button in
@@ -46,18 +48,15 @@ class LabelButtonHeaderView: UICollectionReusableView,
 
     var notificationCenter: NotificationProtocol = NotificationCenter.default
 
-    private var stackViewLeadingConstraint: NSLayoutConstraint?
-
     // MARK: - Initializers
     override init(frame: CGRect) {
         super.init(frame: frame)
-        stackView.addArrangedSubview(titleLabel)
-        stackView.addArrangedSubview(moreButton)
-        addSubview(stackView)
-
         setupLayout()
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
     }
 
     private func setupLayout() {
@@ -65,12 +64,9 @@ class LabelButtonHeaderView: UICollectionReusableView,
         stackView.addArrangedSubview(moreButton)
         addSubview(stackView)
 
-        stackViewLeadingConstraint = stackView.leadingAnchor.constraint(equalTo: leadingAnchor,
-                                                                        constant: UX.leadingInset)
-        stackViewLeadingConstraint?.isActive = true
-
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.topAnchor.constraint(equalTo: topAnchor, constant: UX.topSpacing),
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: UX.leadingInset),
             stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
             stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -UX.bottomSpace),
         ])
@@ -86,10 +82,6 @@ class LabelButtonHeaderView: UICollectionReusableView,
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        notificationCenter.removeObserver(self)
-    }
-
     // MARK: - Helper functions
     override func prepareForReuse() {
         super.prepareForReuse()
@@ -101,7 +93,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
     }
 
     func configure(
-        state: SectionHeaderState,
+        state: SectionHeaderConfiguration,
         moreButtonAction: ((UIButton) -> Void)? = nil,
         textColor: UIColor?,
         theme: Theme
@@ -112,7 +104,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
         moreButton.isHidden = state.isButtonHidden
         if !state.isButtonHidden {
             let moreButtonViewModel = ActionButtonViewModel(
-                title: .BookmarksSavedShowAllText,
+                title: state.buttonTitle ?? .BookmarksSavedShowAllText,
                 a11yIdentifier: state.buttonA11yIdentifier,
                 touchUpAction: moreButtonAction
             )
@@ -166,7 +158,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
     // MARK: - Notifiable
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             adjustLayout()
         default: break
         }

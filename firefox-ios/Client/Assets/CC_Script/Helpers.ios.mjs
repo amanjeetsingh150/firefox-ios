@@ -5,9 +5,13 @@
 import { IOSAppConstants } from "resource://gre/modules/shared/Constants.ios.mjs";
 import Overrides from "resource://gre/modules/Overrides.ios.js";
 
+const EMPTY_MODULE_PATH = "EmptyModule.sys.mjs";
+
 /* eslint mozilla/use-isInstance: 0 */
 HTMLSelectElement.isInstance = element => element instanceof HTMLSelectElement;
 HTMLInputElement.isInstance = element => element instanceof HTMLInputElement;
+HTMLTextAreaElement.isInstance = element =>
+  element instanceof HTMLTextAreaElement;
 HTMLIFrameElement.isInstance = element => element instanceof HTMLIFrameElement;
 HTMLFormElement.isInstance = element => element instanceof HTMLFormElement;
 ShadowRoot.isInstance = element => element instanceof ShadowRoot;
@@ -26,7 +30,14 @@ Object.defineProperty(HTMLInputElement.prototype, "hasBeenTypePassword", {
   configurable: true,
 });
 
-HTMLInputElement.prototype.setUserInput = function (value) {
+Object.defineProperty(HTMLInputElement.prototype, "nodePrincipal", {
+  get() {
+    return { isNullPrincipal: false };
+  },
+  configurable: true,
+});
+
+function setUserInput(value) {
   this.value = value;
 
   // In React apps, setting .value may not always work reliably.
@@ -42,7 +53,10 @@ HTMLInputElement.prototype.setUserInput = function (value) {
   });
 
   this.dispatchEvent(new Event("blur", { bubbles: true }));
-};
+}
+
+HTMLInputElement.prototype.setUserInput = setUserInput;
+HTMLTextAreaElement.prototype.setUserInput = setUserInput;
 
 // Mimic the behavior of .getAutocompleteInfo()
 // It should return an object with a fieldName property matching the autocomplete attribute
@@ -95,13 +109,15 @@ const internalModuleResolvers = {
     const moduleName = moduleURI.split("/").pop();
     const modulePath =
       "./" + (Overrides.ModuleOverrides[moduleName] ?? moduleName);
-    return moduleResolver(modulePath);
+    return { module: moduleResolver(modulePath), path: modulePath };
   },
 
   resolveModules(obj, modules) {
     for (const [exportName, moduleURI] of Object.entries(modules)) {
       const resolvedModule = this.resolveModule(moduleURI);
-      obj[exportName] = resolvedModule?.[exportName];
+      obj[exportName] = resolvedModule.path.includes(EMPTY_MODULE_PATH)
+        ? resolvedModule.module?.default
+        : resolvedModule.module?.[exportName];
     }
   },
 };
@@ -142,7 +158,7 @@ export const ChromeUtils = withNotImplementedError({
     internalModuleResolvers.resolveModules(obj, modules);
   },
   importESModule(moduleURI) {
-    return internalModuleResolvers.resolveModule(moduleURI);
+    return internalModuleResolvers.resolveModule(moduleURI)?.module;
   },
 });
 window.ChromeUtils = ChromeUtils;

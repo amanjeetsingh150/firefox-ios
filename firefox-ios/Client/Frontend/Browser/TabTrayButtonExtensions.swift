@@ -4,17 +4,16 @@
 
 import Common
 import UIKit
-import Shared
 
 class PrivateModeButton: ToggleButton, PrivateModeUI {
     override init(frame: CGRect) {
         super.init(frame: frame)
-        accessibilityLabel = .TabTrayToggleAccessibilityLabel
+        accessibilityLabel = .TabsTray.TabTrayToggleAccessibilityLabel
         let maskImage = UIImage(named: StandardImageIdentifiers.Large.privateMode)?
             .withRenderingMode(.alwaysTemplate)
         setImage(maskImage, for: [])
         showsLargeContentViewer = true
-        largeContentTitle = .TabTrayToggleAccessibilityLabel
+        largeContentTitle = .TabsTray.TabTrayToggleAccessibilityLabel
         largeContentImage = maskImage
     }
 
@@ -29,7 +28,11 @@ class PrivateModeButton: ToggleButton, PrivateModeUI {
         tintColor = isPrivate ? colors.iconOnColor : colors.iconPrimary
         imageView?.tintColor = tintColor
 
-        accessibilityValue = isSelected ? .TabTrayToggleAccessibilityValueOn : .TabTrayToggleAccessibilityValueOff
+        if isSelected {
+            accessibilityValue = .TabsTray.TabTrayToggleAccessibilityValueOn
+        } else {
+            accessibilityValue = .TabsTray.TabTrayToggleAccessibilityValueOff
+        }
     }
 
     override func applyTheme(theme: Theme) {

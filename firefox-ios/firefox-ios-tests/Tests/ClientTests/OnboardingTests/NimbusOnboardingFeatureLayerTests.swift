@@ -2,9 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import Common
 import MozillaAppServices
-import Shared
 import XCTest
 
 @testable import Client
@@ -46,7 +44,7 @@ class NimbusOnboardingFeatureLayerTests: XCTestCase {
         let layer = NimbusOnboardingFeatureLayer(with: MockNimbusMessagingHelperUtility())
         let subject = layer.getOnboardingModel(for: .freshInstall)
 
-        XCTAssertTrue(subject.isDismissable)
+        XCTAssertTrue(subject.isDismissible)
     }
 
     func testLayer_dismissable_isFalse() {
@@ -54,7 +52,7 @@ class NimbusOnboardingFeatureLayerTests: XCTestCase {
         let layer = NimbusOnboardingFeatureLayer(with: MockNimbusMessagingHelperUtility())
         let subject = layer.getOnboardingModel(for: .freshInstall)
 
-        XCTAssertFalse(subject.isDismissable)
+        XCTAssertFalse(subject.isDismissible)
     }
 
     // MARK: - Test A11yRoot

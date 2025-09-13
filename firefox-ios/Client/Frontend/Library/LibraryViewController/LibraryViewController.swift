@@ -12,7 +12,7 @@ extension LibraryViewController: UIToolbarDelegate {
     }
 }
 
-class LibraryViewController: UIViewController, Themeable, BookmarksRefactorFeatureFlagProvider {
+class LibraryViewController: UIViewController, Themeable {
     struct UX {
         struct NavigationMenu {
             static let height: CGFloat = 32
@@ -26,7 +26,7 @@ class LibraryViewController: UIViewController, Themeable, BookmarksRefactorFeatu
     weak var delegate: LibraryPanelDelegate?
     weak var navigationHandler: LibraryNavigationHandler?
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var logger: Logger
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -92,17 +92,19 @@ class LibraryViewController: UIViewController, Themeable, BookmarksRefactorFeatu
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        notificationCenter.removeObserver(self)
-    }
-
     // MARK: - View setup & lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         viewSetup()
-        listenForThemeChange(view)
-        setupNotifications(forObserver: self,
-                           observing: [.LibraryPanelStateDidChange, .LibraryPanelBookmarkTitleChanged])
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
+
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.LibraryPanelStateDidChange, .LibraryPanelBookmarkTitleChanged]
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -360,7 +362,6 @@ class LibraryViewController: UIViewController, Themeable, BookmarksRefactorFeatu
     }
 
     private func updateSegmentControl() {
-        guard isBookmarkRefactorEnabled else { return }
         let panelState = getCurrentPanelState()
 
         switch panelState {

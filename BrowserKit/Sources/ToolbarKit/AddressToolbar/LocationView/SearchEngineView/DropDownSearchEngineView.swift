@@ -7,7 +7,9 @@ import Common
 
 /// A view which contains a search engine icon and a drop down arrow. Supports tapping actions which call the appropriate
 /// method on the `LocationViewDelegate`.
-final class DropDownSearchEngineView: UIView, SearchEngineView, ThemeApplicable {
+final class DropDownSearchEngineView: UIView,
+                                      SearchEngineView,
+                                      ThemeApplicable {
     // MARK: - Properties
     private enum UX {
         static let cornerRadius: CGFloat = 4
@@ -41,7 +43,7 @@ final class DropDownSearchEngineView: UIView, SearchEngineView, ThemeApplicable 
         fatalError("init(coder:) has not been implemented")
     }
 
-    func configure(_ config: LocationViewConfiguration, delegate: LocationViewDelegate) {
+    func configure(_ config: LocationViewConfiguration, isLocationTextCentered: Bool, delegate: LocationViewDelegate) {
         searchEngineImageView.image = config.searchEngineImage
         configureA11y(config)
         self.delegate = delegate

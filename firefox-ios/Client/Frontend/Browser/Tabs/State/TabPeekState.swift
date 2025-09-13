@@ -55,10 +55,13 @@ struct TabPeekState: ScreenState, Equatable {
 
         switch action.actionType {
         case TabPeekActionType.loadTabPeek:
-            guard let tabPeekModel = action.tabPeekModel else { return state }
+            guard let tabPeekModel = action.tabPeekModel else {
+                return defaultState(from: state)
+            }
             return TabPeekState(windowUUID: state.windowUUID,
                                 showAddToBookmarks: tabPeekModel.canTabBeSaved,
                                 showSendToDevice: tabPeekModel.isSyncEnabled && tabPeekModel.canTabBeSaved,
+                                showCopyURL: tabPeekModel.canCopyURL,
                                 previewAccessibilityLabel: tabPeekModel.accessiblityLabel,
                                 screenshot: tabPeekModel.screenshot)
         default:

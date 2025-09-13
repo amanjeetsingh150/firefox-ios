@@ -39,7 +39,7 @@ class SearchEnginesManagerTests: XCTestCase {
         // Verify that the set of shipped engines includes the expected subset.
         let expectation = expectation(description: "Completed parse engines")
 
-        searchEnginesManager.getOrderedEngines { result in
+        searchEnginesManager.getOrderedEngines { prefs, result in
             XCTAssertEqual(self.searchEnginesManager.orderedEngines.count, 6)
             expectation.fulfill()
         }
@@ -60,6 +60,7 @@ class SearchEnginesManagerTests: XCTestCase {
         }
         let testEngine = OpenSearchEngine(engineID: "ATester",
                                           shortName: "ATester",
+                                          telemetrySuffix: nil,
                                           image: testImage,
                                           searchTemplate: "http://firefox.com/find?q={searchTerm}",
                                           suggestTemplate: nil,
@@ -92,14 +93,14 @@ class SearchEnginesManagerTests: XCTestCase {
         // The first ordered engine is the default.
         XCTAssertEqual(searchEnginesManager.orderedEngines[0].shortName, engineSet[1].shortName)
 
-        // Persistence can't be tested without the fixture changing. 
+        // Persistence can't be tested without the fixture changing.
     }
 
     func testOrderedEngines() {
         // Persistence can't be tested without the default fixture changing.
         // Remaining engines should be appended in alphabetical order.
         let expectation = expectation(description: "Completed parse engines")
-        searchEnginesManager.getOrderedEngines { [weak self] orderedEngines in
+        searchEnginesManager.getOrderedEngines { [weak self] prefs, orderedEngines in
             guard let self = self else {
                 XCTFail("Could not weakify self.")
                 return
@@ -189,7 +190,7 @@ class SearchEnginesManagerTests: XCTestCase {
         // Verify that the set of shipped engines includes the expected subset.
         let expectation = expectation(description: "Completed parse engines")
 
-        searchEnginesManager.getOrderedEngines { result in
+        searchEnginesManager.getOrderedEngines { prefs, result in
             XCTAssert(self.searchEnginesManager.orderedEngines.count > 1, "There should be more than one search engine")
             XCTAssertEqual(self.searchEnginesManager.orderedEngines.first?.shortName, "ATester")
             expectation.fulfill()

@@ -8,15 +8,27 @@ import Common
 import struct MozillaAppServices.LoginEntry
 
 protocol PasswordManagerCoordinatorDelegate: AnyObject, ParentCoordinatorDelegate {
+    @MainActor
     func settingsOpenURLInNewTab(_ url: URL)
+
+    @MainActor
     func didFinishPasswordManager(from: PasswordManagerCoordinator)
 }
 
 protocol PasswordManagerFlowDelegate: AnyObject {
+    @MainActor
     func continueFromOnboarding()
+
+    @MainActor
     func showDevicePassCode()
+
+    @MainActor
     func pressedPasswordDetail(model: PasswordDetailViewControllerModel)
+
+    @MainActor
     func pressedAddPassword(completion: @escaping (LoginEntry) -> Void)
+
+    @MainActor
     func openURL(url: URL)
 }
 
@@ -82,9 +94,6 @@ class PasswordManagerCoordinator: BaseCoordinator,
     func pressedPasswordDetail(model: PasswordDetailViewControllerModel) {
         let viewController = PasswordDetailViewController(viewModel: model, windowUUID: windowUUID)
         viewController.coordinator = self
-        viewController.deleteHandler = { [weak self] in
-            self?.passwordManager?.showToast()
-        }
         router.push(viewController)
     }
 

@@ -4,7 +4,6 @@
 
 import Common
 import ComponentLibrary
-import Shared
 import UIKit
 
 /// The card that appears at the top of the Firefox Homepage and is powered by the mobile messaging system.
@@ -49,6 +48,7 @@ class HomepageMessageCardCell: UICollectionViewCell, ReusableCell {
         label.font = FXFontStyles.Regular.headline.scaledFont()
         label.adjustsFontForContentSizeCategory = true
         label.accessibilityIdentifier = a11y.titleLabel
+        label.accessibilityTraits.insert(.header)
     }
 
     private lazy var descriptionText: UILabel = .build { label in
@@ -218,7 +218,7 @@ class HomepageMessageCardCell: UICollectionViewCell, ReusableCell {
             )
             return
         }
-        store.dispatch(
+        store.dispatchLegacy(
             MessageCardAction(
                 windowUUID: windowUUID,
                 actionType: MessageCardActionType.tappedOnCloseButton
@@ -237,7 +237,7 @@ class HomepageMessageCardCell: UICollectionViewCell, ReusableCell {
             )
             return
         }
-        store.dispatch(
+        store.dispatchLegacy(
             MessageCardAction(
                 windowUUID: windowUUID,
                 actionType: MessageCardActionType.tappedOnActionButton

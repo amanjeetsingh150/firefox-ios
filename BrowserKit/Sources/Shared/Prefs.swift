@@ -12,6 +12,7 @@ public struct PrefsKeys {
 
     // Global sync state for rust sync manager
     public static let RustSyncManagerPersistedState = "rustSyncManagerPersistedStateKey"
+    public static let LoginsHaveBeenVerified = "loginsHaveBeenVerified"
 
     public static let KeyLastSyncFinishTime = "lastSyncFinishTime"
     public static let KeyDefaultHomePageURL = "KeyDefaultHomePageURL"
@@ -21,6 +22,19 @@ public struct PrefsKeys {
     public static let HasPocketInstalled = "HasPocketInstalled"
     public static let IntroSeen = "IntroViewControllerSeen"
     public static let TermsOfServiceAccepted = "TermsOfServiceAccepted"
+    // TermsOfUseAccepted should use same string key as before to maintain compatibility
+    public static let TermsOfUseAccepted = "termsOfUseAccepted"
+    public static let TermsOfUseAcceptedVersion = "TermsOfUseAcceptedVersion"
+    public static let TermsOfUseAcceptedDate = "TermsOfUseAcceptedDate"
+    public static let TermsOfUseFirstShown = "TermsOfUseFirstShown"
+    public static let TermsOfUseDismissedDate = "TermsOfUseDismissedDate"
+    public static let TermsOfUseImpressionCount = "TermsOfUseImpressionCount"
+    public static let TermsOfUseRemindMeLaterCount = "TermsOfUseRemindMeLaterCount"
+    public static let TermsOfUseDismissCount = "TermsOfUseDismissCount"
+    public static let TermsOfUseRemindMeLaterTapDate = "TermsOfUseRemindMeLaterTapDate"
+    public static let TermsOfUseLearnMoreTapDate = "TermsOfUseLearnMoreTapDate"
+    public static let TermsOfUsePrivacyNoticeTapDate = "TermsOfUsePrivacyNoticeTapDate"
+    public static let TermsOfUseTermsLinkTapDate = "TermsOfUseTermsLinkTapDate"
     public static let HomePageTab = "HomePageTab"
     public static let HomeButtonHomePageURL = "HomeButtonHomepageURL"
     public static let NumberOfTopSiteRows = "NumberOfTopSiteRows"
@@ -31,6 +45,7 @@ public struct PrefsKeys {
     public static let DidDismissDefaultBrowserMessage = "DidDismissDefaultBrowserCard"
     public static let KeyDidShowDefaultBrowserOnboarding = "didShowDefaultBrowserOnboarding"
     public static let ContextMenuShowLinkPreviews = "showLinkPreviews"
+    public static let ShowClipboardBar = "showClipboardBar"
     public static let BlockOpeningExternalApps = "blockOpeningExternalApps"
     public static let NewTabCustomUrlPrefKey = "HomePageURLPref"
     public static let GoogleTopSiteAddedKey = "googleTopSiteAddedKey"
@@ -40,6 +55,8 @@ public struct PrefsKeys {
     public static let KeySecondRun = "SecondRun"
     public static let KeyAutofillCreditCardStatus = "KeyAutofillCreditCardStatus"
     public static let KeyAutofillAddressStatus = "KeyAutofillAddressStatus"
+    public static let ReaderModeProfileKeyStyle = "readermode.style"
+    public static let RustFxaKeychainEnabled = "RustFxaKeychainEnabled"
 
     // Only set if we get an actual response, no assumptions, nil otherwise
     public static let AppleConfirmedUserIsDefaultBrowser = "AppleConfirmedUserIsDefaultBrowser"
@@ -52,6 +69,12 @@ public struct PrefsKeys {
         public static let firstWeekSearchesTimestamps = "firstWeekSearchesTimestamps"
         public static let didUpdateConversionValue = "didUpdateConversionValue"
         public static let InternalURLUUID = "InternalURLUUID"
+    }
+
+    public struct Summarizer {
+        public static let didAgreeTermsOfService = "didAgreeTermOfService"
+        public static let summarizeContentFeature = "summarizeContentFeature"
+        public static let shakeGestureEnabled = "shakeGestureEnabledKey"
     }
 
     public struct AppVersion {
@@ -77,11 +100,15 @@ public struct PrefsKeys {
     public struct FeatureFlags {
         public static let DebugSuffixKey = "DebugKey"
         public static let FirefoxSuggest = "FirefoxSuggest"
-        public static let HistoryHighlightsSection = "HistoryHighlightsSectionUserPrefsKey"
         public static let InactiveTabs = "InactiveTabsUserPrefsKey"
-        public static let JumpBackInSection = "JumpBackInSectionUserPrefsKey"
         public static let SearchBarPosition = "SearchBarPositionUsersPrefsKey"
-        public static let SentFromFirefox = "SentFromFirefoxUserPrefsKey"
+        public static let SponsoredShortcuts = "SponsoredShortcutsUserPrefsKey"
+        public static let StartAtHome = "StartAtHomeUserPrefsKey"
+    }
+
+    public struct HomepageSettings {
+        public static let BookmarksSection = "BookmarksSectionUserPrefsKey"
+        public static let JumpBackInSection = "JumpBackInSectionUserPrefsKey"
     }
 
     public struct SearchSettings {
@@ -95,6 +122,13 @@ public struct PrefsKeys {
         public static let showSearchSuggestions = "FirefoxSuggestShowSearchSuggestions"
     }
 
+    public struct RemoteSettings {
+        public static let lastRemoteSettingsServiceSyncTimestamp =
+        "LastRemoteSettingsServiceSyncTimestamp"
+        public static let remoteSettingsEnvironment =
+        "remoteSettingsEnvironment"
+    }
+
     public struct Sync {
         public static let numberOfSyncedDevices = "numberOfSyncedDevicesKey"
         public static let signedInFxaAccount = "signedInFxaAccountKey"
@@ -102,8 +136,6 @@ public struct PrefsKeys {
 
     public struct UserFeatureFlagPrefs {
         public static let ASPocketStories = "ASPocketStoriesUserPrefsKey"
-        public static let BookmarksSection = "BookmarksSectionUserPrefsKey"
-        public static let SponsoredShortcuts = "SponsoredShortcutsUserPrefsKey"
         public static let StartAtHome = "StartAtHomeUserPrefsKey"
         public static let TopSiteSection = "TopSitesUserPrefsKey"
     }
@@ -116,11 +148,11 @@ public struct PrefsKeys {
         case jumpBackInSyncedTabKey = "ContextualHintJumpBackInSyncedTab"
         case jumpBackInSyncedTabConfiguredKey = "JumpBackInSyncedTabConfigured"
         case inactiveTabsKey = "ContextualHintInactiveTabs"
-        case toolbarOnboardingKey = "ContextualHintToolbarOnboardingKey"
         case mainMenuKey = "MainMenuHintKey"
-        case shoppingOnboardingKey = "ShoppingOnboardingCFRKey"
-        case shoppingOnboardingCFRsCounterKey = "ShoppingOnboardingCFRsCounterKey"
+        case mainMenuRedesignKey = "mainMenuRedesignHintKey"
         case navigationKey = "ContextualHintNavigation"
+        case toolbarUpdateKey = "ContextualHintToolbarUpdate"
+        case summarizerToolbarEntryKey = "summarizerToolbarEntryKey"
     }
 
     // Firefox settings
@@ -145,21 +177,15 @@ public struct PrefsKeys {
     public static let AppExtensionTelemetryOpenUrl = "AppExtensionTelemetryOpenUrl"
     public static let AppExtensionTelemetryEventArray = "AppExtensionTelemetryEvents"
     public static let KeyBlockPopups = "blockPopups"
+    public static let AutoplayMediaKey = "autoplayMedia"
 
     // Tabs Tray
     public static let KeyTabDisplayOrder = "KeyTabDisplayOrderKey"
-    public static let TabMigrationKey = "TabMigrationKey"
     public static let TabSyncEnabled = "sync.engine.tabs.enabled"
 
     // Widgetkit Key
     public static let WidgetKitSimpleTabKey = "WidgetKitSimpleTabKey"
     public static let WidgetKitSimpleTopTab = "WidgetKitSimpleTopTab"
-
-    // Shopping Keys
-    public static let Shopping2023EnableAds = "Shopping2023EnableAdsKey"
-    public static let Shopping2023OptIn = "Shopping2023OptInKey"
-    public static let Shopping2023OptInSeen = "Shopping2023OptInSeenKey"
-    public static let Shopping2023ExplicitOptOut = "Shopping2023ExplicitOptOutKey"
 
     // WallpaperManager Keys - Legacy
     public static let WallpaperManagerCurrentWallpaperObject = "WallpaperManagerCurrentWallpaperObject"
@@ -176,9 +202,6 @@ public struct PrefsKeys {
     // The last timestamp we polled FxA for missing send tabs
     public static let PollCommandsTimestamp = "PollCommandsTimestamp"
 
-    // The last recorded CFR timestamp
-    public static let FakespotLastCFRTimestamp = "FakespotLastCFRTimestamp"
-
     // Representing whether or not the last user session was private
     public static let LastSessionWasPrivate = "wasLastSessionPrivate"
 
@@ -187,6 +210,9 @@ public struct PrefsKeys {
 
     // Only used to force faster transition of tabs to the inactive state (10 seconds)
     public static let FasterInactiveTabsOverride = "FasterInactiveTabsOverride"
+
+    // Only used to force faster Terms of Use timeout for debugging purposes
+    public static let FasterTermsOfUseTimeoutOverride = "FasterTermsOfUseTimeoutOverride"
 
     // Only used to force showing the App Store review dialog for debugging purposes
     public static let ForceShowAppReviewPromptOverride = "ForceShowAppReviewPromptOverride"
@@ -202,19 +228,28 @@ public struct PrefsKeys {
     // The guid of the bookmark folder that was most recently created or saved to by the user.
     // Used to indicate where we should save the next bookmark by default.
     public static let RecentBookmarkFolder = "RecentBookmarkFolder"
-    // Represents whether or not the bookmark refactor feature flag is enabled
-    // Used in the share extension
-    public static let IsBookmarksRefactorEnabled = "IsBookmarksRefactorEnabled"
 
     // The timestamp where the app was last opened as default browser
     public static let LastOpenedAsDefaultBrowser = "LastOpenedAsDefaultBrowser"
+
+    // Used to only show the felt deletion alert confirmation once, used for private mode
+    public static let dataClearanceAlertShown = "dataClearanceAlertShownKey"
+
+    // Used to only show the Default Browser Banner, in Main Menu, until is dismissed by the user
+    public static let defaultBrowserBannerShown = "defaultBrowserBannerShownKey"
+
+    // MARK: - Apple Intelligence
+    // Used to determine if Apple Intelligence is available
+    public static let appleIntelligenceAvailable = "appleIntelligenceAvailableKey"
+    // Used to determine if cannot run the Apple Intelligence model
+    public static let cannotRunAppleIntelligence = "cannotRunAppleIntelligenceKey"
 
     public struct Usage {
         public static let profileId = "profileId"
     }
 }
 
-public protocol Prefs {
+public protocol Prefs: Sendable {
     func getBranchPrefix() -> String
     func branch(_ branch: String) -> Prefs
     func setTimestamp(_ value: Timestamp, forKey defaultName: String)
@@ -226,6 +261,7 @@ public protocol Prefs {
     func setObject(_ value: Any?, forKey defaultName: String)
     func stringForKey(_ defaultName: String) -> String?
     func objectForKey<T: Any>(_ defaultName: String) -> T?
+    func hasObjectForKey(_ defaultName: String) -> Bool
     func boolForKey(_ defaultName: String) -> Bool?
     func intForKey(_ defaultName: String) -> Int32?
     func timestampForKey(_ defaultName: String) -> Timestamp?
@@ -238,7 +274,7 @@ public protocol Prefs {
     func clearAll()
 }
 
-open class MockProfilePrefs: Prefs {
+open class MockProfilePrefs: Prefs, @unchecked Sendable {
     let prefix: String
 
     open func getBranchPrefix() -> String {
@@ -303,6 +339,10 @@ open class MockProfilePrefs: Prefs {
 
     open func objectForKey<T: Any>(_ defaultName: String) -> T? {
         return things[name(defaultName)] as? T
+    }
+
+    open func hasObjectForKey(_ defaultName: String) -> Bool {
+        return (things[name(defaultName)] != nil)
     }
 
     open func timestampForKey(_ defaultName: String) -> Timestamp? {

@@ -2,54 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
+import Common
 import XCTest
-import Shared
 
-final class MicrosurveyTests: BaseTestCase {
+final class MicrosurveyTests: FeatureFlaggedTestBase {
     override func setUp() {
         launchArguments = [
             LaunchArguments.SkipIntro,
             LaunchArguments.ResetMicrosurveyExpirationCount
         ]
+        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
         super.setUp()
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2776932
-    func testURLBorderHiddenWhenMicrosurveyPromptShown() throws {
-        guard !iPad() else {
-            throw XCTSkip("Toolbar option not available for iPad")
-        }
-        navigator.nowAt(NewTabScreen)
-        navigator.goto(ToolbarSettings)
-        navigator.performAction(Action.SelectToolbarBottom)
-        navigator.goto(HomePanelsScreen)
-        generateTriggerForMicrosurvey()
-        XCTAssertFalse(app.otherElements[AccessibilityIdentifiers.Toolbar.urlBarBorder].exists)
-        XCTAssertTrue(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton].exists)
-        XCTAssertTrue(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo].exists)
-        XCTAssertTrue(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists)
-        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
-        XCTAssertFalse(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists)
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2776933
-    func testCloseButtonDismissesMicrosurveyPrompt() {
-        generateTriggerForMicrosurvey()
-        waitForElementsToExist(
-            [
-                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton],
-                app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo],
-                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton]
-            ]
-        )
-        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
-        mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton])
-        mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo])
-        mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton])
+        app.launch()
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2776931
-    func testShowMicrosurvey() {
+    func testShowMicrosurvey_tabTrayExperimentOff() {
         generateTriggerForMicrosurvey()
         let continueButton = app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton]
         continueButton.waitAndTap()
@@ -74,7 +42,7 @@ final class MicrosurveyTests: BaseTestCase {
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2776934
-    func testCloseButtonDismissesSurveyAndPrompt() {
+    func testCloseButtonDismissesSurveyAndPrompt_tabTrayExperimentOff() {
         generateTriggerForMicrosurvey()
         let continueButton = app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton]
         continueButton.waitAndTap()
@@ -88,23 +56,50 @@ final class MicrosurveyTests: BaseTestCase {
         mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton])
     }
 
+    // https://mozilla.testrail.io/index.php?/cases/view/2776933
+    func testCloseButtonDismissesMicrosurveyPrompt_tabTrayExperimentOff() {
+        // Workaround: The microsurvey prompt may not appear on the first run due to retained app
+        // state or missing triggers.
+        // To ensure the prompt is shown, the app is terminated and relaunched to make sure the
+        // microsurvey is triggered again.
+        app.terminate()
+        app.launch()
+        generateTriggerForMicrosurvey()
+        waitForElementsToExist(
+            [
+                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton],
+                app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo],
+                app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton]
+            ]
+        )
+        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
+        mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton])
+        mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo])
+        mozWaitForElementToNotExist(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton])
+    }
+
+    // https://mozilla.testrail.io/index.php?/cases/view/2776932
+    func testURLBorderHiddenWhenMicrosurveyPromptShown_tabTrayExperimentOff() throws {
+        guard !iPad() else {
+            throw XCTSkip("Toolbar option not available for iPad")
+        }
+        navigator.nowAt(NewTabScreen)
+        navigator.goto(ToolbarSettings)
+        navigator.performAction(Action.SelectToolbarBottom)
+        navigator.goto(HomePanelsScreen)
+        generateTriggerForMicrosurvey()
+        XCTAssertFalse(app.otherElements[AccessibilityIdentifiers.Toolbar.urlBarBorder].exists)
+        XCTAssertTrue(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.takeSurveyButton].exists)
+        XCTAssertTrue(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.firefoxLogo].exists)
+        XCTAssertTrue(app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists)
+        app.buttons[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].waitAndTap()
+        XCTAssertFalse(app.images[AccessibilityIdentifiers.Microsurvey.Prompt.closeButton].exists)
+    }
+
     private func generateTriggerForMicrosurvey() {
-        let homepageToggleButtonIphone =
-        app.buttons[AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.privateModeToggleButton]
-        let homepageToggleButtonIpad = app.buttons[AccessibilityIdentifiers.Browser.TopTabs.privateModeButton]
-        if !iPad() {
-            homepageToggleButtonIphone.waitAndTap()
-            mozWaitForElementToExist(app.staticTexts[AccessibilityIdentifiers.PrivateMode.Homepage.link])
-        } else {
-            homepageToggleButtonIpad.waitAndTap()
-            mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.Browser.TopTabs.collectionView])
-        }
-        if !iPad() {
-            homepageToggleButtonIphone.waitAndTap()
-            mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.FirefoxHomepage.collectionView])
-        } else {
-            homepageToggleButtonIpad.waitAndTap()
-            mozWaitForElementToExist(app.collectionViews[AccessibilityIdentifiers.Browser.TopTabs.collectionView])
-        }
+        navigator.nowAt(NewTabScreen)
+        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
+        navigator.openURL(path(forTestPage: url_2["url"]!))
+        waitUntilPageLoad()
     }
 }

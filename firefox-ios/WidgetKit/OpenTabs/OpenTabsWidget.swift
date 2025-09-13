@@ -34,16 +34,17 @@ struct OpenTabsView: View {
         VStack(alignment: .leading) {
             Link(destination: linkToContainingApp("?uuid=\(tab.uuid)", query: query)) {
                 HStack(alignment: .center, spacing: 15) {
-                    if entry.favicons[tab.imageKey] != nil {
-                        (entry.favicons[tab.imageKey])!.resizable().frame(width: 16, height: 16)
+                    if let favIcon = entry.favicons[tab.imageKey] {
+                        favIcon.resizable().frame(width: 16, height: 16)
+                            .foregroundColor(Color("openTabsContentColor"))
                     } else {
                         Image(decorative: StandardImageIdentifiers.Large.globe)
-                            .foregroundColor(Color.white)
+                            .foregroundColor(Color("openTabsContentColor"))
                             .frame(width: 16, height: 16)
                     }
 
-                    Text(tab.title!)
-                        .foregroundColor(Color.white)
+                    Text(tab.title ?? "")
+                        .foregroundColor(Color("openTabsContentColor"))
                         .multilineTextAlignment(.leading)
                         .lineLimit(1)
                         .font(.system(size: 15, weight: .regular, design: .default))
@@ -51,18 +52,68 @@ struct OpenTabsView: View {
                 }.padding(.horizontal)
             }
 
+            // Separator
             Rectangle()
-                .fill(Color(UIColor(red: 0.85, green: 0.85, blue: 0.85, alpha: 0.3)))
+                .fill(Color("separatorColor"))
                 .frame(height: 0.5)
                 .padding(.leading, 45)
         }
     }
 
+    var emptyView: some View {
+        VStack {
+            Text(String.NoOpenTabsLabel)
+            HStack {
+                Spacer()
+                Image(decorative: StandardImageIdentifiers.Small.externalLink)
+                    .foregroundColor(Color("openTabsContentColor"))
+                Text(String.OpenFirefoxLabel)
+                    .foregroundColor(Color("openTabsContentColor"))
+                    .lineLimit(1)
+                    .font(.system(size: 13, weight: .semibold, design: .default))
+                Spacer()
+            }.padding(10)
+        }
+        .foregroundColor(Color("backgroundColor"))
+    }
+
+    var tabsView: some View {
+        VStack(spacing: 8) {
+            ForEach(entry.tabs.suffix(numberOfTabsToDisplay), id: \.self) { tab in
+                lineItemForTab(tab)
+            }
+
+            if entry.tabs.count > numberOfTabsToDisplay {
+                HStack(alignment: .center, spacing: 15) {
+                    Image(decorative: StandardImageIdentifiers.Small.externalLink)
+                        .foregroundColor(Color("openTabsContentColor"))
+                        .frame(width: 16, height: 16)
+                    Text(
+                        String.localizedStringWithFormat(
+                            String.MoreTabsLabel,
+                            (entry.tabs.count - numberOfTabsToDisplay)
+                        )
+                    )
+                    .foregroundColor(Color("openTabsContentColor"))
+                    .lineLimit(1)
+                    .font(.system(size: 13, weight: .semibold, design: .default))
+                    Spacer()
+                }.padding([.horizontal])
+            } else {
+                openFirefoxButton
+            }
+
+            Spacer()
+        }.padding(.top, 14)
+    }
+
     var openFirefoxButton: some View {
         HStack(alignment: .center, spacing: 15) {
-            Image(decorative: StandardImageIdentifiers.Small.externalLink).foregroundColor(Color.white)
+            Image(decorative: StandardImageIdentifiers.Small.externalLink)
+                .foregroundColor(Color("openTabsContentColor"))
             Text("Open Firefox")
-                .foregroundColor(Color.white).lineLimit(1)
+                .foregroundColor(Color("openTabsContentColor"))
+                .lineLimit(1)
                 .font(.system(size: 13, weight: .semibold, design: .default))
             Spacer()
         }.padding([.horizontal])
@@ -79,53 +130,31 @@ struct OpenTabsView: View {
     var body: some View {
         Group {
             if entry.tabs.isEmpty {
-                VStack {
-                    Text(String.NoOpenTabsLabel)
-                    HStack {
-                        Spacer()
-                        Image(decorative: StandardImageIdentifiers.Small.externalLink)
-                        Text(String.OpenFirefoxLabel)
-                            .foregroundColor(Color.white).lineLimit(1)
-                            .font(.system(size: 13, weight: .semibold, design: .default))
-                        Spacer()
-                    }.padding(10)
-                }.foregroundColor(Color.white)
+                emptyView
             } else {
-                VStack(spacing: 8) {
-                    ForEach(entry.tabs.suffix(numberOfTabsToDisplay), id: \.self) { tab in
-                        lineItemForTab(tab)
-                    }
-
-                    if entry.tabs.count > numberOfTabsToDisplay {
-                        HStack(alignment: .center, spacing: 15) {
-                            Image(decorative: StandardImageIdentifiers.Small.externalLink)
-                                .foregroundColor(Color.white)
-                                .frame(width: 16, height: 16)
-                            Text(
-                                String.localizedStringWithFormat(
-                                    String.MoreTabsLabel,
-                                    (entry.tabs.count - numberOfTabsToDisplay)
-                                )
-                            )
-                            .foregroundColor(Color.white)
-                            .lineLimit(1)
-                            .font(.system(size: 13, weight: .semibold, design: .default))
-                            Spacer()
-                        }.padding([.horizontal])
-                    } else {
-                        openFirefoxButton
-                    }
-
-                    Spacer()
-                }.padding(.top, 14)
+                tabsView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetBackground(Color(UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1.00)))
+        .widgetBackground(Color("backgroundColor"))
     }
 
     private func linkToContainingApp(_ urlSuffix: String = "", query: String) -> URL {
         let urlString = "\(scheme)://\(query)\(urlSuffix)"
-        return URL(string: urlString, invalidCharacters: false)!
+        return URL(string: urlString)!
+    }
+}
+
+struct OpenTabsPreview: PreviewProvider {
+    static let favIcons = ["globe":
+                            Image(decorative: StandardImageIdentifiers.Large.globe)]
+    static let tabs = [SimpleTab(lastUsedTime: nil)]
+    static let testEntry = OpenTabsEntry(date: Date(),
+                                         favicons: favIcons,
+                                         tabs: [SimpleTab]())
+    static var previews: some View {
+        Group {
+            OpenTabsView(entry: testEntry)
+        }
     }
 }

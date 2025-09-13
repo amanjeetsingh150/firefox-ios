@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Shared
 import Common
 import MozillaAppServices
 
@@ -13,7 +12,7 @@ enum JexlError: Error {
     case unknownJexl
 }
 
-class MockNimbusTargetingHelper: NimbusTargetingHelperProtocol {
+final class MockNimbusTargetingHelper: NimbusTargetingHelperProtocol, @unchecked Sendable {
     func evalJexl(expression: String) throws -> Bool {
         switch expression {
         case "true": return true
@@ -23,7 +22,7 @@ class MockNimbusTargetingHelper: NimbusTargetingHelperProtocol {
     }
 }
 
-class MockNimbusStringHelper: NimbusStringHelperProtocol {
+final class MockNimbusStringHelper: NimbusStringHelperProtocol, @unchecked Sendable {
     func stringFormat(template: String, uuid: String?) -> String {
         if let uuid = uuid {
             return template.replacingOccurrences(of: "{uuid}", with: uuid)

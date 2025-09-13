@@ -45,6 +45,7 @@ actor JumpBackInDataAdaptorImplementation: JumpBackInDataAdaptor, FeatureFlaggab
 
         self.mainQueue = mainQueue
 
+        // FIXME: FXIOS-12995 Use Notifiable
         let notifications: [Notification.Name] = [.ShowHomepage,
                                                   .TabsTrayDidClose,
                                                   .TabsTrayDidSelectHomeTab,
@@ -62,10 +63,6 @@ actor JumpBackInDataAdaptorImplementation: JumpBackInDataAdaptor, FeatureFlaggab
         Task {
             await self.updateTabsAndAccountData()
         }
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: Public interface
@@ -96,7 +93,7 @@ actor JumpBackInDataAdaptorImplementation: JumpBackInDataAdaptor, FeatureFlaggab
     private func updateTabsData() async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
-                let recentTabs = await self.updateRecentTabs()
+                let recentTabs = await self.recentlyAccessedNormalTabs()
                 await self.setRecentTabs(recentTabs: recentTabs)
             }
             group.addTask {
@@ -112,14 +109,10 @@ actor JumpBackInDataAdaptorImplementation: JumpBackInDataAdaptor, FeatureFlaggab
         self.recentTabs = recentTabs
     }
 
-    private func updateRecentTabs() async -> [Tab] {
+    @MainActor
+    private func recentlyAccessedNormalTabs() async -> [Tab] {
         // Recent tabs need to be accessed from .main otherwise value isn't proper
-        return await withCheckedContinuation { continuation in
-            ensureMainThread {
-                let recentTabs = self.tabManager.recentlyAccessedNormalTabs
-                continuation.resume(returning: recentTabs)
-            }
-        }
+        return await self.tabManager.recentlyAccessedNormalTabs
     }
 
     // MARK: Synced tab data

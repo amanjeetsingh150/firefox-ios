@@ -20,18 +20,22 @@ struct ToolbarActionConfiguration: Equatable, FeatureFlaggable {
         case trackingProtection
         case locationView
         case readerMode
+        case summarizer
         case dataClearance
         case cancelEdit
     }
 
     var actionType: ActionType
-    var iconName: String
+    var actionLabel: String?
+    var iconName: String?
     var badgeImageName: String?
     var maskImageName: String?
     var numberOfTabs: Int?
     var isFlippedForRTL = false
     var isEnabled: Bool
     var isSelected = false
+    var hasCustomColor = false
+    var largeContentTitle: String?
     var contextualHintType: String?
     var a11yLabel: String
     var a11yHint: String?
@@ -44,6 +48,7 @@ struct ToolbarActionConfiguration: Equatable, FeatureFlaggable {
                actionType == .reload ||
                actionType == .newTab ||
                actionType == .readerMode ||
+               actionType == .summarizer ||
                (actionType == .tabs && isShowingTopTabs == false)
     }
 }

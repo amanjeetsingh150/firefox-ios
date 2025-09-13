@@ -4,7 +4,6 @@
 
 import Common
 import UIKit
-import Shared
 
 class TabToolbar: UIView, SearchBarLocationProvider {
     // MARK: - Variables
@@ -20,7 +19,7 @@ class TabToolbar: UIView, SearchBarLocationProvider {
     let multiStateButton = ToolbarButton()
     let actionButtons: [ThemeApplicable & UIButton]
 
-    private let privateModeBadge = BadgeWithBackdrop(
+    let privateModeBadge = BadgeWithBackdrop(
         imageName: StandardImageIdentifiers.Medium.privateModeCircleFillPurple,
         isPrivateBadge: true)
     private let warningMenuBadge = BadgeWithBackdrop(imageName: StandardImageIdentifiers.Large.warningFill,

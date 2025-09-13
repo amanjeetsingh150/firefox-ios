@@ -16,10 +16,13 @@ class SettingTest: BaseTestCase {
     // Smoketest
     // Check for the basic appearance of the Settings Menu
     // https://mozilla.testrail.io/index.php?/cases/view/394976
-    func testCheckSetting() {
+    func testCheckSetting() throws {
         dismissURLBarFocused()
 
         // Navigate to Settings
+        if #unavailable(iOS 16) {
+            throw XCTSkip("Not supported in iOS 15")
+        }
         waitForExistence(app.buttons["Settings"])
         app.buttons["Settings"].tap()
 
@@ -41,11 +44,15 @@ class SettingTest: BaseTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         // Check Your Rights page, until the text is displayed
-        tablesQuery.staticTexts["Your Rights"].tap()
+        tablesQuery.staticTexts["Terms of Use"].tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         // Go back to Settings
         app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        if #unavailable(iOS 17) {
+            throw XCTSkip("Not supported in iOS 15 and 16")
+        }
 
         // Check the initial state of the switch values
         let safariSwitch = app.tables.switches["Safari"]
@@ -140,7 +147,7 @@ class SettingTest: BaseTestCase {
 
         // Now in Safari
         let safariLabel = safariapp.textFields["Address"]
-        // iPad Safari cannot access the URL bar. 
+        // iPad Safari cannot access the URL bar.
         // Let's ensure that Safari exists at the very least.
         waitForExistence(safariapp)
         if !iPad() {
@@ -229,8 +236,8 @@ class SettingTest: BaseTestCase {
             waitForHittable(app.tables.cells["mozilla.org"].buttons["Delete mozilla.org"])
             app.tables.cells["mozilla.org"].buttons["Delete mozilla.org"].tap()
         }
-        waitForHittable(app.tables.cells["mozilla.org"].buttons["Delete"])
-        app.tables.cells["mozilla.org"].buttons["Delete"].tap()
+        waitForHittable(app.tables.buttons["Delete"])
+        app.tables.buttons["Delete"].tap()
 
         // Finish Editing
         waitForHittable(app.navigationBars.buttons["editButton"])
@@ -333,7 +340,7 @@ class SettingTest: BaseTestCase {
         // Providing straight URL to avoid the error - and use internal website
         app.buttons["icon clear"].tap()
         loadWebPage("https://www.example.com")
-        waitForValueContains(label, value: "www.example.com")
+        waitForValueContains(label, value: "example.com")
 
         // Erase the history
         app.buttons["URLBar.deleteButton"].firstMatch.tap()
@@ -423,7 +430,7 @@ class SettingTest: BaseTestCase {
         } else {
             app.tables.cells["getfirefox.com"].buttons["Delete getfirefox.com"].tap()
         }
-        app.tables.cells["getfirefox.com"].buttons["Delete"].tap()
+        app.tables.buttons["Delete"].tap()
 
         // Finish Editing
         app.navigationBars.buttons["editButton"].tap()

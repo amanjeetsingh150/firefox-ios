@@ -15,9 +15,20 @@ protocol WKInternalSchemeResponse {
     func response(forRequest: URLRequest) -> (URLResponse, Data)?
 }
 
+public protocol SchemeHandler: WKURLSchemeHandler {
+    var scheme: String { get }
+}
+
 /// Will load resources with URL schemes that WebKit doesn’t handle like homepage and error page.
-class WKInternalSchemeHandler: NSObject, WKURLSchemeHandler {
-    public static let scheme = "internal"
+/// Note: This class has some assumptions and cannot be used in production as of July 2025:
+///  - Error pages are only handled with native error pages (HTML error pages won't be served)
+///  - NativeErrorPageViewController is shown in the Client through a redux action, fired when an error page
+///  needs to be shown this mechanism still needs to be investigated and integrated so error pages can load
+///  (natively) under browser kit.
+public class WKInternalSchemeHandler: NSObject, SchemeHandler {
+    public let scheme = "internal"
+
+    override public init() {}
 
     static func response(forUrl url: URL) -> URLResponse {
         return URLResponse(url: url, mimeType: "text/html", expectedContentLength: -1, textEncodingName: "utf-8")
@@ -27,7 +38,7 @@ class WKInternalSchemeHandler: NSObject, WKURLSchemeHandler {
     // responder["about/home"] is used for 'internal://local/about/home'
     static var responders = [String: WKInternalSchemeResponse]()
 
-    func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+    public func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
         guard let url = urlSchemeTask.request.url else {
             urlSchemeTask.didFailWithError(WKInternalPageSchemeHandlerError.badURL)
             return
@@ -56,5 +67,5 @@ class WKInternalSchemeHandler: NSObject, WKURLSchemeHandler {
         urlSchemeTask.didFinish()
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+    public func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
 }

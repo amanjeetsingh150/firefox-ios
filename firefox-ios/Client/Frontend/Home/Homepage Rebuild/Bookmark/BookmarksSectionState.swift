@@ -5,7 +5,6 @@
 import Common
 import Redux
 import Shared
-import Storage
 
 /// State for the bookmark section that is used in the homepage view
 struct BookmarksSectionState: StateType, Equatable, Hashable {
@@ -13,7 +12,7 @@ struct BookmarksSectionState: StateType, Equatable, Hashable {
     var bookmarks: [BookmarkConfiguration]
     let shouldShowSection: Bool
 
-    let sectionHeaderState = SectionHeaderState(
+    let sectionHeaderState = SectionHeaderConfiguration(
         title: .BookmarksSectionTitle,
         a11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.SectionTitles.bookmarks,
         isButtonHidden: false,
@@ -22,7 +21,11 @@ struct BookmarksSectionState: StateType, Equatable, Hashable {
     )
 
     init(profile: Profile = AppContainer.shared.resolve(), windowUUID: WindowUUID) {
-        let shouldShowSection = profile.prefs.boolForKey(PrefsKeys.UserFeatureFlagPrefs.BookmarksSection) ?? true
+        let isStoriesRedesignEnabled = LegacyFeatureFlagsManager.shared.isFeatureEnabled(.homepageStoriesRedesign,
+                                                                                         checking: .buildOnly)
+        let isBookmarksSectionPrefEnabled = profile.prefs.boolForKey(PrefsKeys.HomepageSettings.BookmarksSection) ?? true
+        let shouldShowSection = isStoriesRedesignEnabled ? false : isBookmarksSectionPrefEnabled
+
         self.init(
             windowUUID: windowUUID,
             bookmarks: [],

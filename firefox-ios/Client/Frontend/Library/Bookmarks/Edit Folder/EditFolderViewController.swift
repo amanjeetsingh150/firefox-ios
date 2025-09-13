@@ -21,7 +21,7 @@ class EditFolderViewController: UIViewController,
     }
     var currentWindowUUID: WindowUUID?
     var themeManager: any ThemeManager
-    var themeObserver: (any NSObjectProtocol)?
+    var themeListenerCancellable: Any?
     var notificationCenter: any NotificationProtocol
     var onViewWillDisappear: (() -> Void)?
     var onViewWillAppear: (() -> Void)?
@@ -38,7 +38,6 @@ class EditFolderViewController: UIViewController,
         view.register(cellType: OneLineTableViewCell.self)
         view.register(UITableViewHeaderFooterView.self,
                       forHeaderFooterViewReuseIdentifier: UX.parentFolderHeaderIdentifier)
-        view.separatorStyle = .none
         let headerSpacerView = UIView(frame: CGRect(origin: .zero,
                                                     size: CGSize(width: 0, height: UX.editFolderCellTopPadding)))
         view.tableHeaderView = headerSpacerView
@@ -65,7 +64,6 @@ class EditFolderViewController: UIViewController,
         self.notificationCenter = notificationCenter
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
-        listenForThemeChange(view)
     }
 
     required init?(coder: NSCoder) {
@@ -82,6 +80,9 @@ class EditFolderViewController: UIViewController,
             self?.tableView.reloadSections(IndexSet(integer: Section.parentFolder.rawValue), with: .automatic)
         }
         setupSubviews()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -207,7 +208,7 @@ class EditFolderViewController: UIViewController,
         let folderImage = UIImage(named: StandardImageIdentifiers.Large.folder)?.withRenderingMode(.alwaysTemplate)
         cell.leftImageView.image = folderImage
         cell.indentationLevel = viewModel.folderStructures.count == 1 ? 0 : folder.indentation
-        let isFolderSelected = folder == viewModel.selectedFolder
+        let isFolderSelected = folder.guid == viewModel.selectedFolder?.guid
         let canShowAccessoryView = viewModel.shouldShowDisclosureIndicator(isFolderSelected: isFolderSelected)
         cell.accessoryType = canShowAccessoryView ? .checkmark : .none
         cell.selectionStyle = .default

@@ -4,14 +4,14 @@
 
 import Common
 
-class MockLogger: Logger {
+final class MockLogger: Logger, @unchecked Sendable {
     var crashedLastLaunch = false
     var savedMessage: String?
     var savedLevel: LoggerLevel?
     var savedCategory: LoggerCategory?
+    var savedExtra: [String: String]?
 
     func setup(sendCrashReports: Bool) {}
-    func configure(crashManager: Common.CrashManager) {}
     func copyLogsToDocuments() {}
     func logCustomError(error: Error) {}
     func deleteCachedLogFiles() {}
@@ -21,11 +21,12 @@ class MockLogger: Logger {
              category: LoggerCategory,
              extra: [String: String]? = nil,
              description: String? = nil,
-             file: String = #file,
+             file: String = #filePath,
              function: String = #function,
              line: Int = #line) {
         savedMessage = message
         savedLevel = level
         savedCategory = category
+        savedExtra = extra
     }
 }

@@ -5,12 +5,15 @@
 import Common
 import UIKit
 
-class WKEngineView: UIView, EngineView {
+class WKEngineView: UIView, EngineView, FullscreenDelegate {
     private var session: WKEngineSession?
     private var logger: Logger
+    private var sessionlifeCycleManager: WKSessionLifecycleManager
 
     init(frame: CGRect,
+         sessionlifeCycleManager: WKSessionLifecycleManager = DefaultWKSessionLifecycleManager(),
          logger: Logger = DefaultLogger.shared) {
+        self.sessionlifeCycleManager = sessionlifeCycleManager
         self.logger = logger
         super.init(frame: frame)
     }
@@ -36,13 +39,22 @@ class WKEngineView: UIView, EngineView {
 
     private func remove(session: WKEngineSession) {
         session.webView.removeFromSuperview()
+        session.fullscreenDelegate = nil
+        sessionlifeCycleManager.deactivate(session)
     }
 
     private func add(session: WKEngineSession) {
         self.session = session
-        addSubview(session.webView)
+        session.fullscreenDelegate = self
+        sessionlifeCycleManager.activate(session)
+        setupWebViewLayout()
+    }
+
+    private func setupWebViewLayout() {
+        guard let session else { return }
 
         let webView = session.webView
+        addSubview(webView)
         webView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
@@ -50,5 +62,17 @@ class WKEngineView: UIView, EngineView {
             webView.trailingAnchor.constraint(equalTo: trailingAnchor),
             webView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor)
         ])
+    }
+
+    func enteringFullscreen() {
+        guard let session else { return }
+
+        let webView = session.webView
+        webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    }
+
+    func exitingFullscreen() {
+        setupWebViewLayout()
     }
 }

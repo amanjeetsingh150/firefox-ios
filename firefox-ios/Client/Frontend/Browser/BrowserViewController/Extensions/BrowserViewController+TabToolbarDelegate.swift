@@ -24,7 +24,7 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         }
         dataClearanceContextHintVC.configure(
             anchor: view,
-            withArrowDirection: ToolbarHelper().shouldShowNavigationToolbar(for: traitCollection) ? .down : .up,
+            withArrowDirection: toolbarHelper.shouldShowNavigationToolbar(for: traitCollection) ? .down : .up,
             andDelegate: self,
             presentedUsing: { [weak self] in self?.presentDataClearanceContextualHint() },
             andActionForButton: { },
@@ -46,7 +46,7 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         } else {
             navigationHintDoubleTapTimer = nil
             let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.navigationButtonDoubleTapped)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         }
     }
 
@@ -54,13 +54,13 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         guard isToolbarRefactorEnabled, isToolbarNavigationHintEnabled else { return }
         navigationContextHintVC.configure(
             anchor: view,
-            withArrowDirection: ToolbarHelper().shouldShowNavigationToolbar(for: traitCollection) ? .down : .up,
+            withArrowDirection: toolbarHelper.shouldShowNavigationToolbar(for: traitCollection) ? .down : .up,
             andDelegate: self,
             presentedUsing: { [weak self] in self?.presentNavigationContextualHint() },
             actionOnDismiss: {
                 let action = ToolbarAction(windowUUID: self.windowUUID,
                                            actionType: ToolbarActionType.navigationHintFinishedPresenting)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
             },
             andActionForButton: { },
             overlayState: overlayManager,
@@ -79,27 +79,86 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         else { return }
 
         if let selectedTab = tabManager.selectedTab,
-            selectedTab.isFxHomeTab || !selectedTab.loading,
+            selectedTab.isFxHomeTab || !selectedTab.isLoading,
             !state.microsurveyState.showPrompt {
             present(navigationContextHintVC, animated: true)
             UIAccessibility.post(notification: .layoutChanged, argument: navigationContextHintVC)
         } else {
             let action = ToolbarAction(windowUUID: self.windowUUID,
                                        actionType: ToolbarActionType.navigationHintFinishedPresenting)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         }
+    }
+
+    func configureToolbarUpdateContextualHint(addressToolbarView: UIView, navigationToolbarView: UIView) {
+        guard let state = store.state.screenState(ToolbarState.self,
+                                                  for: .toolbar,
+                                                  window: windowUUID),
+              isToolbarRefactorEnabled,
+              isToolbarUpdateHintEnabled
+        else { return }
+
+        let showNavToolbar = toolbarHelper.shouldShowNavigationToolbar(for: traitCollection)
+        let view = state.toolbarPosition == .top && showNavToolbar ? navigationToolbarView : addressToolbarView
+        let arrowDirection: UIPopoverArrowDirection = state.toolbarPosition == .top && !showNavToolbar ? .up : .down
+
+        toolbarUpdateContextHintVC.configure(
+            anchor: view,
+            withArrowDirection: arrowDirection,
+            andDelegate: self,
+            presentedUsing: { [weak self] in self?.presentToolbarUpdateContextualHint() },
+            andActionForButton: { },
+            overlayState: overlayManager)
+    }
+
+    private func presentToolbarUpdateContextualHint() {
+        guard !IntroScreenManager(prefs: profile.prefs).shouldShowIntroScreen,
+              let selectedTab = tabManager.selectedTab,
+              selectedTab.isFxHomeTab || selectedTab.isCustomHomeTab
+        else { return }
+
+        present(toolbarUpdateContextHintVC, animated: true)
+        UIAccessibility.post(notification: .layoutChanged, argument: toolbarUpdateContextHintVC)
+    }
+
+    // MARK: - Summarize CFR / Contextual Hint
+    func configureSummarizeToolbarEntryContextualHint(for view: UIView) {
+        guard let state = store.state.screenState(ToolbarState.self, for: .toolbar, window: windowUUID) else { return }
+        // Show up arrow for iPad and landscape or top address bar; otherwise show down arrow
+        let showNavToolbar = toolbarHelper.shouldShowNavigationToolbar(for: traitCollection)
+        let shouldShowUpArrow = state.toolbarPosition == .top || !showNavToolbar
+
+        summarizeToolbarEntryContextHintVC.configure(
+            anchor: view,
+            withArrowDirection: shouldShowUpArrow ? .up : .down,
+            andDelegate: self,
+            presentedUsing: { [weak self] in
+                self?.presentSummarizeToolbarEntryContextualHint()
+            },
+            andActionForButton: { },
+            overlayState: overlayManager)
+    }
+
+    private func presentSummarizeToolbarEntryContextualHint() {
+        present(summarizeToolbarEntryContextHintVC, animated: true)
+        UIAccessibility.post(notification: .layoutChanged, argument: summarizeToolbarEntryContextHintVC)
     }
 
     func tabToolbarDidPressHome(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
         didTapOnHome()
     }
 
-    // Presents alert to clear users private session data
     func tabToolbarDidPressDataClearance(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
         didTapOnDataClearance()
     }
 
+    /// Triggers clearing the users private session data, an alert is shown once and then, deletion is done directly after
     func didTapOnDataClearance() {
+        guard !(profile.prefs.boolForKey(PrefsKeys.dataClearanceAlertShown) ?? false) else {
+            performDeletionAction()
+            return
+        }
+
         let alert = UIAlertController(
             title: .Alerts.FeltDeletion.Title,
             message: .Alerts.FeltDeletion.Body,
@@ -118,34 +177,29 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
             title: .Alerts.FeltDeletion.ConfirmButton,
             style: .destructive,
             handler: { [weak self] _ in
-                self?.privateBrowsingTelemetry.sendDataClearanceTappedTelemetry(didConfirm: true)
-                self?.setupDataClearanceAnimation { timingConstant in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + timingConstant) {
-                        self?.closePrivateTabsAndOpenNewPrivateHomepage()
-                        self?.showDataClearanceConfirmationToast()
-                    }
-                }
+                self?.performDeletionAction()
             }
         )
 
         alert.addAction(deleteDataAction)
         alert.addAction(cancelAction)
-        present(alert, animated: true)
+        present(alert, animated: true) { [weak self] in
+            self?.profile.prefs.setBool(true, forKey: PrefsKeys.dataClearanceAlertShown)
+        }
+    }
+
+    private func performDeletionAction() {
+        self.privateBrowsingTelemetry.sendDataClearanceTappedTelemetry(didConfirm: true)
+        self.setupDataClearanceAnimation { timingConstant in
+            DispatchQueue.main.asyncAfter(deadline: .now() + timingConstant) {
+                self.closePrivateTabsAndOpenNewPrivateHomepage()
+            }
+        }
     }
 
     private func closePrivateTabsAndOpenNewPrivateHomepage() {
         tabManager.removeTabs(tabManager.privateTabs)
         tabManager.selectTab(tabManager.addTab(isPrivate: true))
-    }
-
-    private func showDataClearanceConfirmationToast() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            SimpleToast().showAlertWithText(
-                .FirefoxHomepage.FeltDeletion.ToastTitle,
-                bottomContainer: self.contentContainer,
-                theme: self.currentTheme()
-            )
-        }
     }
 
     /// Setup animation for data clearance flow unless reduce motion is enabled
@@ -161,7 +215,7 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         let dataClearanceAnimation = DataClearanceAnimation()
         dataClearanceAnimation.startAnimation(
             with: view,
-            for: ToolbarHelper().shouldShowTopTabs(for: traitCollection)
+            for: toolbarHelper.shouldShowTopTabs(for: traitCollection)
         )
 
         completion(timingToMatchGradientOverlay)
@@ -319,9 +373,20 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
                                      iconString: StandardImageIdentifiers.Large.cross,
                                      iconType: .Image) { _ in
             if let tab = self.tabManager.selectedTab {
+                self.tabsPanelTelemetry.tabClosed(mode: tab.isPrivate ? .private : .normal)
                 self.tabManager.removeTabWithCompletion(tab.tabUUID) {
+                    store.dispatchLegacy(
+                        GeneralBrowserAction(
+                            windowUUID: self.windowUUID,
+                            actionType: GeneralBrowserActionType.didCloseTabFromToolbar
+                        )
+                    )
                     self.updateTabCountUsingTabManager(self.tabManager)
-                    self.showToast(message: .TabsTray.CloseTabsToast.SingleTabTitle, toastAction: .closeTab)
+
+                    if !self.featureFlags.isFeatureEnabled(.tabTrayUIExperiments, checking: .buildOnly)
+                        || UIDevice.current.userInterfaceIdiom == .pad {
+                        self.showToast(message: .TabsTray.CloseTabsToast.SingleTabTitle, toastAction: .closeTab)
+                    }
                 }
             }
         }.items
@@ -358,11 +423,7 @@ extension BrowserViewController: ToolBarActionMenuDelegate, UIDocumentPickerDele
                                     theme: currentTheme()) { isButtonTapped in
                 isButtonTapped ? self.openBookmarkEditPanel(urlString: urlString) : nil
             }
-            if isBookmarkRefactorEnabled {
-                self.show(toast: toast, duration: DispatchTimeInterval.milliseconds(8000))
-            } else {
-                self.show(toast: toast)
-            }
+            show(toast: toast, duration: DispatchTimeInterval.milliseconds(8000))
         case .removeBookmark:
             let viewModel = ButtonToastViewModel(labelText: message,
                                                  buttonText: .UndoString)
@@ -436,5 +497,10 @@ extension BrowserViewController: ToolBarActionMenuDelegate, UIDocumentPickerDele
     func showEditBookmark() {
         guard let urlString = tabManager.selectedTab?.url?.absoluteString else { return }
         openBookmarkEditPanel(urlString: urlString)
+    }
+
+    func showTrackingProtection() {
+        store.dispatchLegacy(GeneralBrowserAction(windowUUID: windowUUID,
+                                                  actionType: GeneralBrowserActionType.showTrackingProtectionDetails))
     }
 }

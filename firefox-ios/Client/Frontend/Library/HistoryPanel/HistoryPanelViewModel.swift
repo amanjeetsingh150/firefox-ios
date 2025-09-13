@@ -10,14 +10,14 @@ import SwiftUI
 
 import struct MozillaAppServices.VisitTransitionSet
 
-class HistoryPanelViewModel: FeatureFlaggable {
+// TODO: FXIOS Make HistoryPanelViewModel actually sendable
+final class HistoryPanelViewModel: FeatureFlaggable, @unchecked Sendable {
     enum Sections: Int, CaseIterable {
         case additionalHistoryActions
         case lastHour
-        case today
-        case yesterday
-        case lastWeek
-        case lastMonth
+        case lastTwentyFourHours
+        case lastSevenDays
+        case lastFourWeeks
         case older
         case searchResults
 
@@ -25,14 +25,12 @@ class HistoryPanelViewModel: FeatureFlaggable {
             switch self {
             case .lastHour:
                 return .LibraryPanel.Sections.LastHour
-            case .today:
-                return .LibraryPanel.Sections.Today
-            case .yesterday:
-                return .LibraryPanel.Sections.Yesterday
-            case .lastWeek:
-                return .LibraryPanel.Sections.LastWeek
-            case .lastMonth:
-                return .LibraryPanel.Sections.LastMonth
+            case .lastTwentyFourHours:
+                return .LibraryPanel.Sections.LastTwentyFourHours
+            case .lastSevenDays:
+                return .LibraryPanel.Sections.LastSevenDays
+            case .lastFourWeeks:
+                return .LibraryPanel.Sections.LastFourWeeks
             case .older:
                 return .LibraryPanel.Sections.Older
             case .additionalHistoryActions, .searchResults:
@@ -41,16 +39,20 @@ class HistoryPanelViewModel: FeatureFlaggable {
         }
     }
 
+    enum HistoryItem: Hashable, Sendable {
+        case site(Site)
+        case historyActionables(HistoryActionablesModel)
+    }
+
     // MARK: - Properties
 
     private let profile: Profile
-    private var logger: Logger
+    private let logger: Logger
     // Request limit and offset
     private let queryFetchLimit = 100
     // Is not intended to be use in prod code, only on test
     private(set) var currentFetchOffset = 0
     private let searchQueryFetchLimit = 50
-    private var searchCurrentFetchOffset = 0
 
     // Search
     var isSearchInProgress = false
@@ -76,7 +78,7 @@ class HistoryPanelViewModel: FeatureFlaggable {
 
     let historyPanelNotifications = [Notification.Name.FirefoxAccountChanged,
                                      Notification.Name.PrivateDataClearedHistory,
-                                     Notification.Name.DynamicFontChanged,
+                                     UIContentSizeCategory.didChangeNotification,
                                      Notification.Name.DatabaseWasReopened,
                                      Notification.Name.OpenClearRecentHistory,
                                      Notification.Name.OpenRecentlyClosedTabs]
@@ -174,7 +176,7 @@ class HistoryPanelViewModel: FeatureFlaggable {
         // Since we remove all data, we reset our fetchOffset back to the start.
         currentFetchOffset = 0
 
-        dateGroupedSites = DateGroupedTableData<Site>()
+        dateGroupedSites = DateGroupedTableData<Site>(includeLastHour: true)
         buildVisibleSections()
     }
 
@@ -187,15 +189,17 @@ class HistoryPanelViewModel: FeatureFlaggable {
     func deleteGroupsFor(dateOption: HistoryDeletionUtilityDateOptions) {
         guard let deletableSections = getDeletableSection(for: dateOption) else { return }
         deletableSections.forEach { section in
-            let sectionItems = dateGroupedSites.itemsForSection(section.rawValue - 1)
+            let sectionItems = dateGroupedSites
+                .itemsForSection(section.rawValue - 1)
+                .map(HistoryItem.site)
             removeHistoryItems(item: sectionItems, at: section.rawValue)
         }
     }
 
     /// This handles removing a Site from the view.
-    func removeHistoryItems(item historyItem: [AnyHashable], at section: Int) {
+    func removeHistoryItems(item historyItem: [HistoryItem], at section: Int) {
         historyItem.forEach { item in
-            if let site = item as? Site {
+            if case HistoryItem.site(let site) = item {
                 deleteSingle(site: site)
             }
         }
@@ -270,10 +274,12 @@ class HistoryPanelViewModel: FeatureFlaggable {
         switch dateOption {
         case .lastHour:
             return [.lastHour]
-        case .today:
-            return [.lastHour, .today]
-        case .yesterday:
-            return [.lastHour, .today, .yesterday]
+        case .lastTwentyFourHours:
+            return [.lastHour, .lastTwentyFourHours]
+        case .lastSevenDays:
+            return [.lastHour, .lastTwentyFourHours, .lastSevenDays]
+        case .lastFourWeeks:
+            return [.lastHour, .lastTwentyFourHours, .lastSevenDays, .lastFourWeeks]
         default:
             return nil
         }

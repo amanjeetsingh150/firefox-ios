@@ -8,10 +8,13 @@ import Shared
 import UserNotifications
 import Common
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+class SceneDelegate: UIResponder,
+                     UIWindowSceneDelegate,
+                     FeatureFlaggable {
     var window: UIWindow?
 
     let profile: Profile = AppContainer.shared.resolve()
+    lazy var introScreenManager = IntroScreenManager(prefs: profile.prefs)
     var sessionManager: AppSessionProvider = AppContainer.shared.resolve()
     var downloadQueue: DownloadQueue = AppContainer.shared.resolve()
 
@@ -20,6 +23,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private let logger: Logger = DefaultLogger.shared
     private let tabErrorTelemetryHelper = TabErrorTelemetryHelper.shared
+    private var isDeeplinkOptimizationRefactorEnabled: Bool {
+        return featureFlags.isFeatureEnabled(.deeplinkOptimizationRefactor, checking: .buildOnly)
+    }
 
     // MARK: - Connecting / Disconnecting Scenes
 
@@ -34,7 +40,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         options connectionOptions: UIScene.ConnectionOptions
     ) {
         guard !AppConstants.isRunningUnitTest else { return }
-        cancelStartupTimeRecordIfNeeded(options: connectionOptions)
         logger.log("SceneDelegate: will connect to session", level: .info, category: .lifecycle)
 
         // Add hooks for the nimbus-cli to test experiments on device or involving deeplinks.
@@ -49,17 +54,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             prefs: profile.prefs
         )
 
-        let sceneCoordinator = SceneCoordinator(scene: scene)
+        let sceneCoordinator = SceneCoordinator(scene: scene, introManager: introScreenManager)
         self.sceneCoordinator = sceneCoordinator
         self.window = sceneCoordinator.window
         sceneCoordinator.start()
         handle(connectionOptions: connectionOptions)
-    }
-
-    private func cancelStartupTimeRecordIfNeeded(options: UIScene.ConnectionOptions) {
-        // if the conditions are met it means the app was launched with no deeplink options
-        guard options.urlContexts.isEmpty, options.shortcutItem == nil, options.userActivities.isEmpty else { return }
-        AppEventQueue.signal(event: .recordStartupTimeOpenURLCancelled)
+        if !sessionManager.launchSessionProvider.openedFromExternalSource {
+            AppEventQueue.signal(event: .recordStartupTimeOpenDeeplinkCancelled)
+        }
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -234,11 +236,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         logger.log("Scene coordinator will handle a route", level: .info, category: .coordinator)
         sessionManager.launchSessionProvider.openedFromExternalSource = true
 
-        AppEventQueue.wait(for: [.startupFlowComplete, .tabRestoration(sceneCoordinator.windowUUID)]) { [weak self] in
-            self?.logger.log("Start up flow and restoration done, will handle route",
-                             level: .info,
-                             category: .coordinator)
+        if isDeeplinkOptimizationRefactorEnabled {
             sceneCoordinator.findAndHandle(route: route)
+        } else {
+            AppEventQueue.wait(for: [.startupFlowComplete, .tabRestoration(sceneCoordinator.windowUUID)]) { [weak self] in
+                self?.logger.log("Start up flow and restoration done, will handle route",
+                                 level: .info,
+                                 category: .coordinator)
+                sceneCoordinator.findAndHandle(route: route)
+                AppEventQueue.signal(event: .recordStartupTimeOpenDeeplinkComplete)
+            }
         }
     }
 }

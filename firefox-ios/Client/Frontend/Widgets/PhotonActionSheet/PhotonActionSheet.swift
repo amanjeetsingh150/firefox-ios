@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Storage
 import Shared
 import UIKit
 import Common
@@ -44,7 +43,7 @@ class PhotonActionSheet: UIViewController, Themeable {
     private var constraints = [NSLayoutConstraint]()
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
 
@@ -91,14 +90,12 @@ class PhotonActionSheet: UIViewController, Themeable {
         tableView.dataSource = nil
         tableView.delegate = nil
         tableView.removeFromSuperview()
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: - View cycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
         view.addSubview(tableView)
         view.accessibilityIdentifier = AccessibilityIdentifiers.Photon.view
 
@@ -107,12 +104,16 @@ class PhotonActionSheet: UIViewController, Themeable {
 
         setupLayout()
 
-        setupNotifications(
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
             forObserver: self,
             observing: [.ProfileDidFinishSyncing,
                         .ProfileDidStartSyncing,
                         UIAccessibility.reduceTransparencyStatusDidChangeNotification]
         )
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -319,8 +320,11 @@ class PhotonActionSheet: UIViewController, Themeable {
                                change: [NSKeyValueChangeKey: Any]?,
                                context: UnsafeMutableRawPointer?) {
         if viewModel.presentationStyle == .popover && !wasHeightOverridden {
-            let size = view.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-            preferredContentSize = CGSize(width: size.width, height: tableView.contentSize.height)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let size = view.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+                preferredContentSize = CGSize(width: size.width, height: tableView.contentSize.height)
+            }
         }
     }
 

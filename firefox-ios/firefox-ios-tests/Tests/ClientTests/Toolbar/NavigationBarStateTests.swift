@@ -57,8 +57,8 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(newState.actions[1].actionType, .forward)
         XCTAssertEqual(newState.actions[1].isEnabled, false)
         XCTAssertEqual(newState.actions[2].actionType, .search)
-        XCTAssertEqual(newState.actions[3].actionType, .tabs)
-        XCTAssertEqual(newState.actions[4].actionType, .menu)
+        XCTAssertEqual(newState.actions[3].actionType, .menu)
+        XCTAssertEqual(newState.actions[4].actionType, .tabs)
     }
 
     func test_urlDidChangeAction_returnsExpectedState() {
@@ -75,8 +75,8 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(newState.actions[1].actionType, .forward)
         XCTAssertEqual(newState.actions[1].isEnabled, false)
         XCTAssertEqual(newState.actions[2].actionType, .home)
-        XCTAssertEqual(newState.actions[3].actionType, .tabs)
-        XCTAssertEqual(newState.actions[4].actionType, .menu)
+        XCTAssertEqual(newState.actions[3].actionType, .menu)
+        XCTAssertEqual(newState.actions[4].actionType, .tabs)
     }
 
     func test_numberOfTabsChangedAction_returnsExpectedState() {
@@ -98,9 +98,9 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(newState.actions[0].actionType, .back)
         XCTAssertEqual(newState.actions[1].actionType, .forward)
         XCTAssertEqual(newState.actions[2].actionType, .search)
-        XCTAssertEqual(newState.actions[3].actionType, .tabs)
-        XCTAssertEqual(newState.actions[3].numberOfTabs, 2)
-        XCTAssertEqual(newState.actions[4].actionType, .menu)
+        XCTAssertEqual(newState.actions[3].actionType, .menu)
+        XCTAssertEqual(newState.actions[4].actionType, .tabs)
+        XCTAssertEqual(newState.actions[4].numberOfTabs, 2)
     }
 
     func test_backForwardButtonStateChangedAction_returnsExpectedState() {
@@ -140,9 +140,9 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
 
         XCTAssertEqual(newState.windowUUID, windowUUID)
 
-        XCTAssertEqual(newState.actions[4].actionType, .menu)
-        XCTAssertNotNil(newState.actions[4].badgeImageName)
-        XCTAssertNotNil(newState.actions[4].maskImageName)
+        XCTAssertEqual(newState.actions[3].actionType, .menu)
+        XCTAssertNotNil(newState.actions[3].badgeImageName)
+        XCTAssertNotNil(newState.actions[3].maskImageName)
     }
 
     func test_borderPositionChangedAction_returnsExpectedState() {
@@ -195,7 +195,7 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         return reducer(
             state,
             ToolbarAction(
-                url: URL(string: "http://mozilla.com", invalidCharacters: false),
+                url: URL(string: "http://mozilla.com"),
                 isPrivate: false,
                 isShowingNavigationToolbar: true,
                 canGoBack: true,
@@ -206,42 +206,6 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
                 actionType: ToolbarActionType.urlDidChange
             )
         )
-    }
-
-    // MARK: Helper
-    func setupAppState(with initialToolbarState: ToolbarState) -> AppState {
-        return AppState(
-            activeScreens: ActiveScreensState(
-                screens: [
-                    .browserViewController(
-                        BrowserViewControllerState(
-                            windowUUID: windowUUID
-                        )
-                    ),
-                    .toolbar(initialToolbarState)
-                ]
-            )
-        )
-    }
-
-    func initialToolbarState(isShowingNavigationToolbar: Bool) -> ToolbarState {
-        let toolbarState = ToolbarState(windowUUID: windowUUID)
-        return ToolbarState(
-            windowUUID: windowUUID,
-            toolbarPosition: toolbarState.toolbarPosition,
-            isPrivateMode: toolbarState.isPrivateMode,
-            addressToolbar: toolbarState.addressToolbar,
-            navigationToolbar: toolbarState.navigationToolbar,
-            isShowingNavigationToolbar: isShowingNavigationToolbar,
-            isShowingTopTabs: toolbarState.isShowingTopTabs,
-            canGoBack: toolbarState.canGoBack,
-            canGoForward: toolbarState.canGoForward,
-            numberOfTabs: toolbarState.numberOfTabs,
-            showMenuWarningBadge: toolbarState.showMenuWarningBadge,
-            isNewTabFeatureEnabled: toolbarState.isNewTabFeatureEnabled,
-            canShowDataClearanceAction: toolbarState.canShowDataClearanceAction,
-            canShowNavigationHint: toolbarState.canShowNavigationHint,
-            shouldAnimate: toolbarState.shouldAnimate)
     }
 
     // MARK: StoreTestUtility

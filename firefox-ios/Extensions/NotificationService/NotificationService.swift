@@ -5,11 +5,8 @@
 import Common
 import Account
 import Shared
-import Storage
-import Sync
 import UserNotifications
-
-import class MozillaAppServices.Viaduct
+import MozillaAppServices
 
 class NotificationService: UNNotificationServiceExtension {
     var display: SyncDataDisplay?
@@ -27,6 +24,7 @@ class NotificationService: UNNotificationServiceExtension {
         // Set-up Rust network stack. This is needed in addition to the call
         // from the AppDelegate due to the fact that this uses a separate process
         Viaduct.shared.useReqwestBackend()
+        MozillaAppServices.initialize()
 
         let userInfo = request.content.userInfo
 
@@ -46,7 +44,10 @@ class NotificationService: UNNotificationServiceExtension {
 
         let display = SyncDataDisplay(content: content, contentHandler: contentHandler)
         self.display = display
-        let handlerCompletion = { (result: Result<PushMessage, PushMessageError>) in
+        self.handleEncryptedPushMessage(
+            userInfo: userInfo,
+            profile: profile
+        ) { (result: Result<PushMessage, PushMessageError>) in
             guard case .success(let event) = result else {
                 if case .failure(let failure) = result {
                     self.didFinish(nil, with: failure)
@@ -55,12 +56,11 @@ class NotificationService: UNNotificationServiceExtension {
             }
             self.didFinish(event)
         }
-        self.handleEncryptedPushMessage(userInfo: userInfo, profile: profile, completion: handlerCompletion)
     }
 
     func handleEncryptedPushMessage(userInfo: [AnyHashable: Any],
                                     profile: BrowserProfile,
-                                    completion: @escaping (Result<PushMessage, PushMessageError>) -> Void
+                                    completion: @escaping @Sendable (Result<PushMessage, PushMessageError>) -> Void
     ) {
         Task {
             do {
@@ -81,7 +81,7 @@ class NotificationService: UNNotificationServiceExtension {
                 }
                 if decryptResult.scope == RustFirefoxAccounts.pushScope {
                     let handler = FxAPushMessageHandler(with: profile)
-                    handler.handleDecryptedMessage(message: decryptedString, completion: completion)
+                    await handler.handleDecryptedMessage(message: decryptedString, completion: completion)
                 } else {
                     completion(.failure(.messageIncomplete("Unknown sender")))
                 }
@@ -203,7 +203,7 @@ class SyncDataDisplay {
 
     func displayNewSentTabNotification(tab: [String: String]) {
         if let urlString = tab[NotificationSentTabs.Payload.urlKey],
-            let url = URL(string: urlString, invalidCharacters: false),
+            let url = URL(string: urlString),
             url.isWebPage(),
             let title = tab[NotificationSentTabs.Payload.titleKey] {
             let tab = [

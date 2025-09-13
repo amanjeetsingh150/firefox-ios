@@ -9,7 +9,7 @@ import UIKit
 import Shared
 
 /*
-    
+
  |----------------|
  |              X |
  |Title Multiline |
@@ -22,7 +22,7 @@ import Shared
  |----------------|
  |    [Button]    | (Bottom View)
  |----------------|
- 
+
  */
 
 class DefaultBrowserOnboardingViewController: UIViewController, OnViewDismissable, Themeable {
@@ -38,7 +38,7 @@ class DefaultBrowserOnboardingViewController: UIViewController, OnViewDismissabl
 
     // MARK: - Properties
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     var onViewDismissed: (() -> Void)?
 
@@ -117,7 +117,8 @@ class DefaultBrowserOnboardingViewController: UIViewController, OnViewDismissabl
         super.viewDidLoad()
 
         initialViewSetup()
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 

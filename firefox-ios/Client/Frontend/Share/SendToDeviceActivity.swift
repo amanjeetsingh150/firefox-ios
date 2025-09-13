@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Shared
 
 /// Adds an option to share a tab to another synced device.
 class SendToDeviceActivity: CustomAppActivity {
@@ -15,11 +14,6 @@ class SendToDeviceActivity: CustomAppActivity {
     override func prepare(withActivityItems activityItems: [Any]) {}
 
     override func perform() {
-        TelemetryWrapper.recordEvent(category: .action,
-                                     method: .tap,
-                                     object: .shareSheet,
-                                     value: .shareSendToDevice,
-                                     extras: nil)
         activityDidFinish(true)
     }
 }

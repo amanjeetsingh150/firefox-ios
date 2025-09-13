@@ -5,7 +5,7 @@
 import Foundation
 import Shared
 
-private var ignoredSchemes = ["about"]
+private let ignoredSchemes = ["about"]
 
 public func isIgnoredURL(_ url: URL) -> Bool {
     guard let scheme = url.scheme else { return false }
@@ -18,7 +18,7 @@ public func isIgnoredURL(_ url: URL) -> Bool {
 }
 
 public func isIgnoredURL(_ url: String) -> Bool {
-    if let url = URL(string: url, invalidCharacters: false) {
+    if let url = URL(string: url) {
         return isIgnoredURL(url)
     }
 
@@ -39,6 +39,33 @@ extension SDRow {
 }
 
 extension BrowserDBSQLite: PinnedSites {
+    // Methods for new homepage that complies with Swift 6 Migration
+    public func remove(pinnedSite site: Site) async throws {
+        guard let host = (site.url as String).asURL?.normalizedHost else {
+            throw DatabaseError(description: "Invalid url for site \(site.url)")
+        }
+
+        try await awaitDatabaseRun(for: [("DELETE FROM pinned_top_sites where domain = ?", [host])])
+        self.notificationCenter.post(name: .TopSitesUpdated, object: nil)
+        try await awaitDatabaseRun(for: [("UPDATE domains SET showOnTopSites = 1 WHERE domain = ?", [host])])
+    }
+
+    /// Helper method that converts using the deferred types to result
+    /// and adopts modern swift concurrency to avoid refactoring the database level
+    private func awaitDatabaseRun(for commands: [(String, Args)]) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            database.run(commands).upon { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    // Legacy methods that use deferred
     public func removeFromPinnedTopSites(_ site: Site) -> Success {
         guard let host = (site.url as String).asURL?.normalizedHost else {
             return deferMaybe(DatabaseError(description: "Invalid url for site \(site.url)"))
@@ -76,10 +103,10 @@ extension BrowserDBSQLite: PinnedSites {
             return deferMaybe(DatabaseError(description: "Invalid site \(site.url)"))
         }
 
-        let args: Args = [site.url, now, site.title, site.id, host]
+        let args: Args = [site.url, now, site.title, host]
         let arglist = BrowserDB.varlist(args.count)
 
-        return self.database.run([("INSERT OR REPLACE INTO pinned_top_sites (url, pinDate, title, historyID, domain) VALUES \(arglist)", args)])
+        return self.database.run([("INSERT OR REPLACE INTO pinned_top_sites (url, pinDate, title, domain) VALUES \(arglist)", args)])
         >>== {
             self.notificationCenter.post(name: .TopSitesUpdated, object: self)
             return succeed()

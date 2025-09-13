@@ -18,7 +18,7 @@ final class BookmarksMiddleware {
         let windowUUID = action.windowUUID
 
         switch action.actionType {
-        case HomepageActionType.initialize, BookmarksActionType.fetchBookmarks:
+        case HomepageActionType.initialize, HomepageMiddlewareActionType.bookmarksUpdated:
             self.handleInitializeBookmarksAction(windowUUID: windowUUID)
         default:
            break
@@ -46,6 +46,6 @@ final class BookmarksMiddleware {
             windowUUID: windowUUID,
             actionType: BookmarksMiddlewareActionType.initialize
         )
-        store.dispatch(newAction)
+        store.dispatchLegacy(newAction)
     }
 }

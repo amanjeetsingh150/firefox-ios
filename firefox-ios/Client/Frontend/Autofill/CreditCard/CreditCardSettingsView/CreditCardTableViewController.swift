@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Common
-import Shared
 import SwiftUI
 import UIKit
 
@@ -21,11 +20,12 @@ class CreditCardTableViewController: UIViewController, Themeable {
         static let savedCardsTitleLabelLeading: CGFloat = 16
         static let savedCardsTitleLabelHeight: CGFloat = 13
         static let tableViewTopAnchor: CGFloat = 8
+        static let estimatedRowHeight: CGFloat = 86
     }
 
     var viewModel: CreditCardTableViewModel
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     var didSelectCardAtIndex: ((_ creditCard: CreditCard) -> Void)?
     var lastSelectedIndex: IndexPath?
@@ -35,7 +35,11 @@ class CreditCardTableViewController: UIViewController, Themeable {
     // MARK: View
 
     private lazy var tableView: UITableView = {
-        let tableView = UITableView(frame: .zero, style: .grouped)
+        let tableView: UITableView = if #available(iOS 26.0, *) {
+            UITableView(frame: .zero, style: .insetGrouped)
+        } else {
+            UITableView(frame: .zero, style: .grouped)
+        }
         tableView.register(HostingTableViewCell<CreditCardItemRow>.self,
                            forCellReuseIdentifier: HostingTableViewCell<CreditCardItemRow>.cellIdentifier)
         tableView.register(HostingTableViewCell<CreditCardAutofillToggle>.self,
@@ -49,7 +53,7 @@ class CreditCardTableViewController: UIViewController, Themeable {
             origin: .zero,
             size: CGSize(width: 0, height: CGFloat.leastNormalMagnitude)))
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 86
+        tableView.estimatedRowHeight = UX.estimatedRowHeight
         tableView.separatorStyle = .none
         tableView.separatorColor = .clear
         tableView.dataSource = self
@@ -77,9 +81,11 @@ class CreditCardTableViewController: UIViewController, Themeable {
     override func viewDidLoad() {
         super.viewDidLoad()
         viewSetup()
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
 
+        // FIXME: FXIOS-12995 Use Notifiable
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(didFinishAnnouncement),
@@ -112,10 +118,6 @@ class CreditCardTableViewController: UIViewController, Themeable {
 
     func reloadData() {
         tableView.reloadData()
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     @objc

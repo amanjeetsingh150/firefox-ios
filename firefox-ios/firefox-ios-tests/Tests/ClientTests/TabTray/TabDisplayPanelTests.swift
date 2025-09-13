@@ -45,12 +45,15 @@ final class TabDisplayPanelTests: XCTestCase {
     private func createSubject(isPrivateMode: Bool,
                                emptyTabs: Bool,
                                emptyInactiveTabs: Bool,
-                               file: StaticString = #file,
+                               file: StaticString = #filePath,
                                line: UInt = #line) -> TabDisplayPanelViewController {
         let subjectState = createSubjectState(isPrivateMode: isPrivateMode,
                                               emptyTabs: emptyTabs,
                                               emptyInactiveTabs: emptyInactiveTabs)
-        let subject = TabDisplayPanelViewController(isPrivateMode: isPrivateMode, windowUUID: .XCTestDefaultUUID)
+        let delegate = MockTabDisplayViewDragAndDropInteraction()
+        let subject = TabDisplayPanelViewController(isPrivateMode: isPrivateMode,
+                                                    windowUUID: .XCTestDefaultUUID,
+                                                    dragAndDropDelegate: delegate)
         subject.newState(state: subjectState)
 
         trackForMemoryLeaks(subject, file: file, line: line)

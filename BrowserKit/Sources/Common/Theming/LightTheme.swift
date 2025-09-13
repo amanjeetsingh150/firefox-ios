@@ -37,11 +37,17 @@ private struct LightColourPalette: ThemeColourPalette {
     var layerWarning: UIColor = FXColors.Yellow20
     var layerCritical: UIColor = FXColors.Red10
     var layerSelectedText: UIColor = FXColors.Blue50
-    var layerAutofillText: UIColor = FXColors.DarkGrey05.withAlphaComponent(0.73)
-    var layerSearch: UIColor = FXColors.LightGrey30
+    var layerAutofillText: UIColor = FXColors.DarkGrey05.withAlphaComponent(0.43)
+    var layerEmphasis: UIColor = FXColors.LightGrey30
     var layerGradientURL = Gradient(colors: [
         FXColors.LightGrey30.withAlphaComponent(0),
         FXColors.LightGrey30.withAlphaComponent(1)
+    ])
+    var layerSurfaceLow = FXColors.LightGrey20
+    var layerSurfaceMedium = FXColors.White
+    var layerGradientSummary = Gradient(colors: [
+        FXColors.Red70,
+        FXColors.Orange50
     ])
 
     // MARK: - Ratings
@@ -61,6 +67,7 @@ private struct LightColourPalette: ThemeColourPalette {
     var actionPrimaryHover: UIColor = FXColors.Blue60
     var actionPrimaryDisabled: UIColor = FXColors.Blue50.withAlphaComponent(0.5)
     var actionSecondary: UIColor = FXColors.LightGrey30
+    var actionSecondaryDisabled: UIColor = FXColors.LightGrey30.withAlphaComponent(0.5)
     var actionSecondaryHover: UIColor = FXColors.LightGrey40
     var formSurfaceOff: UIColor = FXColors.LightGrey30
     var formKnob: UIColor = FXColors.White
@@ -72,6 +79,7 @@ private struct LightColourPalette: ThemeColourPalette {
     var actionInformation: UIColor = FXColors.Blue50
     var actionTabActive: UIColor = FXColors.White
     var actionTabInactive: UIColor = FXColors.LightGrey20
+    var actionCloseButton: UIColor = FXColors.White
 
     // MARK: - Text
     var textPrimary: UIColor = FXColors.DarkGrey90
@@ -111,4 +119,12 @@ private struct LightColourPalette: ThemeColourPalette {
     var shadowSubtle: UIColor = FXColors.DarkGrey40.withAlphaComponent(0.10)
     var shadowDefault: UIColor = FXColors.DarkGrey40.withAlphaComponent(0.12)
     var shadowStrong: UIColor = FXColors.DarkGrey40.withAlphaComponent(0.16)
+
+    // MARK: - Gradient
+    var gradientOnboardingStop1: UIColor = FXColors.Yellow50
+    var gradientOnboardingStop2: UIColor = FXColors.Blue50
+    var gradientOnboardingStop3: UIColor = FXColors.Red60
+    var gradientOnboardingStop4: UIColor = FXColors.Orange50
+
+    var shadowBorder: UIColor = FXColors.DarkGrey50.withAlphaComponent(0.50)
 }

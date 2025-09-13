@@ -29,7 +29,7 @@ class IntroViewController: UIViewController,
     var didFinishFlow: (() -> Void)?
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var userDefaults: UserDefaultsInterface
     var hasRegisteredForDefaultBrowserNotification = false
     var currentWindowUUID: UUID? { windowUUID }
@@ -82,7 +82,6 @@ class IntroViewController: UIViewController,
 
         self.viewModel.setupViewControllerDelegates(with: self, for: windowUUID)
         setupLayout()
-        applyTheme()
     }
 
     required init?(coder: NSCoder) {
@@ -92,12 +91,10 @@ class IntroViewController: UIViewController,
     // MARK: - View lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
         populatePageController()
-    }
 
-    deinit {
-        notificationCenter.removeObserver(self)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     // MARK: View setup
@@ -112,7 +109,7 @@ class IntroViewController: UIViewController,
 
     private func setupLayout() {
         setupPageController()
-        if viewModel.isDismissable { setupCloseButton() }
+        if viewModel.isDismissible { setupCloseButton() }
     }
 
     private func setupPageController() {
@@ -129,7 +126,7 @@ class IntroViewController: UIViewController,
     }
 
     private func setupCloseButton() {
-        guard viewModel.isDismissable else { return }
+        guard viewModel.isDismissible else { return }
         view.addSubview(closeButton)
         view.bringSubviewToFront(closeButton)
         view.accessibilityElements = [closeButton, pageController.view as Any, pageControl]
@@ -150,7 +147,7 @@ class IntroViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .onboardingViewController)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
         let uuid = windowUUID
         store.subscribe(self, transform: {
             $0.select({ appState in
@@ -164,7 +161,7 @@ class IntroViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .onboardingViewController)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     func newState(state: OnboardingViewControllerState) {
@@ -182,6 +179,7 @@ class IntroViewController: UIViewController,
     func closeOnboarding() {
         guard let viewModel = viewModel as? IntroViewModel else { return }
         viewModel.saveHasSeenOnboarding()
+        viewModel.saveSearchBarPosition()
         didFinishFlow?()
         viewModel.telemetryUtility.sendDismissOnboardingTelemetry(
             from: viewModel.availableCards[pageControl.currentPage].viewModel.name)
@@ -209,8 +207,11 @@ class IntroViewController: UIViewController,
 
     func registerForNotification() {
         if !hasRegisteredForDefaultBrowserNotification {
-            setupNotifications(forObserver: self,
-                               observing: [UIApplication.didEnterBackgroundNotification])
+            startObservingNotifications(
+                withNotificationCenter: notificationCenter,
+                forObserver: self,
+                observing: [UIApplication.didEnterBackgroundNotification]
+            )
             hasRegisteredForDefaultBrowserNotification = true
         }
     }
@@ -327,6 +328,10 @@ extension IntroViewController: OnboardingCardDelegate {
             registerForNotification()
             DefaultApplicationHelper().openSettings()
         case .openInstructionsPopup:
+            /// Setting default browser card action opens an instruction pop up instead of
+            /// setting a default browser action. TBD if the above code even still fires.
+            introViewModel.chosenOptions.insert(.setAsDefaultBrowser)
+            introViewModel.updateOnboardingUserActivationEvent()
             presentDefaultBrowserPopup(
                 windowUUID: windowUUID,
                 from: cardName,
@@ -356,19 +361,23 @@ extension IntroViewController: OnboardingCardDelegate {
             let action = ThemeSettingsViewAction(manualThemeType: .dark,
                                                  windowUUID: windowUUID,
                                                  actionType: ThemeSettingsViewActionType.switchManualTheme)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         case .themeLight:
             turnSystemTheme(on: false)
             let action = ThemeSettingsViewAction(manualThemeType: .light,
                                                  windowUUID: windowUUID,
                                                  actionType: ThemeSettingsViewActionType.switchManualTheme)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         case .themeSystemDefault:
             turnSystemTheme(on: true)
         case .toolbarBottom:
             featureFlags.set(feature: .searchBarPosition, to: SearchBarPosition.bottom)
+            let notificationObject = [PrefsKeys.FeatureFlags.SearchBarPosition: SearchBarPosition.bottom]
+            notificationCenter.post(name: .SearchBarPositionDidChange, withObject: notificationObject)
         case .toolbarTop:
             featureFlags.set(feature: .searchBarPosition, to: SearchBarPosition.top)
+            let notificationObject = [PrefsKeys.FeatureFlags.SearchBarPosition: SearchBarPosition.top]
+            notificationCenter.post(name: .SearchBarPositionDidChange, withObject: notificationObject)
         }
         viewModel.telemetryUtility.sendMultipleChoiceButtonActionTelemetry(
             from: cardName,
@@ -380,7 +389,7 @@ extension IntroViewController: OnboardingCardDelegate {
         let action = ThemeSettingsViewAction(useSystemAppearance: state,
                                              windowUUID: windowUUID,
                                              actionType: ThemeSettingsViewActionType.toggleUseSystemAppearance)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     func sendCardViewTelemetry(from cardName: String) {

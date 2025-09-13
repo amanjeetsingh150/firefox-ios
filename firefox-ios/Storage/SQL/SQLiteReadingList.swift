@@ -5,8 +5,8 @@
 import Foundation
 import Shared
 
-public class ReadingListStorageError: MaybeErrorType {
-    var message: String
+public final class ReadingListStorageError: MaybeErrorType {
+    let message: String
     public init(_ message: String) {
         self.message = message
     }
@@ -15,7 +15,7 @@ public class ReadingListStorageError: MaybeErrorType {
     }
 }
 
-open class SQLiteReadingList {
+public final class SQLiteReadingList: Sendable {
     let db: BrowserDB
 
     let allColumns = [
@@ -40,29 +40,28 @@ open class SQLiteReadingList {
 }
 
 extension SQLiteReadingList: ReadingList {
-    public func getAvailableRecords(completion: @escaping ([ReadingListItem]) -> Void) {
+    public func getAvailableRecords(completion: @escaping @Sendable ([ReadingListItem]) -> Void) {
         let sql = "SELECT \(allColumns) FROM items ORDER BY client_last_modified DESC"
-        let deferredResponse = db.runQuery(
+        db.runQuery(
             sql,
             args: nil,
             factory: SQLiteReadingList.ReadingListItemFactory
-        ) >>== { cursor in
-            return deferMaybe(cursor.asArray())
-        }
-
-        deferredResponse.upon { result in
-            completion(result.successValue ?? [])
+        ).upon { result in
+            guard let cursor = result.successValue else {
+                completion([])
+                return
+            }
+            completion(cursor.asArray())
         }
     }
 
     public func getAvailableRecords() -> Deferred<Maybe<[ReadingListItem]>> {
         let sql = "SELECT \(allColumns) FROM items ORDER BY client_last_modified DESC"
-        return db.runQuery(sql, args: nil, factory: SQLiteReadingList.ReadingListItemFactory) >>== { cursor in
-            return deferMaybe(cursor.asArray())
-        }
+        return db.runQuery(sql, args: nil, factory: SQLiteReadingList.ReadingListItemFactory)
+            .map { $0.map { cursor in cursor.asArray() } }
     }
 
-    public func deleteRecord(_ record: ReadingListItem, completion: ((Bool) -> Void)? = nil) {
+    public func deleteRecord(_ record: ReadingListItem, completion: (@Sendable (Bool) -> Void)? = nil) {
         let sql = "DELETE FROM items WHERE client_id = ?"
         let args: Args = [record.id]
         let deferredResponse = db.run(sql, withArgs: args)
@@ -109,13 +108,14 @@ extension SQLiteReadingList: ReadingList {
     public func getRecordWithURL(_ url: String) -> Deferred<Maybe<ReadingListItem>> {
         let sql = "SELECT \(allColumns) FROM items WHERE url = ? LIMIT 1"
         let args: Args = [url]
-        return db.runQuery(sql, args: args, factory: SQLiteReadingList.ReadingListItemFactory) >>== { cursor in
+        return db.runQuery(sql, args: args, factory: SQLiteReadingList.ReadingListItemFactory).map { $0.bind { cursor in
             let items = cursor.asArray()
             if let item = items.first {
-                return deferMaybe(item)
+                return Maybe(success: item)
             } else {
-                return deferMaybe(ReadingListStorageError("Can't create RLCR from row"))
+                return Maybe(failure: ReadingListStorageError("Can't create RLCR from row"))
             }
+        }
         }
     }
 

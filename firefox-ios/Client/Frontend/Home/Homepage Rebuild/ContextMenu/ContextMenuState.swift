@@ -12,7 +12,9 @@ import Redux
 /// Classes conforming to this protocol can manage adding and removing bookmarks.
 /// Since bookmarks are not using Redux, we use this instead of dispatching an action.
 protocol BookmarksHandlerDelegate: AnyObject {
+    @MainActor
     func addBookmark(urlString: String, title: String?, site: Site?)
+    @MainActor
     func removeBookmark(urlString: String, title: String?, site: Site?)
 }
 
@@ -20,7 +22,6 @@ protocol BookmarksHandlerDelegate: AnyObject {
 /// Ideally, we want that view to subscribe to the store and update its state following the redux pattern
 /// For now, we will instantiate this state and populate the associated view model instead to avoid
 /// increasing scope of homepage rebuild project.
-
 struct ContextMenuState {
     var site: Site?
     var actions: [[PhotonRowActions]] = [[]]
@@ -49,14 +50,14 @@ struct ContextMenuState {
         guard let site = configuration.site else { return }
         self.site = site
 
-        switch configuration.homepageSection {
-        case .topSites:
+        switch configuration.menuType {
+        case .topSite, .shortcut:
             actions = [getTopSitesActions(site: site)]
         case .jumpBackIn:
             actions = [getJumpBackInActions(site: site)]
-        case .bookmarks:
+        case .bookmark:
             actions = [getBookmarksActions(site: site)]
-        case .pocket:
+        case .merino:
             actions = [getPocketActions(site: site)]
         default:
             return
@@ -109,63 +110,106 @@ struct ContextMenuState {
     /// This action removes the tile out of the top sites.
     /// If site is pinned, it removes it from pinned and remove from top sites in general.
     private func getRemoveTopSiteAction(site: Site) -> PhotonRowActions {
-        return SingleActionViewModel(title: .RemoveContextMenuTitle,
-                                     iconString: StandardImageIdentifiers.Large.cross,
-                                     allowIconScaling: true,
-                                     tapHandler: { _ in
-            dispatchContextMenuAction(site: site, actionType: ContextMenuActionType.tappedOnRemoveTopSite)
-            // TODO: FXIOS-10171 - Add telemetry
-        }).items
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+
+        return SingleActionViewModel(
+            title: .RemoveContextMenuTitle,
+            iconString: StandardImageIdentifiers.Large.cross,
+            allowIconScaling: true,
+            tapHandler: { _ in
+                ContextMenuState.dispatchContextMenuAction(
+                    windowUUID: windowUUID,
+                    site: site,
+                    actionType: ContextMenuActionType.tappedOnRemoveTopSite
+                )
+            }).items
     }
 
     private func getPinTopSiteAction(site: Site) -> PhotonRowActions {
-        return SingleActionViewModel(title: .PinTopsiteActionTitle2,
-                                     iconString: StandardImageIdentifiers.Large.pin,
-                                     allowIconScaling: true,
-                                     tapHandler: { _ in
-            dispatchContextMenuAction(site: site, actionType: ContextMenuActionType.tappedOnPinTopSite)
-            // TODO: FXIOS-10171 - Add telemetry
-        }).items
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+
+        return SingleActionViewModel(
+            title: .PinTopsiteActionTitle2,
+            iconString: StandardImageIdentifiers.Large.pin,
+            allowIconScaling: true,
+            tapHandler: { _ in
+                ContextMenuState.dispatchContextMenuAction(
+                    windowUUID: windowUUID,
+                    site: site,
+                    actionType: ContextMenuActionType.tappedOnPinTopSite
+                )
+            }).items
     }
 
     /// This unpin action removes the top site from the location it's in.
-    /// The tile can stil appear in the top sites as unpinned.
+    /// The tile can still appear in the top sites as unpinned.
     private func getRemovePinTopSiteAction(site: Site) -> PhotonRowActions {
-        return SingleActionViewModel(title: .UnpinTopsiteActionTitle2,
-                                     iconString: StandardImageIdentifiers.Large.pinSlash,
-                                     allowIconScaling: true,
-                                     tapHandler: { _ in
-            dispatchContextMenuAction(site: site, actionType: ContextMenuActionType.tappedOnUnpinTopSite)
-            // TODO: FXIOS-10171 - Add telemetry
-        }).items
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+
+        return SingleActionViewModel(
+            title: .UnpinTopsiteActionTitle2,
+            iconString: StandardImageIdentifiers.Large.pinSlash,
+            allowIconScaling: true,
+            tapHandler: { _ in
+                ContextMenuState.dispatchContextMenuAction(
+                    windowUUID: windowUUID,
+                    site: site,
+                    actionType: ContextMenuActionType.tappedOnUnpinTopSite
+                )
+            }).items
     }
 
     private func getSettingsAction() -> PhotonRowActions {
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+
         return SingleActionViewModel(title: .FirefoxHomepage.ContextualMenu.Settings,
                                      iconString: StandardImageIdentifiers.Large.settings,
                                      allowIconScaling: true,
                                      tapHandler: { _ in
-            dispatchSettingsAction(section: .topSites)
-            // TODO: FXIOS-10171 - Add telemetry
+            ContextMenuState.dispatchSettingsAction(windowUUID: windowUUID, section: .topSites)
+            store.dispatchLegacy(
+                ContextMenuAction(windowUUID: windowUUID, actionType: ContextMenuActionType.tappedOnSettingsAction)
+            )
         }).items
     }
 
     private func getSponsoredContentAction() -> PhotonRowActions {
-        return SingleActionViewModel(title: .FirefoxHomepage.ContextualMenu.SponsoredContent,
-                                     iconString: StandardImageIdentifiers.Large.helpCircle,
-                                     allowIconScaling: true,
-                                     tapHandler: { _ in
-            guard let url = SupportUtils.URLForTopic("sponsor-privacy") else {
-                self.logger.log(
-                    "Unable to retrieve URL for sponsor-privacy, return early",
-                    level: .warning,
-                    category: .homepage
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+        let logger = logger
+
+        return SingleActionViewModel(
+            title: .FirefoxHomepage.ContextualMenu.SponsoredContent,
+            iconString: StandardImageIdentifiers.Large.helpCircle,
+            allowIconScaling: true,
+            tapHandler: { _ in
+                guard let url = SupportUtils.URLForTopic("sponsor-privacy") else {
+                    logger.log(
+                        "Unable to retrieve URL for sponsor-privacy, return early",
+                        level: .warning,
+                        category: .homepage
+                    )
+                    return
+                }
+                ContextMenuState.dispatchOpenNewTabAction(
+                    windowUUID: windowUUID,
+                    siteURL: url,
+                    isPrivate: false,
+                    selectNewTab: true
                 )
-                return
-            }
-            dispatchOpenNewTabAction(siteURL: url, isPrivate: false, selectNewTab: true)
-            // TODO: FXIOS-10171 - Add telemetry
-        }).items
+                store.dispatchLegacy(
+                    ContextMenuAction(windowUUID: windowUUID, actionType: ContextMenuActionType.tappedOnSponsoredAction)
+                )
+            }).items
     }
 
     // MARK: - JumpBack In section item's context menu actions
@@ -205,24 +249,45 @@ struct ContextMenuState {
 
     // MARK: - Default actions
     private func getOpenInNewTabAction(siteURL: URL) -> PhotonRowActions {
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+
         return SingleActionViewModel(
             title: .OpenInNewTabContextMenuTitle,
             iconString: StandardImageIdentifiers.Large.plus,
             allowIconScaling: true
         ) { _ in
-            dispatchOpenNewTabAction(siteURL: siteURL, isPrivate: false)
+            ContextMenuState.dispatchOpenNewTabAction(
+                windowUUID: windowUUID,
+                siteURL: siteURL,
+                isPrivate: false
+            )
             // TODO: FXIOS-10171 - Add telemetry
         }.items
     }
 
     private func getOpenInNewPrivateTabAction(siteURL: URL) -> PhotonRowActions {
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let windowUUID = windowUUID
+        let menuType = configuration.menuType
+
         return SingleActionViewModel(
             title: .OpenInNewPrivateTabContextMenuTitle,
             iconString: StandardImageIdentifiers.Large.privateMode,
             allowIconScaling: true
         ) { _ in
-            dispatchOpenNewTabAction(siteURL: siteURL, isPrivate: true)
-            // TODO: FXIOS-10171 - Add telemetry
+            ContextMenuState.dispatchOpenNewTabAction(
+                windowUUID: windowUUID,
+                siteURL: siteURL,
+                isPrivate: true
+            )
+            ContextMenuState.dispatchContextMenuActionForSection(
+                windowUUID: windowUUID,
+                menuType: menuType,
+                actionType: ContextMenuActionType.tappedOnOpenNewPrivateTab
+            )
         }.items
     }
 
@@ -241,9 +306,8 @@ struct ContextMenuState {
         return SingleActionViewModel(title: .RemoveBookmarkContextMenuTitle,
                                      iconString: StandardImageIdentifiers.Large.bookmarkSlash,
                                      allowIconScaling: true,
-                                     tapHandler: { _ in
+                                     tapHandler: { [bookmarkDelegate] _ in
             bookmarkDelegate.removeBookmark(urlString: site.url, title: site.title, site: site)
-            // TODO: FXIOS-10171 - Add telemetry
         })
     }
 
@@ -251,21 +315,27 @@ struct ContextMenuState {
         return SingleActionViewModel(title: .BookmarkContextMenuTitle,
                                      iconString: StandardImageIdentifiers.Large.bookmark,
                                      allowIconScaling: true,
-                                     tapHandler: { _ in
+                                     tapHandler: { [bookmarkDelegate] _ in
             // The method in BVC also handles the toast for this use case
             bookmarkDelegate.addBookmark(urlString: site.url, title: site.title, site: site)
-            // TODO: FXIOS-10171 - Add telemetry
         })
     }
 
     private func getShareAction(siteURL: String) -> PhotonRowActions {
+        // TODO: FXIOS-12750 ContextMenuState should be synchronized to the main actor, and then we won't need to pass
+        // this state across isolation boundaries...
+        let logger = self.logger
+        let sourceView = configuration.sourceView ?? UIView()
+        let toastContainerView = configuration.toastContainer
+        let windowUUID = windowUUID
+
         return SingleActionViewModel(
             title: .ShareContextMenuTitle,
             iconString: StandardImageIdentifiers.Large.share,
             allowIconScaling: true,
             tapHandler: { _ in
-                guard let url = URL(string: siteURL, invalidCharacters: false) else {
-                    self.logger.log(
+                guard let url = URL(string: siteURL) else {
+                    logger.log(
                         "Unable to retrieve URL for \(siteURL), return early",
                         level: .warning,
                         category: .homepage
@@ -275,19 +345,22 @@ struct ContextMenuState {
                 let shareSheetConfiguration = ShareSheetConfiguration(
                     shareType: .site(url: url),
                     shareMessage: nil,
-                    sourceView: configuration.sourceView ?? UIView(),
+                    sourceView: sourceView,
                     sourceRect: nil,
-                    toastContainer: configuration.toastContainer,
+                    toastContainer: toastContainerView,
                     popoverArrowDirection: [.up, .down, .left]
                 )
 
-                dispatchShareSheetAction(shareSheetConfiguration: shareSheetConfiguration)
+                ContextMenuState.dispatchShareSheetAction(
+                    windowUUID: windowUUID,
+                    shareSheetConfiguration: shareSheetConfiguration
+                )
             }).items
     }
 
     // MARK: Dispatch Actions
-    private func dispatchSettingsAction(section: Route.SettingsSection) {
-        store.dispatch(
+    private static func dispatchSettingsAction(windowUUID: WindowUUID, section: Route.SettingsSection) {
+        store.dispatchLegacy(
             NavigationBrowserAction(
                 navigationDestination: NavigationDestination(.settings(section)),
                 windowUUID: windowUUID,
@@ -296,8 +369,13 @@ struct ContextMenuState {
         )
     }
 
-    private func dispatchOpenNewTabAction(siteURL: URL, isPrivate: Bool, selectNewTab: Bool = false) {
-        store.dispatch(
+    private static func dispatchOpenNewTabAction(
+        windowUUID: WindowUUID,
+        siteURL: URL,
+        isPrivate: Bool,
+        selectNewTab: Bool = false
+    ) {
+        store.dispatchLegacy(
             NavigationBrowserAction(
                 navigationDestination: NavigationDestination(
                     .newTab,
@@ -311,8 +389,8 @@ struct ContextMenuState {
         )
     }
 
-    private func dispatchShareSheetAction(shareSheetConfiguration: ShareSheetConfiguration) {
-        store.dispatch(
+    private static func dispatchShareSheetAction(windowUUID: WindowUUID, shareSheetConfiguration: ShareSheetConfiguration) {
+        store.dispatchLegacy(
             NavigationBrowserAction(
                 navigationDestination: NavigationDestination(.shareSheet(shareSheetConfiguration)),
                 windowUUID: windowUUID,
@@ -321,10 +399,24 @@ struct ContextMenuState {
         )
     }
 
-    private func dispatchContextMenuAction(site: Site, actionType: ActionType) {
-        store.dispatch(
+    private static func dispatchContextMenuAction(windowUUID: WindowUUID, site: Site, actionType: ActionType) {
+        store.dispatchLegacy(
             ContextMenuAction(
                 site: site,
+                windowUUID: windowUUID,
+                actionType: actionType
+            )
+        )
+    }
+
+    private static func dispatchContextMenuActionForSection(
+        windowUUID: WindowUUID,
+        menuType: MenuType?,
+        actionType: ActionType
+    ) {
+        store.dispatchLegacy(
+            ContextMenuAction(
+                menuType: menuType,
                 windowUUID: windowUUID,
                 actionType: actionType
             )

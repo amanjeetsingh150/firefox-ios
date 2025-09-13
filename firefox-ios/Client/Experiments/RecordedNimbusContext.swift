@@ -5,7 +5,6 @@
 import Common
 import Foundation
 import Glean
-import Shared
 
 import func MozillaAppServices.getCalculatedAttributes
 import func MozillaAppServices.getLocaleTag
@@ -20,14 +19,15 @@ private extension Double? {
     }
 }
 
-private extension Int32? {
+extension Int32? {
     func toInt64() -> Int64? {
         guard let self = self else { return nil }
         return Int64(self)
     }
 }
 
-class RecordedNimbusContext: RecordedContext {
+/// TODO(FXIOS-12942): Implement proper thread-safety
+final class RecordedNimbusContext: RecordedContext, @unchecked Sendable {
     /**
      * The following constants are string constants of the keys that appear in the [EVENT_QUERIES] map.
      */
@@ -42,8 +42,11 @@ class RecordedNimbusContext: RecordedContext {
 
     var isFirstRun: Bool
     var isPhone: Bool
-    var isReviewCheckerEnabled: Bool
     var isDefaultBrowser: Bool
+    var isBottomToolbarUser: Bool
+    var hasEnabledTipsNotifications: Bool
+    var isAppleIntelligenceAvailable: Bool
+    var cannotUseAppleIntelligence: Bool
     var appVersion: String?
     var region: String?
     var language: String?
@@ -57,8 +60,11 @@ class RecordedNimbusContext: RecordedContext {
     private var logger: Logger
 
     init(isFirstRun: Bool,
-         isReviewCheckerEnabled: Bool,
          isDefaultBrowser: Bool,
+         isBottomToolbarUser: Bool,
+         hasEnabledTipsNotifications: Bool,
+         isAppleIntelligenceAvailable: Bool,
+         cannotUseAppleIntelligence: Bool,
          eventQueries: [String: String] = RecordedNimbusContext.EVENT_QUERIES,
          isPhone: Bool = UIDevice.current.userInterfaceIdiom == .phone,
          bundle: Bundle = Bundle.main,
@@ -69,8 +75,11 @@ class RecordedNimbusContext: RecordedContext {
 
         self.isFirstRun = isFirstRun
         self.isPhone = isPhone
-        self.isReviewCheckerEnabled = isReviewCheckerEnabled
         self.isDefaultBrowser = isDefaultBrowser
+        self.isBottomToolbarUser = isBottomToolbarUser
+        self.hasEnabledTipsNotifications = hasEnabledTipsNotifications
+        self.isAppleIntelligenceAvailable = isAppleIntelligenceAvailable
+        self.cannotUseAppleIntelligence = cannotUseAppleIntelligence
 
         let info = bundle.infoDictionary ?? [:]
         appVersion = info["CFBundleShortVersionString"] as? String
@@ -130,7 +139,6 @@ class RecordedNimbusContext: RecordedContext {
             GleanMetrics.NimbusSystem.RecordedNimbusContextObject(
                 isFirstRun: isFirstRun,
                 eventQueryValues: eventQueryValuesObject,
-                isReviewCheckerEnabled: isReviewCheckerEnabled,
                 isPhone: isPhone,
                 appVersion: appVersion,
                 locale: locale,
@@ -138,9 +146,14 @@ class RecordedNimbusContext: RecordedContext {
                 daysSinceUpdate: daysSinceUpdate.toInt64(),
                 language: language,
                 region: region,
-                isDefaultBrowser: isDefaultBrowser
+                isDefaultBrowser: isDefaultBrowser,
+                isBottomToolbarUser: isBottomToolbarUser,
+                hasEnabledTipsNotifications: hasEnabledTipsNotifications,
+                isAppleIntelligenceAvailable: isAppleIntelligenceAvailable,
+                cannotUseAppleIntelligence: cannotUseAppleIntelligence
             )
         )
+        GleanMetrics.Pings.shared.nimbus.submit()
         logger.log("record end", level: .debug, category: .experiments)
     }
 
@@ -170,7 +183,6 @@ class RecordedNimbusContext: RecordedContext {
             "is_first_run": isFirstRun,
             "isFirstRun": "\(isFirstRun)",
             "is_phone": isPhone,
-            "is_review_checker_enabled": isReviewCheckerEnabled,
             "events": eventQueryValues,
             "app_version": appVersion as Any,
             "region": region as Any,
@@ -179,6 +191,10 @@ class RecordedNimbusContext: RecordedContext {
             "days_since_install": daysSinceInstall as Any,
             "days_since_update": daysSinceUpdate as Any,
             "is_default_browser": isDefaultBrowser,
+            "is_bottom_toolbar_user": isBottomToolbarUser,
+            "has_enabled_tips_notifications": hasEnabledTipsNotifications,
+            "is_apple_intelligence_available": isAppleIntelligenceAvailable,
+            "cannot_use_apple_intelligence": cannotUseAppleIntelligence
         ]),
             let jsonString = NSString(data: data, encoding: String.Encoding.utf8.rawValue) as? String
         else {

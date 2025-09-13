@@ -17,6 +17,14 @@ struct TopSitesSectionState: StateType, Equatable {
     let numberOfTilesPerRow: Int
     let shouldShowSection: Bool
 
+    let sectionHeaderState = SectionHeaderConfiguration(
+        title: .FirefoxHomepage.Shortcuts.SectionTitle,
+        a11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.SectionTitles.topSites,
+        isButtonHidden: !LegacyFeatureFlagsManager.shared.isFeatureEnabled(.homepageShortcutsLibrary, checking: .buildOnly),
+        buttonA11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.MoreButtons.shortcuts,
+        buttonTitle: .BookmarksSavedShowAllText
+    )
+
     init(profile: Profile = AppContainer.shared.resolve(), windowUUID: WindowUUID) {
         let preferredNumberOfRows = profile.prefs.intForKey(PrefsKeys.NumberOfTopSiteRows)
         let defaultNumberOfRows = TopSitesRowCountSettingsController.defaultNumberOfRows
@@ -27,7 +35,7 @@ struct TopSitesSectionState: StateType, Equatable {
             windowUUID: windowUUID,
             topSitesData: [],
             numberOfRows: numberOfRows,
-            numberOfTilesPerRow: HomepageSectionLayoutProvider.UX.TopSitesConstants.minCards,
+            numberOfTilesPerRow: TopSitesSectionLayoutProvider.UX.minCards,
             shouldShowSection: shouldShowSection
         )
     }
@@ -59,7 +67,7 @@ struct TopSitesSectionState: StateType, Equatable {
             return handleUpdatedNumberOfRowsAction(action: action, state: state)
         case TopSitesActionType.toggleShowSectionSetting:
             return handleToggleShowSectionSettingAction(action: action, state: state)
-        case HomepageActionType.initialize, HomepageActionType.viewWillTransition:
+        case HomepageActionType.initialize, HomepageActionType.viewWillTransition, HomepageActionType.viewDidLayoutSubviews:
             return handleViewChangeAction(action: action, state: state)
         default:
             return defaultState(from: state)
@@ -78,7 +86,7 @@ struct TopSitesSectionState: StateType, Equatable {
             topSitesData: sites,
             numberOfRows: state.numberOfRows,
             numberOfTilesPerRow: state.numberOfTilesPerRow,
-            shouldShowSection: !sites.isEmpty && state.shouldShowSection
+            shouldShowSection: state.shouldShowSection
         )
     }
 

@@ -4,8 +4,8 @@
 
 import Common
 import Foundation
-import Shared
 
+@MainActor
 struct SimpleToast: ThemeApplicable {
     struct UX {
         static let labelPadding: CGFloat = 16
@@ -46,9 +46,9 @@ struct SimpleToast: ThemeApplicable {
 
         NSLayoutConstraint.activate([
             heightConstraint,
-            containerView.leadingAnchor.constraint(equalTo: bottomContainer.leadingAnchor,
+            containerView.leadingAnchor.constraint(equalTo: bottomContainer.safeAreaLayoutGuide.leadingAnchor,
                                                    constant: Toast.UX.toastSidePadding),
-            containerView.trailingAnchor.constraint(equalTo: bottomContainer.trailingAnchor,
+            containerView.trailingAnchor.constraint(equalTo: bottomContainer.safeAreaLayoutGuide.trailingAnchor,
                                                     constant: -Toast.UX.toastSidePadding),
             containerView.bottomAnchor.constraint(equalTo: bottomContainer.safeAreaLayoutGuide.bottomAnchor,
                                                   constant: bottomConstraintPadding),
@@ -74,7 +74,16 @@ struct SimpleToast: ThemeApplicable {
         animate(containerView)
 
         if UIAccessibility.isVoiceOverRunning {
-            UIAccessibility.post(notification: .announcement, argument: text)
+            let announcementString = NSMutableAttributedString(string: text)
+
+            // FXIOS-10766/10767 Prevents toast messages from being interrupted
+            if #available(iOS 17, *) {
+                let fullRange = NSRange(location: 0, length: announcementString.length)
+                announcementString.addAttribute(NSAttributedString.Key.accessibilitySpeechAnnouncementPriority,
+                                                value: UIAccessibilityPriority.high.rawValue,
+                                                range: fullRange)
+            }
+            UIAccessibility.post(notification: .announcement, argument: announcementString)
         }
     }
 

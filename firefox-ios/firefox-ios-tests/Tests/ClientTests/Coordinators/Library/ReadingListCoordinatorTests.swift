@@ -3,11 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import MozillaAppServices
-import Storage
 import XCTest
 
 @testable import Client
 
+@MainActor
 final class ReadingListCoordinatorTests: XCTestCase {
     var router: MockRouter!
     var parentCoordinator: MockLibraryCoordinatorDelegate!

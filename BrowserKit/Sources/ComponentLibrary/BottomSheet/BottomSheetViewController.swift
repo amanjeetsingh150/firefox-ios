@@ -9,16 +9,20 @@ import UIKit
 /// Protocol followed by child of the bottom sheet, which holds the content shown in the bottom sheet.
 public protocol BottomSheetChild: UIViewController {
     /// Tells the child that the bottom sheet will get dismissed
+    @MainActor
     func willDismiss()
 }
 
-/// Protocol followed by the bottom sheet view controller. Gives the possibility to dismiss the bottom sheet.
-public protocol BottomSheetDismissProtocol {
+@MainActor
+public protocol BottomSheetDelegate: AnyObject {
+    /// Returns the height of the `BottomSheetViewController` header including the close button.
+    func getBottomSheetHeaderHeight() -> CGFloat
+
     func dismissSheetViewController(completion: (() -> Void)?)
 }
 
 public class BottomSheetViewController: UIViewController,
-                                        BottomSheetDismissProtocol,
+                                        BottomSheetDelegate,
                                         Themeable,
                                         UIGestureRecognizerDelegate {
     private struct UX {
@@ -31,7 +35,7 @@ public class BottomSheetViewController: UIViewController,
 
     public var notificationCenter: NotificationProtocol
     public var themeManager: ThemeManager
-    public var themeObserver: NSObjectProtocol?
+    public var themeListenerCancellable: Any?
 
     private let viewModel: BottomSheetViewModel
     private var useDimmedBackground: Bool
@@ -61,6 +65,7 @@ public class BottomSheetViewController: UIViewController,
     private var contentViewBottomConstraint: NSLayoutConstraint?
     private var viewTranslation = CGPoint(x: 0, y: 0)
     private let windowUUID: WindowUUID
+    private var glassEffectView: UIVisualEffectView?
 
     // MARK: Init
     public init(viewModel: BottomSheetViewModel,
@@ -93,23 +98,20 @@ public class BottomSheetViewController: UIViewController,
         setupChildViewController()
 
         let closeButtonViewModel = CloseButtonViewModel(a11yLabel: viewModel.closeButtonA11yLabel,
-                                                        a11yIdentifier: "a11yCloseButton")
+                                                        a11yIdentifier: viewModel.closeButtonA11yIdentifier)
         closeButton.configure(viewModel: closeButtonViewModel)
 
         let gesture = UIPanGestureRecognizer(target: self, action: #selector(panGesture))
         contentView.addGestureRecognizer(gesture)
         gesture.delegate = self
 
-        listenForThemeChange(view)
         setupView()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
 
         contentViewBottomConstraint?.constant = childViewController.view.frame.height
         view.layoutIfNeeded()
-    }
-
-    override public func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        applyTheme()
     }
 
     override public func viewDidAppear(_ animated: Bool) {
@@ -134,12 +136,21 @@ public class BottomSheetViewController: UIViewController,
         sheetView.layer.shadowRadius = 20.0
         sheetView.layer.shadowPath = UIBezierPath(roundedRect: sheetView.bounds,
                                                   cornerRadius: viewModel.cornerRadius).cgPath
+
+        if #available(iOS 26.0, *) {
+            setupDynamicBackground()
+        }
     }
 
     // MARK: - Theme
 
     public func applyTheme() {
-        contentView.backgroundColor = themeManager.getCurrentTheme(for: windowUUID).colors.layer1
+        if #available(iOS 26.0, *) {
+            setupDynamicBackground()
+        } else {
+            contentView.backgroundColor = themeManager.getCurrentTheme(for: windowUUID).colors.layer1
+        }
+
         sheetView.layer.shadowOpacity = viewModel.shadowOpacity
 
         if useDimmedBackground {
@@ -162,6 +173,58 @@ public class BottomSheetViewController: UIViewController,
     }
 
     // MARK: - Private
+
+    @available(iOS 26.0, *)
+    private func setupDynamicBackground() {
+        let screenHeight = UIScreen.main.bounds.height
+        let seventyFivePercentScreenHeight = screenHeight * 0.75
+        let currentSheetHeight = childViewController.view.frame.height
+
+        if currentSheetHeight <= seventyFivePercentScreenHeight {
+            setupGlassEffect()
+        } else {
+            removeGlassEffect()
+            contentView.backgroundColor = themeManager.getCurrentTheme(for: windowUUID).colors.layer1
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func setupGlassEffect() {
+        // Only add glass effect if it doesn't already exist
+        guard glassEffectView == nil else { return }
+
+        let effectView = UIVisualEffectView()
+
+        #if canImport(FoundationModels)
+        let glassEffect = UIGlassEffect()
+        glassEffect.isInteractive = true
+        effectView.effect = glassEffect
+        #else
+        effectView.effect = UIBlurEffect(style: .systemUltraThinMaterial)
+        #endif
+
+        effectView.layer.cornerRadius = viewModel.cornerRadius
+        effectView.clipsToBounds = true
+        effectView.translatesAutoresizingMaskIntoConstraints = false
+
+        contentView.backgroundColor = .clear
+        contentView.insertSubview(effectView, at: 0)
+
+        NSLayoutConstraint.activate([
+            effectView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            effectView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            effectView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            effectView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        ])
+
+        glassEffectView = effectView
+    }
+
+    @available(iOS 26.0, *)
+    private func removeGlassEffect() {
+        glassEffectView?.removeFromSuperview()
+        glassEffectView = nil
+    }
 
     private func setupView() {
         if viewModel.shouldDismissForTapOutside {
@@ -283,6 +346,12 @@ public class BottomSheetViewController: UIViewController,
     }
 
     // MARK: - BottomSheetDismissProtocol
+
+    public func getBottomSheetHeaderHeight() -> CGFloat {
+        // this is a little work around to have `BottomSheetChild` being able to adjust for dynamic font size change
+        // since modifying the constraints is going to break the UI of other bottom sheet child.
+        return closeButton.dynamicSize.height
+    }
 
     public func dismissSheetViewController(completion: (() -> Void)? = nil) {
         childViewController.willDismiss()

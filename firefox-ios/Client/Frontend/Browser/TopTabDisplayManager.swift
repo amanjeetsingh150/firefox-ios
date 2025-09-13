@@ -30,10 +30,12 @@ protocol TabDisplayCompletionDelegate: AnyObject {
 
 @objc
 protocol TabSelectionDelegate: AnyObject {
+    @MainActor
     func didSelectTabAtIndex(_ index: Int)
 }
 
 protocol TopTabCellDelegate: AnyObject {
+    @MainActor
     func tabCellDidClose(_ cell: UICollectionViewCell)
 }
 
@@ -47,7 +49,8 @@ protocol TabDisplayerDelegate: AnyObject {
 
 // Regular tab order persistence for TabDisplayManager
 struct TabDisplayOrder: Codable {
-    static let defaults = UserDefaults(suiteName: AppInfo.sharedContainerIdentifier)!
+    // TODO: FXIOS-12589 UserDefaults is not Sendable
+    nonisolated(unsafe) static let defaults = UserDefaults(suiteName: AppInfo.sharedContainerIdentifier)!
     var regularTabUUID: [TabUUID] = []
 }
 
@@ -67,6 +70,7 @@ class TopTabDisplayManager: NSObject {
     }
 
     // MARK: - Variables
+    let tabsPanelTelemetry: TabsPanelTelemetry
     private var performingChainedOperations = false
     var isInactiveViewExpanded = false
     var dataStore = WeakList<Tab>()
@@ -176,7 +180,8 @@ class TopTabDisplayManager: NSObject {
          tabManager: TabManager,
          tabDisplayer: TabDisplayerDelegate,
          reuseID: String,
-         profile: Profile
+         profile: Profile,
+         gleanWrapper: GleanWrapper = DefaultGleanWrapper()
     ) {
         self.collectionView = collectionView
         self.tabDisplayerDelegate = tabDisplayer
@@ -185,36 +190,40 @@ class TopTabDisplayManager: NSObject {
         self.tabReuseIdentifier = reuseID
         self.profile = profile
         self.notificationCenter = NotificationCenter.default
+        self.tabsPanelTelemetry = TabsPanelTelemetry(gleanWrapper: gleanWrapper)
 
         super.init()
-        setupNotifications(forObserver: self, observing: [.DidTapUndoCloseAllTabToast])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.DidTapUndoCloseAllTabToast]
+        )
         tabManager.addDelegate(self)
-        register(self, forTabEvents: .didChangeURL, .didSetScreenshot)
         self.dataStore.removeAll()
-        getTabs { [weak self] tabsToDisplay in
-            guard let self, !tabsToDisplay.isEmpty else { return }
+        let tabsToDisplay = getTabs()
+        guard !tabsToDisplay.isEmpty else { return }
 
-            let orderedRegularTabs = tabsToDisplay
-            if self.getRegularOrderedTabs() == nil {
-                self.saveRegularOrderedTabs(from: tabsToDisplay)
-            }
-            orderedRegularTabs.forEach {
-                self.dataStore.insert($0)
-            }
-            self.collectionView.reloadData()
+        let orderedRegularTabs = tabsToDisplay
+        if self.getRegularOrderedTabs() == nil {
+            self.saveRegularOrderedTabs(from: tabsToDisplay)
         }
+        orderedRegularTabs.forEach {
+            self.dataStore.insert($0)
+        }
+        self.collectionView.reloadData()
     }
 
-    private func getTabs(completion: @escaping ([Tab]) -> Void) {
+    private func getTabs() -> [Tab] {
         let allTabs = self.isPrivate ? tabManager.privateTabs : tabManager.normalTabs
         self.filteredTabs = allTabs
-        completion(allTabs)
+        return allTabs
     }
 
     func indexOfRegularTab(tab: Tab) -> Int? {
         return filteredTabs.firstIndex(of: tab)
     }
 
+    @MainActor
     func togglePrivateMode(isOn: Bool,
                            createTabOnEmptyPrivateMode: Bool,
                            shouldSelectMostRecentTab: Bool = false) {
@@ -240,11 +249,10 @@ class TopTabDisplayManager: NSObject {
         }
 
         if shouldSelectMostRecentTab {
-            getTabs { [weak self] tabsToDisplay in
-                let tab = mostRecentTab(inTabs: tabsToDisplay) ?? tabsToDisplay.last
-                if let tab = tab {
-                    self?.tabManager.selectTab(tab)
-                }
+            let tabsToDisplay = getTabs()
+            let tab = mostRecentTab(inTabs: tabsToDisplay) ?? tabsToDisplay.last
+            if let tab = tab {
+                tabManager.selectTab(tab)
             }
         }
 
@@ -257,41 +265,37 @@ class TopTabDisplayManager: NSObject {
     }
 
     func refreshStore(forceReload: Bool = false,
-                      shouldAnimate: Bool = false,
-                      completion: (() -> Void)? = nil) {
+                      shouldAnimate: Bool = false) {
         operations.removeAll()
         dataStore.removeAll()
 
-        getTabs { [weak self] tabsToDisplay in
-            guard let self else { return }
-            tabsToDisplay.forEach {
-                self.dataStore.insert($0)
-            }
-
-            if shouldAnimate {
-                UIView.transition(
-                    with: self.collectionView,
-                    duration: 0.3,
-                    options: .transitionCrossDissolve,
-                    animations: {
-                        self.collectionView.reloadData()
-                    }
-                ) { finished in
-                    if finished {
-                        self.collectionView.reloadData()
-                    }
-                }
-            } else {
-                self.collectionView.reloadData()
-            }
-
-            if forceReload {
-                forceReloadCollectionView()
-            }
-
-            self.tabDisplayerDelegate?.focusSelectedTab()
-            completion?()
+        let tabsToDisplay = getTabs()
+        tabsToDisplay.forEach {
+            self.dataStore.insert($0)
         }
+
+        if shouldAnimate {
+            UIView.transition(
+                with: self.collectionView,
+                duration: 0.3,
+                options: .transitionCrossDissolve,
+                animations: {
+                    self.collectionView.reloadData()
+                }
+            ) { finished in
+                if finished {
+                    self.collectionView.reloadData()
+                }
+            }
+        } else {
+            self.collectionView.reloadData()
+        }
+
+        if forceReload {
+            forceReloadCollectionView()
+        }
+
+        self.tabDisplayerDelegate?.focusSelectedTab()
     }
 
     // reloadData() will reset the data for the collection view,
@@ -310,6 +314,7 @@ class TopTabDisplayManager: NSObject {
     }
 
     /// Close tab action for Top tabs type
+    @MainActor
     func closeActionPerformed(forCell cell: UICollectionViewCell) {
         guard !isDragging else { return }
 
@@ -320,22 +325,13 @@ class TopTabDisplayManager: NSObject {
     }
 
     /// Close tab action for Grid type
+    @MainActor
     func performCloseAction(for tab: Tab) {
         guard !isDragging else { return }
 
-        getTabs { [weak self] tabsToDisplay in
-            guard let self else { return }
-            // If it is the last tab of regular mode we automatically create an new tab
-            if !self.isPrivate,
-               tabsToDisplay.count == 1 {
-                self.tabManager.removeTabWithCompletion(tab.tabUUID) {
-                    self.tabManager.selectTab(self.tabManager.addTab())
-                }
-                return
-            }
-
-            self.tabManager.removeTabWithCompletion(tab.tabUUID, completion: nil)
-        }
+        _ = getTabs()
+        tabsPanelTelemetry.tabClosed(mode: tab.isPrivate ? .private : .normal)
+        tabManager.removeTab(tab.tabUUID)
     }
 
     // When using 'Close All', hide all the tabs so they don't animate their deletion individually
@@ -362,10 +358,6 @@ class TopTabDisplayManager: NSObject {
     ) {
         let eventValue = TelemetryWrapper.EventValue.topTabs
         TelemetryWrapper.recordEvent(category: .action, method: method, object: object, value: eventValue)
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 }
 
@@ -401,14 +393,14 @@ extension TopTabDisplayManager: UICollectionViewDataSource {
 
 // MARK: - TabSelectionDelegate
 extension TopTabDisplayManager: TabSelectionDelegate {
+    @MainActor
     func didSelectTabAtIndex(_ index: Int) {
         guard let tab = dataStore.at(index) else { return }
-        getTabs { [weak self] tabsToDisplay in
-            if tabsToDisplay.contains(tab) {
-                self?.tabManager.selectTab(tab)
-            }
-            TelemetryWrapper.recordEvent(category: .action, method: .press, object: .tab)
+        let tabsToDisplay = getTabs()
+        if tabsToDisplay.contains(tab) {
+            tabManager.selectTab(tab)
         }
+        TelemetryWrapper.recordEvent(category: .action, method: .press, object: .tab)
     }
 }
 

@@ -18,6 +18,7 @@ class BrowserViewController: UIViewController,
                              EngineSessionDelegate {
     weak var navigationDelegate: NavigationDelegate?
     private lazy var progressView: UIProgressView = .build { _ in }
+    private var engineProvider: EngineProvider
     private var engineSession: EngineSession
     private var engineView: EngineView
     private let urlFormatter: URLFormatter
@@ -25,8 +26,9 @@ class BrowserViewController: UIViewController,
 
     // MARK: - Init
 
-    init(engineProvider: EngineProvider = AppContainer.shared.resolve(),
+    init(engineProvider: EngineProvider,
          urlFormatter: URLFormatter = DefaultURLFormatter()) {
+        self.engineProvider = engineProvider
         self.engineSession = engineProvider.session
         self.engineView = engineProvider.view
         self.urlFormatter = urlFormatter
@@ -71,6 +73,7 @@ class BrowserViewController: UIViewController,
 
     private func setupBrowserView(_ engineView: EngineView) {
         engineView.render(session: engineSession)
+        view.bringSubviewToFront(progressView)
     }
 
     private func setupProgressBar() {
@@ -146,6 +149,10 @@ class BrowserViewController: UIViewController,
 
     func showFindInPage() {
         engineSession.showFindInPage()
+    }
+
+    func requestMediaCapturePermission() -> Bool {
+        return true
     }
 
     // MARK: - Search
@@ -228,8 +235,7 @@ class BrowserViewController: UIViewController,
         guard let url = linkURL else { return nil }
 
         let previewProvider: UIContextMenuContentPreviewProvider = {
-            let previewEngineProvider: EngineProvider = AppContainer.shared.resolve()
-            let previewVC = BrowserViewController(engineProvider: previewEngineProvider)
+            let previewVC = BrowserViewController(engineProvider: self.engineProvider)
 
             let context = BrowsingContext(type: .internalNavigation, url: url)
             if let browserURL = BrowserURL(browsingContext: context) {
@@ -263,6 +269,11 @@ class BrowserViewController: UIViewController,
 
     func onWillDisplayAccessoryView() -> EngineInputAccessoryView {
         return .default
+    }
+
+    func onRequestOpenNewSession(_ session: EngineSession) {
+        engineSession = session
+        engineView.render(session: session)
     }
 
     // MARK: - Ads Handling

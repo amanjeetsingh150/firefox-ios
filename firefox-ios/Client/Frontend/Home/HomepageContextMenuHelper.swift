@@ -28,25 +28,31 @@ enum BookmarkAction {
     case remove
 }
 
+@MainActor
 class HomepageContextMenuHelper: HomepageContextMenuProtocol,
-                                 BookmarksRefactorFeatureFlagProvider {
+                                 CanRemoveQuickActionBookmark {
     typealias ContextHelperDelegate = HomepageContextMenuHelperDelegate & UIPopoverPresentationControllerDelegate
+    private let profile: Profile
     private var viewModel: HomepageViewModel
     private let toastContainer: UIView
     private let bookmarksSaver: BookmarksSaver
+    let bookmarksHandler: BookmarksHandler
     weak var browserNavigationHandler: BrowserNavigationHandler?
     weak var delegate: ContextHelperDelegate?
     var getPopoverSourceRect: ((UIView?) -> CGRect)?
     private let bookmarksTelemetry = BookmarksTelemetry()
 
     init(
+        profile: Profile,
         viewModel: HomepageViewModel,
         toastContainer: UIView,
         bookmarksSaver: BookmarksSaver? = nil
     ) {
+        self.profile = profile
         self.viewModel = viewModel
         self.toastContainer = toastContainer
         self.bookmarksSaver = bookmarksSaver ?? DefaultBookmarksSaver(profile: viewModel.profile)
+        self.bookmarksHandler = profile.places
     }
 
     func presentContextMenu(for site: Site,
@@ -69,7 +75,7 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
         if sectionType == .topSites,
            let topSitesActions = getTopSitesActions(site: site, with: sourceView) {
             actions = topSitesActions
-        } else if sectionType == .pocket,
+        } else if sectionType == .merino,
                   let pocketActions = getPocketActions(site: site, with: sourceView) {
             actions = pocketActions
         } else if sectionType == .bookmarks,
@@ -83,26 +89,6 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
         return actions
     }
 
-    func presentContextMenu(for highlightItem: HighlightItem,
-                            with sourceView: UIView?,
-                            sectionType: HomepageSectionType,
-                            completionHandler: @escaping () -> PhotonActionSheet?
-    ) {
-        guard let contextMenu = completionHandler() else { return }
-        delegate?.present(contextMenu, animated: true, completion: nil)
-    }
-
-    func getContextMenuActions(for highlightItem: HighlightItem,
-                               with sourceView: UIView?,
-                               sectionType: HomepageSectionType
-    ) -> [PhotonRowActions]? {
-        guard sectionType == .historyHighlights,
-              let highlightsActions = getHistoryHighlightsActions(for: highlightItem, with: sourceView)
-        else { return nil }
-
-        return highlightsActions
-    }
-
     // MARK: - Default actions
     func getOpenInNewPrivateTabAction(siteURL: URL, sectionType: HomepageSectionType) -> PhotonRowActions {
         return SingleActionViewModel(
@@ -113,23 +99,6 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
             self.delegate?.homePanelDidRequestToOpenInNewTab(siteURL, isPrivate: true)
             sectionType.newPrivateTabActionTelemetry()
         }.items
-    }
-
-    // MARK: - History Highlights
-
-    private func getHistoryHighlightsActions(
-        for highlightItem: HighlightItem,
-        with sourceView: UIView?
-    ) -> [PhotonRowActions]? {
-        guard let siteURL = highlightItem.siteUrl else { return nil }
-
-        let site = Site.createBasicSite(url: siteURL.absoluteString, title: highlightItem.displayTitle)
-        let openInNewTabAction = getOpenInNewTabAction(siteURL: siteURL, sectionType: .historyHighlights)
-        let openInNewPrivateTabAction = getOpenInNewPrivateTabAction(siteURL: siteURL, sectionType: .historyHighlights)
-        let shareAction = getShareAction(site: site, sourceView: sourceView)
-        let bookmarkAction = getBookmarkAction(site: site)
-
-        return [openInNewTabAction, openInNewPrivateTabAction, bookmarkAction, shareAction]
     }
 
     // MARK: Jump Back In
@@ -162,8 +131,8 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
     private func getPocketActions(site: Site, with sourceView: UIView?) -> [PhotonRowActions]? {
         guard let siteURL = site.url.asURL else { return nil }
 
-        let openInNewTabAction = getOpenInNewTabAction(siteURL: siteURL, sectionType: .pocket)
-        let openInNewPrivateTabAction = getOpenInNewPrivateTabAction(siteURL: siteURL, sectionType: .pocket)
+        let openInNewTabAction = getOpenInNewTabAction(siteURL: siteURL, sectionType: .merino)
+        let openInNewPrivateTabAction = getOpenInNewPrivateTabAction(siteURL: siteURL, sectionType: .merino)
         let shareAction = getShareAction(site: site, sourceView: sourceView)
         let bookmarkAction = getBookmarkAction(site: site)
 
@@ -178,7 +147,7 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
         ) { _ in
             self.delegate?.homePanelDidRequestToOpenInNewTab(siteURL, isPrivate: false)
 
-            if sectionType == .pocket {
+            if sectionType == .merino {
                 let originExtras = TelemetryWrapper.getOriginExtras(isZeroSearch: self.viewModel.isZeroSearch)
                 TelemetryWrapper.recordEvent(category: .action,
                                              method: .tap,
@@ -203,8 +172,14 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
                                      iconString: StandardImageIdentifiers.Large.bookmarkSlash,
                                      allowIconScaling: true,
                                      tapHandler: { _ in
-            // We don't need to do anything after this call completes
-            _ = self.viewModel.profile.places.deleteBookmarksWithURL(url: site.url)
+            self.viewModel.profile.places.deleteBookmarksWithURL(url: site.url)
+                .uponQueue(.main) { result in
+                    // FXIOS-13228 It should be safe to assumeIsolated here because of `.main` queue above
+                    MainActor.assumeIsolated {
+                        guard result.isSuccess else { return }
+                        self.removeBookmarkShortcut()
+                    }
+                }
 
             self.delegate?.homePanelDidRequestBookmarkToast(urlString: site.url, action: .remove)
             self.bookmarksTelemetry.deleteBookmark(eventLabel: .activityStream)
@@ -235,9 +210,9 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
         })
     }
 
-    /// Handles share from long press on pocket articles, jump back in websites, bookmarks, etc. on the home screen.
+    /// Handles share from long press on merino articles, jump back in websites, bookmarks, etc. on the home screen.
     /// - Parameters:
-    ///   - site: Site for pocket article
+    ///   - site: Site for merino article
     ///   - sourceView: View to show the popover
     /// - Returns: Share action
     private func getShareAction(site: Site, sourceView: UIView?) -> PhotonRowActions {
@@ -245,7 +220,7 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
                                      iconString: StandardImageIdentifiers.Large.share,
                                      allowIconScaling: true,
                                      tapHandler: { _ in
-            guard let url = URL(string: site.url, invalidCharacters: false) else { return }
+            guard let url = URL(string: site.url) else { return }
 
             self.browserNavigationHandler?.showShareSheet(
                 shareType: .site(url: url),
@@ -348,9 +323,12 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
 
     private func fetchBookmarkStatus(for site: Site, completionHandler: @escaping (Site) -> Void) {
         viewModel.profile.places.isBookmarked(url: site.url).uponQueue(.main) { result in
-            var updatedSite = site
-            updatedSite.isBookmarked = result.successValue ?? false
-            completionHandler(updatedSite)
+            // FXIOS-13228 It should be safe to assumeIsolated here because of `.main` queue above
+            MainActor.assumeIsolated {
+                var updatedSite = site
+                updatedSite.isBookmarked = result.successValue ?? false
+                completionHandler(updatedSite)
+            }
         }
     }
 
@@ -369,14 +347,5 @@ class HomepageContextMenuHelper: HomepageContextMenuProtocol,
             value: nil,
             extras: extras
         )
-    }
-
-    func sendHistoryHighlightContextualTelemetry(type: ContextualActionType) {
-        let extras = [TelemetryWrapper.EventExtraKey.contextualMenuType.rawValue: type.rawValue]
-        TelemetryWrapper.recordEvent(category: .action,
-                                     method: .view,
-                                     object: .historyHighlightContextualMenu,
-                                     value: nil,
-                                     extras: extras)
     }
 }

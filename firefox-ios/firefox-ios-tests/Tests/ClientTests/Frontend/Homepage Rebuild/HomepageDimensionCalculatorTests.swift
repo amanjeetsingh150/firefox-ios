@@ -6,6 +6,7 @@ import XCTest
 
 @testable import Client
 
+@MainActor
 class HomepageDimensionCalculatorTests: XCTestCase {
     struct UX {
         struct DeviceSize {
@@ -142,5 +143,23 @@ class HomepageDimensionCalculatorTests: XCTestCase {
         )
 
         XCTAssertEqual(numberOfTilesPerRow, 4)
+    }
+
+    func test_getTallestViewHeight_returnsTallestHeight() throws {
+        let testWidth: CGFloat = 100
+        let testHeights: [CGFloat] = [20, 50, 80]
+
+        // Create views with width height constraints
+        let views: [UIView] = testHeights.map { fixedHeight in
+            let v = UIView()
+            v.translatesAutoresizingMaskIntoConstraints = false
+            v.widthAnchor.constraint(equalToConstant: testWidth).isActive = true
+            v.heightAnchor.constraint(equalToConstant: fixedHeight).isActive = true
+            return v
+        }
+
+        let result = HomepageDimensionCalculator.getTallestViewHeight(views: views, viewWidth: testWidth)
+
+        XCTAssertEqual(result, 80, accuracy: 0.1)
     }
 }

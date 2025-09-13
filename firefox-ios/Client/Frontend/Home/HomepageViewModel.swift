@@ -102,8 +102,7 @@ class HomepageViewModel: FeatureFlaggable, InjectedThemeUUIDIdentifiable {
     var topSiteViewModel: TopSitesViewModel
     var bookmarksViewModel: BookmarksViewModel
     var jumpBackInViewModel: JumpBackInViewModel
-    var historyHighlightsViewModel: HistoryHighlightsViewModel
-    var pocketViewModel: PocketViewModel
+    var pocketViewModel: StoryViewModel
     var customizeButtonViewModel: CustomizeHomepageSectionViewModel
 
     var shouldDisplayHomeTabBanner: Bool {
@@ -111,6 +110,7 @@ class HomepageViewModel: FeatureFlaggable, InjectedThemeUUIDIdentifiable {
     }
 
     // MARK: - Initializers
+    @MainActor
     init(profile: Profile,
          isPrivate: Bool,
          tabManager: TabManager,
@@ -147,23 +147,11 @@ class HomepageViewModel: FeatureFlaggable, InjectedThemeUUIDIdentifiable {
         self.bookmarksViewModel = BookmarksViewModel(profile: profile,
                                                      theme: theme,
                                                      wallpaperManager: wallpaperManager)
-        let deletionUtility = HistoryDeletionUtility(with: profile)
-        let historyDataAdaptor = HistoryHighlightsDataAdaptorImplementation(
-            profile: profile,
-            tabManager: tabManager,
-            deletionUtility: deletionUtility)
-        self.historyHighlightsViewModel = HistoryHighlightsViewModel(
-            with: profile,
-            isPrivate: isPrivate,
-            theme: theme,
-            historyHighlightsDataAdaptor: historyDataAdaptor,
-            wallpaperManager: wallpaperManager)
-
-        let pocketDataAdaptor = PocketDataAdaptorImplementation(pocketAPI: PocketProvider(prefs: profile.prefs))
-        self.pocketViewModel = PocketViewModel(pocketDataAdaptor: pocketDataAdaptor,
-                                               theme: theme,
-                                               prefs: profile.prefs,
-                                               wallpaperManager: wallpaperManager)
+        let pocketDataAdaptor = StoryDataAdaptorImplementation(merinoAPI: MerinoProvider(prefs: profile.prefs))
+        self.pocketViewModel = StoryViewModel(pocketDataAdaptor: pocketDataAdaptor,
+                                              theme: theme,
+                                              prefs: profile.prefs,
+                                              wallpaperManager: wallpaperManager)
         pocketDataAdaptor.delegate = pocketViewModel
 
         self.customizeButtonViewModel = CustomizeHomepageSectionViewModel(theme: theme)
@@ -172,14 +160,12 @@ class HomepageViewModel: FeatureFlaggable, InjectedThemeUUIDIdentifiable {
                                 topSiteViewModel,
                                 jumpBackInViewModel,
                                 bookmarksViewModel,
-                                historyHighlightsViewModel,
                                 pocketViewModel,
                                 customizeButtonViewModel]
         self.isPrivate = isPrivate
 
         self.nimbus = nimbus
         topSiteViewModel.delegate = self
-        historyHighlightsViewModel.delegate = self
         bookmarksViewModel.delegate = self
         pocketViewModel.delegate = self
         jumpBackInViewModel.delegate = self
@@ -198,7 +184,6 @@ class HomepageViewModel: FeatureFlaggable, InjectedThemeUUIDIdentifiable {
         guard !viewAppeared else { return }
 
         viewAppeared = true
-        nimbus.features.homescreenFeature.recordExposure()
         TelemetryWrapper.recordEvent(category: .action,
                                      method: .view,
                                      object: .firefoxHomepage,

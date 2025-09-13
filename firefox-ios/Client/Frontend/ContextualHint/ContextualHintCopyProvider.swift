@@ -53,7 +53,11 @@ struct ContextualHintCopyProvider: FeatureFlaggable {
     private func getTitleCopyFor(_ hint: ContextualHintType) -> String {
         switch hint {
         case .mainMenu:
-            return CFRStrings.MainMenu.NewMenu.Title
+            return CFRStrings.MainMenu.MenuRedesign.Title
+
+        case .toolbarUpdate:
+            return CFRStrings.Toolbar.ToolbarUpdateTitle
+
         default: return ""
         }
     }
@@ -64,6 +68,7 @@ struct ContextualHintCopyProvider: FeatureFlaggable {
         switch hint {
         case .dataClearance:
             descriptionCopy = CFRStrings.FeltDeletion.Body
+
         case .inactiveTabs:
             descriptionCopy = CFRStrings.TabsTray.InactiveTabs.Body
 
@@ -73,16 +78,17 @@ struct ContextualHintCopyProvider: FeatureFlaggable {
         case .jumpBackInSyncedTab:
             descriptionCopy = CFRStrings.FirefoxHomepage.JumpBackIn.SyncedTab
 
-        case .toolbarLocation:
-            return getToolbarDescriptionCopy(with: arrowDirection)
-
         case .mainMenu:
-            descriptionCopy = CFRStrings.MainMenu.NewMenu.Body
+            descriptionCopy = CFRStrings.MainMenu.MenuRedesign.Body
 
-        case .shoppingExperience:
-            descriptionCopy = getShoppingCopy(.description)
         case .navigation:
             descriptionCopy = CFRStrings.Toolbar.NavigationButtonsBody
+
+        case .toolbarUpdate:
+            descriptionCopy = CFRStrings.Toolbar.ToolbarUpdateBody
+
+        case .summarizeToolbarEntry:
+            descriptionCopy = CFRStrings.Summarize.Description
         }
 
         return descriptionCopy
@@ -96,50 +102,19 @@ struct ContextualHintCopyProvider: FeatureFlaggable {
             actionCopy = ""
         case .inactiveTabs:
             actionCopy = CFRStrings.TabsTray.InactiveTabs.Action
-        case .toolbarLocation:
-            actionCopy = CFRStrings.Toolbar.SearchBarPlacementButtonText
         case .mainMenu:
             actionCopy = ""
-        case .shoppingExperience:
-            actionCopy = getShoppingCopy(.action)
         case .jumpBackIn,
                 .jumpBackInSyncedTab:
             actionCopy = ""
         case .navigation:
             actionCopy = ""
+        case .toolbarUpdate:
+            actionCopy = ""
+        case .summarizeToolbarEntry:
+            actionCopy = ""
         }
 
         return actionCopy
-    }
-
-    // MARK: - Private helpers
-
-    /// Toolbar description copy depends on the arrow direction.
-    private func getToolbarDescriptionCopy(with arrowDirection: UIPopoverArrowDirection?) -> String {
-        // Toolbar description should never be empty! If it is, find where this struct is being
-        // created for toolbar and ensure there's an arrowDirection passed.
-        guard let arrowDirection = arrowDirection else { return "" }
-
-        switch arrowDirection {
-        case .up:
-            return CFRStrings.Toolbar.SearchBarTopPlacement
-        case .down:
-            return CFRStrings.Toolbar.SearchBarBottomPlacement
-        default: return ""
-        }
-    }
-
-    private func getShoppingCopy(_ copyType: ContextualHintCopyType) -> String {
-        let hasOptedIn = prefs.boolForKey(PrefsKeys.Shopping2023OptIn) ?? false
-        var copy: String
-        switch copyType {
-        case .action:
-            copy = hasOptedIn ? CFRStrings.Shopping.OptedInAction : CFRStrings.Shopping.NotOptedInAction
-        case .title:
-            copy = ""
-        case .description:
-            copy = hasOptedIn ? CFRStrings.Shopping.OptedInBody : CFRStrings.Shopping.NotOptedInBody
-        }
-        return copy
     }
 }

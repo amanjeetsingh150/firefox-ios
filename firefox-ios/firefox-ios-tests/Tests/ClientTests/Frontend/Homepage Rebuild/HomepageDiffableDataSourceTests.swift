@@ -23,6 +23,7 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
             return UICollectionViewCell()
         }
         DependencyHelperMock().bootstrapDependencies()
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: MockProfile())
     }
 
     override func tearDown() {
@@ -34,6 +35,7 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
 
     // MARK: - applyInitialSnapshot
     func test_updateSnapshot_hasCorrectData() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
 
         dataSource.updateSnapshot(
@@ -42,13 +44,11 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         )
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfSections, 2)
+        XCTAssertEqual(snapshot.numberOfSections, 1)
         let expectedSections: [HomepageSection] = [
-            .header,
             .customizeHomepage
         ]
         XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
-        XCTAssertEqual(snapshot.itemIdentifiers(inSection: .header).count, 1)
         XCTAssertEqual(snapshot.itemIdentifiers(inSection: .customizeHomepage).count, 1)
     }
 
@@ -64,10 +64,10 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
 
         let state = HomepageState.reducer(
             HomepageState(windowUUID: .XCTestDefaultUUID),
-            PocketAction(
-                pocketStories: createStories(),
+            MerinoAction(
+                merinoStories: createStories(),
                 windowUUID: .XCTestDefaultUUID,
-                actionType: PocketMiddlewareActionType.retrievedUpdatedStories
+                actionType: MerinoMiddlewareActionType.retrievedUpdatedStories
             )
         )
 
@@ -86,10 +86,11 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         )
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(.systemCyan)), 21)
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(.systemCyan)), 20)
     }
 
     func test_updateSnapshot_withValidState_returnTopSites() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
 
         let state = HomepageState.reducer(
@@ -113,33 +114,32 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         dataSource.updateSnapshot(state: updatedState, jumpBackInDisplayConfig: mockSectionConfig)
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfItems(inSection: .topSites(4)), 8)
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .topSites(nil, 4)), 8)
         let expectedSections: [HomepageSection] = [
-            .header,
-            .topSites(4),
+            .topSites(nil, 4),
             .customizeHomepage
         ]
         XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
     }
 
     func test_updateSnapshot_withValidState_returnPocketStories() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
 
         let state = HomepageState.reducer(
             HomepageState(windowUUID: .XCTestDefaultUUID),
-            PocketAction(
-                pocketStories: createStories(),
+            MerinoAction(
+                merinoStories: createStories(),
                 windowUUID: .XCTestDefaultUUID,
-                actionType: PocketMiddlewareActionType.retrievedUpdatedStories
+                actionType: MerinoMiddlewareActionType.retrievedUpdatedStories
             )
         )
 
         dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
 
         let snapshot = dataSource.snapshot()
-        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(nil)), 21)
+        XCTAssertEqual(snapshot.numberOfItems(inSection: .pocket(nil)), 20)
         let expectedSections: [HomepageSection] = [
-            .header,
             .pocket(nil),
             .customizeHomepage
         ]
@@ -147,6 +147,7 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
     }
 
     func test_updateSnapshot_withValidState_returnMessageCard() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
         let configuration = MessageCardConfiguration(
             title: "Example Title",
@@ -169,7 +170,6 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         XCTAssertEqual(snapshot.numberOfItems(inSection: .messageCard), 1)
         XCTAssertEqual(snapshot.itemIdentifiers(inSection: .messageCard).first, HomepageItem.messageCard(configuration))
         let expectedSections: [HomepageSection] = [
-            .header,
             .messageCard,
             .customizeHomepage
         ]
@@ -177,6 +177,7 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
     }
 
     func test_updateSnapshot_withValidState_returnBookmarks() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
 
         let state = HomepageState.reducer(
@@ -199,7 +200,6 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         let snapshot = dataSource.snapshot()
         XCTAssertEqual(snapshot.numberOfItems(inSection: .bookmarks(nil)), 1)
         let expectedSections: [HomepageSection] = [
-            .header,
             .bookmarks(nil),
             .customizeHomepage
         ]
@@ -207,6 +207,7 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
     }
 
     func test_updateSnapshot_withValidState_returnJumpBackInSection() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
         let dataSource = try XCTUnwrap(diffableDataSource)
 
         let state = HomepageState.reducer(
@@ -223,10 +224,33 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         let snapshot = dataSource.snapshot()
         XCTAssertEqual(snapshot.numberOfItems(inSection: .jumpBackIn(nil, mockSectionConfig)), 1)
         let expectedSections: [HomepageSection] = [
-            .header,
             .jumpBackIn(nil, mockSectionConfig),
             .customizeHomepage
         ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    func test_customizationSectionShown_returnsExpectedSections() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: false)
+
+        let dataSource = try XCTUnwrap(diffableDataSource)
+        let state = HomepageState(windowUUID: .XCTestDefaultUUID)
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
+        let snapshot = dataSource.snapshot()
+        let expectedSections: [HomepageSection] = [
+            .customizeHomepage
+        ]
+        XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
+    }
+
+    func test_customizationSectionHidden_returnsExpectedSections() throws {
+        setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: true)
+
+        let dataSource = try XCTUnwrap(diffableDataSource)
+        let state = HomepageState(windowUUID: .XCTestDefaultUUID)
+        dataSource.updateSnapshot(state: state, jumpBackInDisplayConfig: mockSectionConfig)
+        let snapshot = dataSource.snapshot()
+        let expectedSections: [HomepageSection] = []
         XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
     }
 
@@ -242,15 +266,15 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         return sites
     }
 
-    private func createStories(count: Int = 20) -> [PocketStoryConfiguration] {
-        var feedStories = [PocketFeedStory]()
+    private func createStories(count: Int = 20) -> [MerinoStoryConfiguration] {
+        var feedStories = [RecommendationDataItem]()
         (0..<count).forEach {
-            let story: PocketFeedStory = .make(title: "feed \($0)")
+            let story: RecommendationDataItem = .makeItem("feed \($0)")
             feedStories.append(story)
         }
 
         let stories = feedStories.compactMap {
-            PocketStoryConfiguration(story: PocketStory(pocketFeedStory: $0))
+            MerinoStoryConfiguration(story: MerinoStory(from: $0))
         }
         return stories
     }
@@ -268,5 +292,13 @@ final class HomepageDiffableDataSourceTests: XCTestCase {
         let tab = Tab(profile: MockProfile(), windowUUID: .XCTestDefaultUUID)
         tab.url = URL(string: urlString)!
         return tab
+    }
+
+    private func setupNimbusHomepageRedesignTesting(storiesRedesignEnabled: Bool) {
+        FxNimbus.shared.features.homepageRedesignFeature.with { _, _ in
+            return HomepageRedesignFeature(
+                storiesRedesign: storiesRedesignEnabled
+            )
+        }
     }
 }

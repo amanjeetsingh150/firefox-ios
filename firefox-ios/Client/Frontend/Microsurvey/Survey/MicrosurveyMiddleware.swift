@@ -4,7 +4,6 @@
 
 import Foundation
 import Redux
-import Shared
 import Common
 
 final class MicrosurveyMiddleware {
@@ -45,7 +44,7 @@ final class MicrosurveyMiddleware {
     }
 
     private func closeMicrosurveyPrompt(windowUUID: WindowUUID) {
-        store.dispatch(
+        store.dispatchLegacy(
             MicrosurveyPromptAction(
                 windowUUID: windowUUID,
                 actionType: MicrosurveyPromptActionType.closePrompt

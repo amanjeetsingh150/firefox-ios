@@ -34,7 +34,7 @@ struct Folder: Equatable, Hashable {
     }
 }
 
-struct DefaultFolderHierarchyFetcher: FolderHierarchyFetcher, BookmarksRefactorFeatureFlagProvider {
+struct DefaultFolderHierarchyFetcher: FolderHierarchyFetcher {
     let profile: Profile
     let rootFolderGUID: String
 
@@ -104,7 +104,13 @@ struct DefaultFolderHierarchyFetcher: FolderHierarchyFetcher, BookmarksRefactorF
 
             // Prepend desktop folders to the top of the mobile bookmarks folder hierarchy
             if folder.guid == BookmarkRoots.MobileFolderGUID {
-                prependDesktopFolders(folder, folders: &folders, indent: indent, prefixFolders: prefixFolders)
+                prependDesktopFolders(
+                    folder,
+                    folders: &folders,
+                    indent: indent,
+                    excludedGuids: excludedGuids,
+                    prefixFolders: prefixFolders
+                )
             }
         } else { return }
         for case let subFolder as BookmarkFolderData in folder.children ?? [] {
@@ -120,13 +126,27 @@ struct DefaultFolderHierarchyFetcher: FolderHierarchyFetcher, BookmarksRefactorF
     }
 
     private func countDesktopBookmarks() async -> Int? {
-        return await withUnsafeContinuation { continuation in
-            profile.places.countBookmarksInTrees(folderGuids: BookmarkRoots.DesktopRoots.map { $0 }) { result in
-                switch result {
-                case .success(let count):
-                    continuation.resume(returning: count)
-                case .failure:
-                    continuation.resume(returning: nil)
+        // FXIOS-11895 Temporary test for reverting continuation workaround we put in place for iOS 18.0 (beta?) users
+        if ContinuationsChecker.shouldUseCheckedContinuation {
+            return await withCheckedContinuation { continuation in
+                profile.places.countBookmarksInTrees(folderGuids: BookmarkRoots.DesktopRoots.map { $0 }) { result in
+                    switch result {
+                    case .success(let count):
+                        continuation.resume(returning: count)
+                    case .failure:
+                        continuation.resume(returning: nil)
+                    }
+                }
+            }
+        } else {
+            return await withUnsafeContinuation { continuation in
+                profile.places.countBookmarksInTrees(folderGuids: BookmarkRoots.DesktopRoots.map { $0 }) { result in
+                    switch result {
+                    case .success(let count):
+                        continuation.resume(returning: count)
+                    case .failure:
+                        continuation.resume(returning: nil)
+                    }
                 }
             }
         }
@@ -135,9 +155,16 @@ struct DefaultFolderHierarchyFetcher: FolderHierarchyFetcher, BookmarksRefactorF
     private func prependDesktopFolders(_ folder: BookmarkFolderData,
                                        folders: inout [Folder],
                                        indent: Int = 0,
+                                       excludedGuids: [String],
                                        prefixFolders: [BookmarkFolderData] = []) {
         prefixFolders.forEach {
-            folders.append(Folder(title: $0.title, guid: $0.guid, indentation: indent + 2))
+            recursiveAddSubFolders(
+                $0,
+                folders: &folders,
+                hasDesktopBookmarks: true,
+                indent: indent + 2,
+                excludedGuids: excludedGuids
+            )
         }
         // Find the first desktop folder and prepend a dummy folder object to use for the "DESKTOP BOOKMARKS" header
         if let firstDesktopFolderIndex = folders.firstIndex(where: { BookmarkRoots.DesktopRoots.contains($0.guid) }) {

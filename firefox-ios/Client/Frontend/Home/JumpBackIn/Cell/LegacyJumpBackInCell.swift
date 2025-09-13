@@ -83,17 +83,16 @@ class LegacyJumpBackInCell: UICollectionViewCell, ReusableCell {
         isAccessibilityElement = true
         accessibilityIdentifier = AccessibilityIdentifiers.FirefoxHomepage.JumpBackIn.itemCell
 
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
         setupLayout()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     override func prepareForReuse() {
@@ -240,9 +239,10 @@ extension LegacyJumpBackInCell: Blurrable {
 // MARK: - Notifiable
 extension LegacyJumpBackInCell: Notifiable {
     func handleNotifications(_ notification: Notification) {
+        let name = notification.name
         ensureMainThread { [weak self] in
-            switch notification.name {
-            case .DynamicFontChanged:
+            switch name {
+            case UIContentSizeCategory.didChangeNotification:
                 self?.adjustLayout()
             default: break
             }

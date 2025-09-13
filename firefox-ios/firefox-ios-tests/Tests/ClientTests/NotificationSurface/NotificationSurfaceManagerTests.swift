@@ -3,8 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
-import Shared
-import Common
 @testable import Client
 
 class NotificationSurfaceManagerTests: XCTestCase {
@@ -62,6 +60,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
         XCTAssertEqual(notificationManager.scheduledNotifications, 1)
     }
 
+    @MainActor
     func testDidTapNotification_noMessageId() {
         let subject = createSubject()
         subject.didTapNotification([:])
@@ -69,6 +68,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
         XCTAssertEqual(messageManager.onMessagePressedCalled, 0)
     }
 
+    @MainActor
     func testDidTapNotification_noMessageFound() {
         let subject = createSubject()
         subject.didTapNotification([NotificationSurfaceManager.Constant.messageIdKey: "test"])
@@ -76,6 +76,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
         XCTAssertEqual(messageManager.onMessagePressedCalled, 0)
     }
 
+    @MainActor
     func testDidTapNotification_openNewTabAction() {
         let subject = createSubject()
         let message = createMessage()
@@ -88,6 +89,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
         XCTAssertEqual(messageManager.onMessagePressedCalled, 1)
     }
 
+    @MainActor
     func testDidTapNotification_defaultAction() {
         let subject = createSubject()
         let message = createMessage(action: "test-action")
@@ -101,7 +103,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
     }
 
     // MARK: Helpers
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line
     ) -> NotificationSurfaceManager {
         let subject = NotificationSurfaceManager(messagingManager: messageManager,

@@ -4,7 +4,6 @@
 
 import Common
 import XCTest
-import Shared
 @testable import Client
 
 class HomeLogoHeaderViewModelTests: XCTestCase, FeatureFlaggable {
@@ -33,7 +32,7 @@ class HomeLogoHeaderViewModelTests: XCTestCase, FeatureFlaggable {
 }
 
 extension HomeLogoHeaderViewModelTests {
-    func createSubject(file: StaticString = #file, line: UInt = #line) -> HomepageHeaderViewModel {
+    func createSubject(file: StaticString = #filePath, line: UInt = #line) -> HomepageHeaderViewModel {
         let subject = HomepageHeaderViewModel(profile: profile, theme: LightTheme(), tabManager: tabManager)
         trackForMemoryLeaks(subject, file: file, line: line)
         return subject

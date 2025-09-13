@@ -12,12 +12,22 @@ class WebsiteDataManagementViewController: UIViewController,
                                            UISearchBarDelegate,
                                            Themeable {
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
     private static let showMoreCellReuseIdentifier = "showMoreCell"
-
+    private struct UX {
+        static let sectionTopMargin: CGFloat = 10
+        static var tableViewStyleForCurrentOS: UITableView.Style {
+            guard #available(iOS 26.0, *) else { return .grouped }
+            return .insetGrouped
+        }
+        static var sectionTopMarginForCurrentOS: CGFloat {
+            guard #available(iOS 26.0, *) else { return 0 }
+            return UX.sectionTopMargin
+        }
+    }
     private enum Section: Int {
         case sites = 0
         case showMore = 1
@@ -57,10 +67,19 @@ class WebsiteDataManagementViewController: UIViewController,
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = .SettingsWebsiteDataTitle
-        navigationController?.setToolbarHidden(true, animated: false)
+        setupView()
 
-        let tableView = UITableView()
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
+    }
+
+    private func setupView() {
+        title = .SettingsWebsiteDataTitle
+
+        let tableView = UITableView(
+            frame: .zero,
+            style: UX.tableViewStyleForCurrentOS
+        )
         tableView.dataSource = self
         tableView.delegate = self
         tableView.separatorColor = currentTheme().colors.borderPrimary
@@ -126,19 +145,12 @@ class WebsiteDataManagementViewController: UIViewController,
         searchController.searchBar.delegate = self
         searchController.searchBar.barStyle = currentTheme().type.getBarStyle()
 
+        navigationItem.hidesSearchBarWhenScrolling = false
         navigationItem.searchController = searchController
         self.searchController = searchController
         self.tableView = tableView
 
         definesPresentationContext = true
-
-        listenForThemeChange(view)
-        applyTheme()
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        unfoldSearchbar()
     }
 
     func tableView(
@@ -318,11 +330,11 @@ class WebsiteDataManagementViewController: UIViewController,
         let section = Section(rawValue: section)!
         switch section {
         case .clearButton:
-            return 10 // Controls the space between the site list and the button
+            return UX.sectionTopMargin // Controls the space between the site list and the button
         case .sites:
             return UITableView.automaticDimension
         case .showMore:
-            return 0
+            return UX.sectionTopMarginForCurrentOS
         }
     }
 
@@ -338,12 +350,6 @@ class WebsiteDataManagementViewController: UIViewController,
 
     func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
         return 0
-    }
-
-    private func unfoldSearchbar() {
-        guard let searchBarHeight = navigationItem.searchController?.searchBar.intrinsicContentSize.height,
-              let tableView else { return }
-        tableView.setContentOffset(CGPoint(x: 0, y: -searchBarHeight + tableView.contentOffset.y), animated: true)
     }
 
     func applyTheme() {

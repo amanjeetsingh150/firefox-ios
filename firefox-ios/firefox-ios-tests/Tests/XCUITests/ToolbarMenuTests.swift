@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
-import Common
+import XCTest
 
 class ToolbarMenuTests: BaseTestCase {
     override func tearDown() {
@@ -39,8 +39,8 @@ class ToolbarMenuTests: BaseTestCase {
         } else {
             mozWaitForElementToExist(tabsButton)
             XCTAssertTrue(
-                hamburgerMenu.isRightOf(rightElement: tabsButton),
-                "Menu button is not on the right side of tabs button"
+                hamburgerMenu.isLeftOf(rightElement: tabsButton),
+                "Menu button is not on the left side of tabs button"
             )
             XCTAssertTrue(
                 hamburgerMenu.isBelow(element: firstPocketCell),
@@ -48,45 +48,50 @@ class ToolbarMenuTests: BaseTestCase {
             )
         }
         navigator.goto(BrowserTabMenu)
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.MainMenu.HeaderView.mainButton])
+        // issue 28625: iOS 15 may not open the menu fully.
+        if #unavailable(iOS 16) {
+            app.swipeUp()
+        }
+        mozWaitForElementToExist(app.tables.cells[AccessibilityIdentifiers.MainMenu.settings])
         validateMenuOptions()
-        app.buttons["MainMenu.CloseMenuButton"].waitAndTap()
-        XCUIDevice.shared.orientation = .landscapeLeft
-        waitForElementsToExist(
-            [
-                hamburgerMenu,
-                firstPocketCell,
-                backButton,
-                forwardButton,
-                searchField,
-                tabsButton
-            ]
-        )
-        XCTAssertTrue(
-            hamburgerMenu.isRightOf(rightElement: tabsButton),
-            "Menu button is not on the right side of tabs button"
-        )
-        XCTAssertTrue(
-            hamburgerMenu.isAbove(element: firstPocketCell),
-            "Menu button is not below the pocket cells area"
-        )
-        hamburgerMenu.waitAndTap()
-        mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.MainMenu.HeaderView.mainButton])
-        validateMenuOptions()
-        app.buttons["MainMenu.CloseMenuButton"].waitAndTap()
-        mozWaitForElementToNotExist(app.buttons[AccessibilityIdentifiers.MainMenu.HeaderView.mainButton])
+        // issue 28629: menu not available in landscape mode (iOS 15 only)
+        if #available(iOS 16, *) {
+            app.otherElements["PopoverDismissRegion"].firstMatch.tap()
+            XCUIDevice.shared.orientation = .landscapeLeft
+            waitForElementsToExist(
+                [
+                    hamburgerMenu,
+                    firstPocketCell,
+                    backButton,
+                    forwardButton,
+                    searchField,
+                    tabsButton
+                ]
+            )
+            XCTAssertTrue(
+                hamburgerMenu.isLeftOf(rightElement: tabsButton),
+                "Menu button is not on the left side of tabs button"
+            )
+            XCTAssertTrue(
+                hamburgerMenu.isAbove(element: firstPocketCell),
+                "Menu button is not below the pocket cells area"
+            )
+            hamburgerMenu.waitAndTap()
+            mozWaitForElementToExist(app.tables.cells[AccessibilityIdentifiers.MainMenu.settings])
+            validateMenuOptions()
+            app.otherElements["PopoverDismissRegion"].firstMatch.tap()
+            mozWaitForElementToNotExist(app.tables.cells[AccessibilityIdentifiers.MainMenu.settings])
+        }
     }
 
     private func validateMenuOptions() {
         waitForElementsToExist(
             [
-                app.buttons[AccessibilityIdentifiers.MainMenu.HeaderView.mainButton],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.newTab],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.newPrivateTab],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.bookmarks],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.history],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.downloads],
-                app.tables.cells[AccessibilityIdentifiers.MainMenu.passwords]
+                app.tables.cells[AccessibilityIdentifiers.MainMenu.settings],
+                app.tables.cells.buttons[AccessibilityIdentifiers.MainMenu.bookmarks],
+                app.tables.cells.buttons[AccessibilityIdentifiers.MainMenu.history],
+                app.tables.cells.buttons[AccessibilityIdentifiers.MainMenu.downloads],
+                app.cells[AccessibilityIdentifiers.MainMenu.signIn]
             ]
         )
     }

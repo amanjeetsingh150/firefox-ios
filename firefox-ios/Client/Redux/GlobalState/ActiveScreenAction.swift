@@ -6,16 +6,10 @@ import Foundation
 import Redux
 import Common
 
-class ScreenAction: Action {
+struct ScreenAction: Action {
+    let windowUUID: WindowUUID
+    let actionType: ActionType
     let screen: AppScreen
-
-    init(windowUUID: WindowUUID,
-         actionType: ActionType,
-         screen: AppScreen) {
-        self.screen = screen
-        super.init(windowUUID: windowUUID,
-                   actionType: actionType)
-    }
 }
 
 enum AppScreen {
@@ -28,13 +22,14 @@ enum AppScreen {
     case remoteTabsPanel
     case tabPeek
     case mainMenu
-    case mainMenuDetails
     case microsurvey
+    case termsOfUse
     case trackingProtection
     case toolbar
     case searchEngineSelection
     case passwordGenerator
     case nativeErrorPage
+    case shortcutsLibrary
 }
 
 enum ScreenActionType: ActionType {

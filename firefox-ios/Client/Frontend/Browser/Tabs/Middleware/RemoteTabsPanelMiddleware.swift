@@ -43,7 +43,7 @@ class RemoteTabsPanelMiddleware {
             let accountChangeAction = TabTrayAction(hasSyncableAccount: self.hasSyncableAccount,
                                                     windowUUID: uuid,
                                                     actionType: TabTrayActionType.firefoxAccountChanged)
-            store.dispatch(accountChangeAction)
+            store.dispatchLegacy(accountChangeAction)
         case RemoteTabsPanelActionType.refreshTabs:
             self.getSyncState(window: uuid)
         case RemoteTabsPanelActionType.refreshTabsWithCache:
@@ -55,7 +55,11 @@ class RemoteTabsPanelMiddleware {
 
     private func resolveHomepageActions(action: Action, state: AppState) {
         switch action.actionType {
-        case HomepageActionType.initialize, JumpBackInActionType.fetchRemoteTabs:
+        case HomepageActionType.viewWillAppear,
+            HomepageMiddlewareActionType.jumpBackInRemoteTabsUpdated,
+            TabTrayActionType.dismissTabTray,
+            TopTabsActionType.didTapNewTab,
+            TopTabsActionType.didTapCloseTab:
             self.handleFetchingMostRecentRemoteTab(windowUUID: action.windowUUID)
         default:
             break
@@ -68,7 +72,7 @@ class RemoteTabsPanelMiddleware {
                 let action = RemoteTabsPanelAction(reason: .notLoggedIn,
                                                    windowUUID: window,
                                                    actionType: RemoteTabsPanelActionType.refreshDidFail)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
                 return
             }
 
@@ -77,7 +81,7 @@ class RemoteTabsPanelMiddleware {
                 let action = RemoteTabsPanelAction(reason: .syncDisabledByUser,
                                                    windowUUID: window,
                                                    actionType: RemoteTabsPanelActionType.refreshDidFail)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
                 return
             }
 
@@ -86,7 +90,7 @@ class RemoteTabsPanelMiddleware {
             // in the middle of a refresh (pull-to-refresh shouldn't trigger a new update etc.)
             let action = RemoteTabsPanelAction(windowUUID: window,
                                                actionType: RemoteTabsPanelActionType.refreshDidBegin)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
 
             getTabsAndDevices(window: window, useCache: useCache)
         }
@@ -98,7 +102,7 @@ class RemoteTabsPanelMiddleware {
                 let action = RemoteTabsPanelAction(reason: .failedToSync,
                                                    windowUUID: window,
                                                    actionType: RemoteTabsPanelActionType.refreshDidFail)
-                store.dispatch(action)
+                store.dispatchLegacy(action)
                 return
             }
             var action: RemoteTabsPanelAction
@@ -116,7 +120,7 @@ class RemoteTabsPanelMiddleware {
                                                windowUUID: window,
                                                actionType: RemoteTabsPanelActionType.refreshDidSucceed)
             }
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         }
 
         if useCache {
@@ -129,7 +133,7 @@ class RemoteTabsPanelMiddleware {
     private func handleFetchingMostRecentRemoteTab(windowUUID: WindowUUID) {
         let completion = { (result: [ClientAndTabs]?) in
             guard let mostRecentSyncedTab = self.retrieveConfigurationForMostRecentTab(from: result) else { return }
-            store.dispatch(
+            store.dispatchLegacy(
                 RemoteTabsAction(
                     mostRecentSyncedTab: mostRecentSyncedTab,
                     windowUUID: windowUUID,
@@ -189,11 +193,11 @@ class RemoteTabsPanelMiddleware {
             let accountChangeAction = TabTrayAction(hasSyncableAccount: hasSyncableAccount,
                                                     windowUUID: WindowUUID.unavailable,
                                                     actionType: TabTrayActionType.firefoxAccountChanged)
-            store.dispatch(accountChangeAction)
+            store.dispatchLegacy(accountChangeAction)
         case .constellationStateUpdate:
             let action = RemoteTabsPanelAction(windowUUID: WindowUUID.unavailable,
                                                actionType: RemoteTabsPanelActionType.remoteDevicesChanged)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         default: break
         }
     }

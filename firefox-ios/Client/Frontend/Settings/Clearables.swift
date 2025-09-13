@@ -2,15 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
+import Common
+import CoreSpotlight
 import Foundation
+import SiteImageView
 import Shared
 import WebKit
-import CoreSpotlight
-import SiteImageView
-import Common
+import WebEngine
 
 // A base protocol for something that can be cleared.
 protocol Clearable {
+    @MainActor
     func clear() -> Success
     var label: String { get }
 }
@@ -34,16 +36,22 @@ class HistoryClearable: Clearable {
 
     var label: String { .ClearableHistory }
 
+    @MainActor
     func clear() -> Success {
         // Treat desktop sites as part of browsing history.
         Tab.ChangeUserAgent.clear()
 
         // Clear everything in places
-        return profile.places.deleteEverythingHistory().bindQueue(.main) { success in
-            return self.clearAfterHistory(success: success)
-        }
+        return profile.places.deleteEverythingHistory()
+            .bindQueue(.main) { success in
+                // FXIOS-13228 It should be safe to assumeIsolated here because of `.main` queue above
+                MainActor.assumeIsolated {
+                    return self.clearAfterHistory(success: success)
+                }
+            }
     }
 
+    @MainActor
     func clearAfterHistory(success: Maybe<Void>) -> Success {
         // Clear image data from Site Image Helper
         siteImageHandler.clearAllCaches()
@@ -77,10 +85,10 @@ class CacheClearable: Clearable {
         WKWebsiteDataStore.default().removeData(ofTypes: dataTypes, modifiedSince: .distantPast, completionHandler: {})
 
         // Clear in-memory reader cache (private browsing content etc.)
-        MemoryReaderModeCache.sharedInstance.clear()
+        MemoryReaderModeCache.shared.clear()
 
         // Clear out any persistent cached readerized content on disk
-        DiskReaderModeCache.sharedInstance.clear()
+        DiskReaderModeCache.shared.clear()
 
         // Ensure all log files are cleared. A new log file will be immediately created as soon as our
         // next log message is sent but any older cached log data will be reset to free up disk space.

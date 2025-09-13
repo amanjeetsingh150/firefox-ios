@@ -5,7 +5,6 @@
 import Foundation
 import Common
 import Storage
-import Shared
 import WebKit
 import ComponentLibrary
 
@@ -105,11 +104,11 @@ class CredentialAutofillCoordinator: BaseCoordinator {
             }
         }
 
-        var bottomSheetViewModel = BottomSheetViewModel(
+        let bottomSheetViewModel = BottomSheetViewModel(
+            shouldDismissForTapOutside: false,
             closeButtonA11yLabel: .CloseButtonTitle,
             closeButtonA11yIdentifier: AccessibilityIdentifiers.Autofill.creditCardCloseButton
         )
-        bottomSheetViewModel.shouldDismissForTapOutside = false
 
         let bottomSheetVC = BottomSheetViewController(
             viewModel: bottomSheetViewModel,
@@ -178,11 +177,11 @@ class CredentialAutofillCoordinator: BaseCoordinator {
             )
         }
 
-        var bottomSheetViewModel = BottomSheetViewModel(
+        let bottomSheetViewModel = BottomSheetViewModel(
+            shouldDismissForTapOutside: false,
             closeButtonA11yLabel: .CloseButtonTitle,
             closeButtonA11yIdentifier: AccessibilityIdentifiers.Autofill.loginCloseButton
         )
-        bottomSheetViewModel.shouldDismissForTapOutside = false
 
         let bottomSheetVC = BottomSheetViewController(
             viewModel: bottomSheetViewModel,

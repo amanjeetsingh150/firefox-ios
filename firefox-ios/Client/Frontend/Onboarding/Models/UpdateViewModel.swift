@@ -13,7 +13,7 @@ class UpdateViewModel: OnboardingViewModelProtocol,
     var profile: Profile
     var hasSyncableAccount: Bool?
     var availableCards: [OnboardingCardViewController]
-    var isDismissable: Bool
+    var isDismissible: Bool
     var telemetryUtility: OnboardingTelemetryProtocol
     let windowUUID: WindowUUID
     private var cardModels: [OnboardingCardInfoModelProtocol]
@@ -41,7 +41,7 @@ class UpdateViewModel: OnboardingViewModelProtocol,
         self.profile = profile
         self.telemetryUtility = telemetryUtility
         self.cardModels = model.cards
-        self.isDismissable = model.isDismissable
+        self.isDismissible = model.isDismissible
         self.availableCards = []
         self.windowUUID = windowUUID
     }
@@ -80,7 +80,7 @@ class UpdateViewModel: OnboardingViewModelProtocol,
         }
     }
 
-    func hasSyncableAccount() async -> Bool {
+    func containsSyncableAccount() -> Bool {
         let hasSync = profile.hasAccount()
         hasSyncableAccount = hasSync
         return hasSync

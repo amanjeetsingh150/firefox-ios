@@ -4,7 +4,6 @@
 
 import UIKit
 import Common
-import ComponentLibrary
 import Shared
 import Glean
 
@@ -22,7 +21,7 @@ final class PrivacyPreferencesViewController: UIViewController,
     private var profile: Profile
     var windowUUID: WindowUUID
     var themeManager: ThemeManager
-    var themeObserver: (any NSObjectProtocol)?
+    var themeListenerCancellable: Any?
     var currentWindowUUID: UUID? { windowUUID }
     var notificationCenter: NotificationProtocol
 
@@ -69,7 +68,11 @@ final class PrivacyPreferencesViewController: UIViewController,
         self.notificationCenter = notificationCenter
         super.init(nibName: nil, bundle: nil)
 
-        setupNotifications(forObserver: self, observing: [.DynamicFontChanged])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification]
+        )
         setupLayout()
         setDetentSize()
         setupContentViews()
@@ -85,7 +88,9 @@ final class PrivacyPreferencesViewController: UIViewController,
     // MARK: - View cycles
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -174,6 +179,7 @@ final class PrivacyPreferencesViewController: UIViewController,
 
         technicalDataSwitch.switchCallback = { [weak self] value in
             self?.profile.prefs.setBool(value, forKey: AppConstants.prefSendUsageData)
+            self?.profile.prefs.setBool(value, forKey: AppConstants.prefStudiesToggle)
             if !value {
                 GleanMetrics.Pings.shared.onboardingOptOut.submit()
             }
@@ -253,7 +259,7 @@ final class PrivacyPreferencesViewController: UIViewController,
     // MARK: - Notifications
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             setDetentSize()
         default: break
         }

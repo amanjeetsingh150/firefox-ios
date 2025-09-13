@@ -4,7 +4,6 @@
 
 import Common
 import Foundation
-import Shared
 
 protocol AlphaDimmable {
     func updateAlphaForSubviews(_ alpha: CGFloat)
@@ -12,6 +11,17 @@ protocol AlphaDimmable {
 
 class BaseAlphaStackView: UIStackView, AlphaDimmable, ThemeApplicable {
     var isClearBackground = false
+    var isSpacerClearBackground = false
+    lazy var toolbarHelper: ToolbarHelperInterface = ToolbarHelper()
+
+    private var isToolbarRefactorEnabled: Bool {
+        return FxNimbus.shared.features.toolbarRefactorFeature.value().enabled
+    }
+
+    private var isToolbarTranslucencyEnabled: Bool {
+        return FxNimbus.shared.features.toolbarRefactorFeature.value().translucency
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
 
@@ -98,6 +108,11 @@ class BaseAlphaStackView: UIStackView, AlphaDimmable, ThemeApplicable {
         layoutIfNeeded()
     }
 
+    func moveSpacerToBack() {
+        guard let insetSpacer = self.insetSpacer else { return }
+        sendSubviewToBack(insetSpacer)
+    }
+
     func removeBottomInsetSpacer() {
         guard let insetSpacer = self.insetSpacer else { return }
 
@@ -107,9 +122,11 @@ class BaseAlphaStackView: UIStackView, AlphaDimmable, ThemeApplicable {
     }
 
     func applyTheme(theme: Theme) {
-        let color = isClearBackground ? .clear : theme.colors.layer1
-        backgroundColor = color
-        keyboardSpacer?.backgroundColor = color
-        insetSpacer?.backgroundColor = color
+        let color: UIColor = isToolbarRefactorEnabled ? theme.colors.layerSurfaceLow : theme.colors.layer1
+        let backgroundAlpha = toolbarHelper.glassEffectAlpha
+
+        backgroundColor = isClearBackground ? .clear : color
+        keyboardSpacer?.backgroundColor = isSpacerClearBackground ? .clear : color.withAlphaComponent(backgroundAlpha)
+        insetSpacer?.backgroundColor = isSpacerClearBackground ? .clear : color.withAlphaComponent(backgroundAlpha)
     }
 }

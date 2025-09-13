@@ -16,19 +16,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
     var notificationCenter: NotificationProtocol = NotificationCenter.default
     var orientationLock = UIInterfaceOrientationMask.all
 
-    private let creditCardAutofillStatus = FxNimbus.shared
-        .features
-        .creditCardAutofill
-        .value()
-        .creditCardAutofillStatus
-
     lazy var profile: Profile = BrowserProfile(
         localName: "profile",
-        fxaCommandsDelegate: UIApplication.shared.fxaCommandsDelegate,
-        creditCardAutofillEnabled: creditCardAutofillStatus
+        fxaCommandsDelegate: UIApplication.shared.fxaCommandsDelegate)
+
+    lazy var searchEnginesManager = SearchEnginesManager(
+        prefs: profile.prefs,
+        files: profile.files
     )
 
-    lazy var themeManager: ThemeManager = DefaultThemeManager(sharedContainerIdentifier: AppInfo.sharedContainerIdentifier)
+    lazy var themeManager: ThemeManager = DefaultThemeManager(
+        sharedContainerIdentifier: AppInfo.sharedContainerIdentifier,
+        isNewAppearanceMenuOnClosure: { self.featureFlags.isFeatureEnabled(.appearanceMenu, checking: .buildOnly) }
+    )
+    lazy var documentLogger = DocumentLogger(logger: logger)
     lazy var appSessionManager: AppSessionProvider = AppSessionManager()
     lazy var notificationSurfaceManager = NotificationSurfaceManager()
     lazy var tabDataStore = DefaultTabDataStore()
@@ -44,6 +45,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
     private var webServerUtil: WebServerUtil?
     private var appLaunchUtil: AppLaunchUtil?
     private var backgroundWorkUtility: BackgroundFetchAndProcessingUtility?
+    private var suggestBackgroundUtility: BackgroundFirefoxSuggestIngestUtility?
+    private var suggestBackgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    private static let suggestBackgroundTaskName = "SuggestIngest"
     private var widgetManager: TopSitesWidgetManager?
     private var menuBuilderHelper: MenuBuilderHelper?
     private lazy var metricKitWrapper = MetricKitWrapper()
@@ -64,8 +68,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         // before any Application Services component gets used.
         Viaduct.shared.useReqwestBackend()
 
-        // Configure logger so we can start tracking logs early
-        logger.configure(crashManager: DefaultCrashManager())
         initializeRustErrors(logger: logger)
         logger.log("willFinishLaunchingWithOptions begin",
                    level: .info,
@@ -80,6 +82,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
             .browserIsReady
         ])
 
+        // Initialize the feature flag subsystem.
+        // Among other things, it toggles on and off Nimbus, Contile, Adjust.
+        // i.e. this must be run before initializing those systems.
+        LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
+
         // Then setup dependency container as it's needed for everything else
         DependencyHelper().bootstrapDependencies()
 
@@ -88,7 +95,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
 
         // Set up a web server that serves us static content.
         // Do this early so that it is ready when the UI is presented.
-        webServerUtil = WebServerUtil(profile: profile)
+        webServerUtil = WebServerUtil(readerModeHandler: ReaderModeHandlers(), profile: profile)
         webServerUtil?.setUpWebServer()
 
         menuBuilderHelper = MenuBuilderHelper()
@@ -101,16 +108,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
     }
 
     private func startRecordingStartupOpenURLTime() {
-        shareTelemetry.recordOpenURLTime()
+        shareTelemetry.recordOpenDeeplinkTime()
         var recordCompleteToken: ActionToken?
         var recordCancelledToken: ActionToken?
-        recordCompleteToken = AppEventQueue.wait(for: .recordStartupTimeOpenURLComplete) { [weak self] in
-            self?.shareTelemetry.sendOpenURLTimeRecord()
+        recordCompleteToken = AppEventQueue.wait(for: .recordStartupTimeOpenDeeplinkComplete) { [weak self] in
+            self?.shareTelemetry.sendOpenDeeplinkTimeRecord()
             guard let recordCancelledToken, let recordCompleteToken  else { return }
             AppEventQueue.cancelAction(token: recordCancelledToken)
             AppEventQueue.cancelAction(token: recordCompleteToken)
         }
-        recordCancelledToken = AppEventQueue.wait(for: .recordStartupTimeOpenURLCancelled) { [weak self] in
+        recordCancelledToken = AppEventQueue.wait(for: .recordStartupTimeOpenDeeplinkCancelled) { [weak self] in
             self?.shareTelemetry.cancelOpenURLTimeRecord()
             guard let recordCancelledToken, let recordCompleteToken  else { return }
             AppEventQueue.cancelAction(token: recordCancelledToken)
@@ -135,10 +142,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         backgroundWorkUtility = BackgroundFetchAndProcessingUtility()
         backgroundWorkUtility?.registerUtility(BackgroundSyncUtility(profile: profile, application: application))
         backgroundWorkUtility?.registerUtility(BackgroundNotificationSurfaceUtility())
+
         if let firefoxSuggest = profile.firefoxSuggest {
-            backgroundWorkUtility?.registerUtility(BackgroundFirefoxSuggestIngestUtility(
-                firefoxSuggest: firefoxSuggest
-            ))
+            suggestBackgroundUtility = BackgroundFirefoxSuggestIngestUtility(firefoxSuggest: firefoxSuggest)
         }
 
         let topSitesProvider = TopSitesProviderImplementation(
@@ -184,9 +190,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
 
         // Cleanup can be a heavy operation, take it out of the startup path. Instead check after a few seconds.
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
-            if self?.featureFlags.isFeatureEnabled(.cleanupHistoryReenabled, checking: .buildOnly) ?? false {
-                self?.profile.cleanupHistoryIfNeeded()
-            }
+            self?.profile.cleanupHistoryIfNeeded()
         }
 
         DispatchQueue.global().async { [weak self] in
@@ -195,7 +199,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
 
         updateWallpaperMetadata()
         loadBackgroundTabs()
-
+        ingestFirefoxSuggestions(in: application)
         logger.log("applicationDidBecomeActive end",
                    level: .info,
                    category: .lifecycle)
@@ -233,6 +237,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         // We have only five seconds here, so let's hope this doesn't take too long.
         logger.log("applicationWillTerminate", level: .info, category: .lifecycle)
         profile.shutdown()
+        documentLogger.logPendingDownloads()
     }
 
     func applicationDidReceiveMemoryWarning(_ application: UIApplication) {
@@ -260,6 +265,41 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         }
     }
 
+    private func ingestFirefoxSuggestions(in application: UIApplication) {
+        /// Start a background task so that the ingest task doesn't get killed
+        /// immediately if the app goes to the background before ingest finishes. iOS will kill
+        /// our process as soon as we hit background if we don't have a background task running.
+        suggestBackgroundTaskID = application.beginBackgroundTask(
+            withName: Self.suggestBackgroundTaskName) { [weak self, application] in
+            guard let self = self else { return }
+            self.profile.firefoxSuggest?.interruptEverything()
+            application.endBackgroundTask(self.suggestBackgroundTaskID)
+            self.suggestBackgroundTaskID = .invalid
+        }
+
+        /// On first run (when suggest‑data.db is empty) this populates the db; later calls are no‑ops due to `emptyOnly`.
+        /// For details, see:
+        ///     https://github.com/mozilla/application-services/blob/5aade8c09653ad2a2ec02746dc6bcf80dc8434c2/components/suggest/src/store.rs#L597-L599
+        /// Actual periodic refreshing happens in the background in `BackgroundFirefoxSuggestIngestUtility.swift`.
+        /// `.utility` priority is used here because this blocks on network calls and would otherwise trigger a
+        /// priority‑inversion warning if run at user‑initiated QoS.
+        Task(priority: .utility) { [profile] in
+            do {
+                try await profile.firefoxSuggest?.ingest(emptyOnly: true)
+            } catch {
+                self.logger.log("Suggest ingest failed: \(error)", level: .warning, category: .storage)
+            }
+            /// Only schedule the periodic BGProcessingTask after the
+            /// initial on-launch ingest completes, to avoid double scheduling
+            /// or racing against our own background task.
+            self.suggestBackgroundUtility?.scheduleTaskOnAppBackground()
+            if self.suggestBackgroundTaskID != .invalid {
+                application.endBackgroundTask(self.suggestBackgroundTaskID)
+                self.suggestBackgroundTaskID = .invalid
+            }
+        }
+    }
+
     private func updateWallpaperMetadata() {
         wallpaperMetadataQueue.async {
             let wallpaperManager = WallpaperManager()
@@ -284,9 +324,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
 
 extension AppDelegate: Notifiable {
     private func addObservers() {
-        setupNotifications(forObserver: self, observing: [UIApplication.didBecomeActiveNotification,
-                                                          UIApplication.willResignActiveNotification,
-                                                          UIApplication.didEnterBackgroundNotification])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIApplication.didBecomeActiveNotification,
+                        UIApplication.willResignActiveNotification,
+                        UIApplication.didEnterBackgroundNotification]
+        )
     }
 
     /// When migrated to Scenes, these methods aren't called.

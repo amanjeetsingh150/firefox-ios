@@ -27,7 +27,20 @@ extension UILabel {
 }
 
 // A base setting class that shows a title. You probably want to subclass this, not use it directly.
+@MainActor
 class Setting: NSObject {
+    struct UX {
+        static let horizontalMargin: CGFloat = 15
+        static var cellLayoutMarginsForCurrentOS: UIEdgeInsets {
+            guard #available(iOS 26.0, *) else { return .zero }
+            return UIEdgeInsets(top: 0, left: horizontalMargin, bottom: 0, right: 0)
+        }
+        static var cellSeparatorInsetForCurrentOS: UIEdgeInsets {
+            guard #available(iOS 26.0, *) else { return .zero }
+            return UIEdgeInsets(top: 0, left: horizontalMargin, bottom: 0, right: horizontalMargin)
+        }
+    }
+
     private var _title: NSAttributedString?
     private var _footerTitle: NSAttributedString?
     private var _cellHeight: CGFloat?
@@ -102,15 +115,14 @@ class Setting: NSObject {
         cell.imageView?.image = _image
         cell.accessibilityTraits = UIAccessibilityTraits.button
         cell.indentationWidth = 0
-        cell.layoutMargins = .zero
+        cell.layoutMargins = UX.cellLayoutMarginsForCurrentOS
+        cell.separatorInset = UX.cellSeparatorInsetForCurrentOS
         cell.isUserInteractionEnabled = enabled
 
         backgroundView.backgroundColor = theme.colors.layer5Hover
         backgroundView.bounds = cell.bounds
         cell.selectedBackgroundView = backgroundView
 
-        // So that the separator line goes all the way to the left edge.
-        cell.separatorInset = .zero
         if let cell = cell as? ThemedTableViewCell {
             cell.applyTheme(theme: theme)
         }
@@ -340,17 +352,15 @@ class BoolSetting: Setting, FeatureFlaggable {
     func switchValueChanged(_ control: UISwitch) {
         writeBool(control)
         settingDidChange?(control.isOn)
-        if let featureFlagName = featureFlagName {
-            TelemetryWrapper.recordEvent(category: .action,
-                                         method: .change,
-                                         object: .setting,
-                                         extras: ["pref": featureFlagName.rawValue as Any,
-                                                  "to": control.isOn])
+
+        if let settingChanged = featureFlagName?.rawValue ?? prefKey {
+            SettingsTelemetry().changedSetting(
+                settingChanged,
+                to: "\(control.isOn)",
+                from: "\(!control.isOn)"
+            )
         } else {
-            TelemetryWrapper.recordEvent(category: .action,
-                                         method: .change,
-                                         object: .setting,
-                                         extras: ["pref": prefKey as Any, "to": control.isOn])
+            assertionFailure("We should be able to get a unique key to describe the changed setting")
         }
     }
 
@@ -503,11 +513,12 @@ class WebPageSetting: StringPrefSetting {
         alignTextFieldToNatural()
     }
 
+    @MainActor
     static func isURLOrEmpty(_ string: String?) -> Bool {
         guard let string = string, !string.isEmpty else {
             return true
         }
-        return URL(string: string, invalidCharacters: false)?.isWebPage() ?? false
+        return URL(string: string)?.isWebPage() ?? false
     }
 }
 
@@ -806,7 +817,10 @@ class WithoutAccountSetting: AccountSetting {
 
 @objc
 protocol SettingsDelegate: AnyObject {
+    @MainActor
     func settingsOpenURLInNewTab(_ url: URL)
+
+    @MainActor
     func didFinish()
 }
 
@@ -966,6 +980,14 @@ class SettingsTableViewController: ThemedTableViewController {
                 for: indexPath
             ) as? ThemedCenteredTableViewCell else {
                 return ThemedCenteredTableViewCell()
+            }
+            return cell
+        } else if setting as? SendDataSetting != nil {
+            guard let cell = tableView.dequeueReusableCell(
+                withIdentifier: ThemedLearnMoreTableViewCell.cellIdentifier,
+                for: indexPath
+            ) as? ThemedLearnMoreTableViewCell else {
+                return ThemedLearnMoreTableViewCell()
             }
             return cell
         } else if setting.style == .subtitle {

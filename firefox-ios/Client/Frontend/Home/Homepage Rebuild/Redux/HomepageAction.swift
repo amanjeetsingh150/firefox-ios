@@ -5,19 +5,45 @@
 import Common
 import Redux
 
-final class HomepageAction: Action {
+/// Extras are optionals since we pass in `item.telemetryItemType` as `itemType`
+/// and not all items will have telemetry extras (i.e. `header`)
+/// Only sponsored sites telemetry are using `topSitesTelemetryConfig`
+struct HomepageTelemetryExtras {
+    let itemType: HomepageTelemetry.ItemType?
+    let topSitesTelemetryConfig: TopSitesTelemetryConfig?
+}
+
+struct HomepageAction: Action {
+    let windowUUID: WindowUUID
+    let actionType: ActionType
+    let isSearchBarEnabled: Bool?
+    let shouldShowSpacer: Bool?
     let showiPadSetup: Bool?
     let numberOfTopSitesPerRow: Int?
+    let telemetryExtras: HomepageTelemetryExtras?
+    let isZeroSearch: Bool?
+    let availableContentHeight: CGFloat?
 
     init(
+        isSearchBarEnabled: Bool? = nil,
+        shouldShowSpacer: Bool? = nil,
         numberOfTopSitesPerRow: Int? = nil,
         showiPadSetup: Bool? = nil,
+        telemetryExtras: HomepageTelemetryExtras? = nil,
+        isZeroSearch: Bool? = nil,
+        availableContentHeight: CGFloat? = nil,
         windowUUID: WindowUUID,
         actionType: any ActionType
     ) {
+        self.windowUUID = windowUUID
+        self.actionType = actionType
+        self.isSearchBarEnabled = isSearchBarEnabled
+        self.shouldShowSpacer = shouldShowSpacer
         self.numberOfTopSitesPerRow = numberOfTopSitesPerRow
         self.showiPadSetup = showiPadSetup
-        super.init(windowUUID: windowUUID, actionType: actionType)
+        self.telemetryExtras = telemetryExtras
+        self.isZeroSearch = isZeroSearch
+        self.availableContentHeight = availableContentHeight
     }
 }
 
@@ -25,4 +51,21 @@ enum HomepageActionType: ActionType {
     case initialize
     case traitCollectionDidChange
     case viewWillTransition
+    case viewWillAppear
+    case viewDidAppear
+    case viewDidLayoutSubviews
+    case didSelectItem
+    case embeddedHomepage
+    case sectionSeen
+    case availableContentHeightDidChange
+}
+
+enum HomepageMiddlewareActionType: ActionType {
+    case topSitesUpdated
+    case jumpBackInLocalTabsUpdated
+    case jumpBackInRemoteTabsUpdated
+    case bookmarksUpdated
+    case enteredForeground
+    case configuredSearchBar
+    case configuredSpacer
 }

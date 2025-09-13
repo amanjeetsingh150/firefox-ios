@@ -6,13 +6,14 @@ import Account
 import Foundation
 import Shared
 import Storage
-import Sync
 import XCTest
+import Common
 
 @testable import Client
 
 import enum MozillaAppServices.SyncReason
 import struct MozillaAppServices.SyncResult
+import class MozillaAppServices.RemoteSettingsService
 
 public typealias ClientSyncManager = Client.SyncManager
 
@@ -34,13 +35,17 @@ open class ClientSyncManagerSpy: ClientSyncManager {
     open func syncTabs() -> Deferred<Maybe<SyncResult>> { return emptySyncResult }
     open func syncHistory() -> Deferred<Maybe<SyncResult>> { return emptySyncResult }
     open func syncEverything(why: SyncReason) -> Success { return succeed() }
-    open func updateCreditCardAutofillStatus(value: Bool) {}
 
     var syncNamedCollectionsCalled = 0
-    open func syncNamedCollections(why: SyncReason, names: [String]) -> Success {
+    open func syncNamedCollections(why: SyncReason, names: [String]) -> Deferred<Maybe<SyncResult>> {
         syncNamedCollectionsCalled += 1
-        return succeed()
+        return emptySyncResult
     }
+    var syncPostSyncSettingsChangeCalled = 0
+    open func syncPostSyncSettingsChange(why: SyncReason, names: [String]) {
+        syncPostSyncSettingsChangeCalled += 1
+    }
+    open func reportOpenSyncSettingsMenuTelemetry() {}
     open func beginTimedSyncs() {}
     open func endTimedSyncs() {}
     open func applicationDidBecomeActive() {
@@ -85,9 +90,11 @@ final class MockTabQueue: TabQueue {
         return succeed()
     }
 
-    func getQueuedTabs(completion: @escaping ([ShareItem]) -> Void) {
-        getQueuedTabsCalled += 1
-        return completion(queuedTabs)
+    func getQueuedTabs(completion: @escaping @MainActor ([ShareItem]) -> Void) {
+        Task { @MainActor in
+            completion(queuedTabs)
+            getQueuedTabsCalled += 1
+        }
     }
 
     func clearQueuedTabs() -> Success {
@@ -97,22 +104,32 @@ final class MockTabQueue: TabQueue {
 }
 
 class MockFiles: FileAccessor {
-    init() {
-        let docPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        super.init(rootPath: (docPath as NSString).appendingPathComponent("testing"))
+    var rootPath: String
+
+    init(rootPath: String? = nil) {
+        guard let rootPath else {
+            let docPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+            self.rootPath = (docPath as NSString).appendingPathComponent("testing")
+            return
+        }
+
+        self.rootPath = rootPath
     }
 }
 
-open class MockProfile: Client.Profile {
+// TODO: FXIOS-12610 Profile should be refactored so it is **not** `Sendable`.
+final class MockProfile: Client.Profile, @unchecked Sendable {
     public var rustFxA: RustFirefoxAccounts {
         return RustFirefoxAccounts.shared
     }
 
     // Read/Writeable properties for mocking
 
-    public var files: FileAccessor
-    public var syncManager: ClientSyncManager?
-    public var firefoxSuggest: RustFirefoxSuggestProtocol?
+    public let files: FileAccessor
+    public let syncManager: ClientSyncManager?
+    public let firefoxSuggest: RustFirefoxSuggestProtocol?
+    public let remoteSettingsService: RemoteSettingsService?
+    public let mockNotificationCenter: NotificationProtocol = MockNotificationCenter()
 
     fileprivate let name = "mockaccount"
 
@@ -123,12 +140,14 @@ open class MockProfile: Client.Profile {
     init(
         databasePrefix: String = "mock",
         firefoxSuggest: RustFirefoxSuggestProtocol? = nil,
+        remoteSettingsService: RemoteSettingsService? = nil,
         injectedPinnedSites: MockablePinnedSites? = nil
     ) {
         files = MockFiles()
         syncManager = ClientSyncManagerSpy()
         self.databasePrefix = databasePrefix
         self.firefoxSuggest = firefoxSuggest
+        self.remoteSettingsService = remoteSettingsService
         self.injectedPinnedSites = injectedPinnedSites
 
         do {
@@ -137,6 +156,10 @@ open class MockProfile: Client.Profile {
             XCTFail("Could not create directory at root path: \(error)")
             fatalError("Could not create directory at root path: \(error)")
         }
+    }
+
+    deinit {
+        shutdown()
     }
 
     public func localName() -> String {
@@ -173,10 +196,6 @@ open class MockProfile: Client.Profile {
 
     public lazy var certStore: CertStore = {
         return CertStore()
-    }()
-
-    public lazy var searchEnginesManager: SearchEnginesManager = {
-        return SearchEnginesManager(prefs: self.prefs, files: self.files, engineProvider: MockSearchEngineProvider())
     }()
 
     public lazy var prefs: Prefs = {
@@ -227,7 +246,7 @@ open class MockProfile: Client.Profile {
         ).appendingPathComponent("\(databasePrefix)_places.db").path
         try? files.remove("\(databasePrefix)_places.db")
 
-        let places = RustPlaces(databasePath: placesDatabasePath)
+        let places = RustPlaces(databasePath: placesDatabasePath, notificationCenter: mockNotificationCenter)
         _ = places.reopenIfClosed()
 
         return places
@@ -290,7 +309,9 @@ open class MockProfile: Client.Profile {
 
     public func cleanupHistoryIfNeeded() {}
 
-    public func storeTabs(_ tabs: [RemoteTab]) -> Deferred<Maybe<Int>> {
+    var storeAndSyncTabsCalled = 0
+    public func storeAndSyncTabs(_ tabs: [RemoteTab]) -> Deferred<Maybe<Int>> {
+        storeAndSyncTabsCalled += 1
         return deferMaybe(0)
     }
 

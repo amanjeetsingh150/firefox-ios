@@ -5,6 +5,7 @@
 import MappaMundi
 import XCTest
 import Shared
+import Common
 
 let testPageBase = "http://www.example.com"
 let loremIpsumURL = "\(testPageBase)"
@@ -47,7 +48,7 @@ class L10nBaseSnapshotTests: XCTestCase {
     func waitForExistence(
         _ element: XCUIElement,
         timeout: TimeInterval = 5.0,
-        file: String = #file,
+        file: String = #filePath,
         line: UInt = #line
     ) {
             waitFor(element, with: "exists == true", timeout: timeout, file: file, line: line)
@@ -96,7 +97,7 @@ class L10nBaseSnapshotTests: XCTestCase {
     func waitForNoExistence(
         _ element: XCUIElement,
         timeoutValue: TimeInterval = 5.0,
-        file: String = #file,
+        file: String = #filePath,
         line: UInt = #line
     ) {
         waitFor(element, with: "exists != true", timeout: timeoutValue, file: file, line: line)

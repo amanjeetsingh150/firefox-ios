@@ -8,6 +8,7 @@ import XCTest
 
 @testable import Client
 
+@MainActor
 final class ContextMenuCoordinatorTests: XCTestCase {
     private var mockRouter: MockRouter!
 
@@ -48,9 +49,9 @@ final class ContextMenuCoordinatorTests: XCTestCase {
         XCTAssertEqual(mockRouter.dismissCalled, 1)
     }
 
-    private func createSubject(file: StaticString = #file,
+    private func createSubject(file: StaticString = #filePath,
                                line: UInt = #line) -> ContextMenuCoordinator {
-        let configuration = ContextMenuConfiguration(homepageSection: .header, toastContainer: UIView())
+        let configuration = createConfiguration()
         let subject = ContextMenuCoordinator(
             configuration: configuration,
             router: mockRouter,
@@ -60,6 +61,22 @@ final class ContextMenuCoordinatorTests: XCTestCase {
 
         trackForMemoryLeaks(subject, file: file, line: line)
         return subject
+    }
+
+    private func createConfiguration() -> ContextMenuConfiguration {
+        let topSiteItem: HomepageItem = .topSite(
+            TopSiteConfiguration(
+                site: Site.createBasicSite(url: "www.example.com/1234", title: "Site 0")
+            ), nil
+        )
+        guard case let .topSite(state, nil) = topSiteItem else {
+            return ContextMenuConfiguration(site: nil, menuType: nil, toastContainer: UIView())
+        }
+        return ContextMenuConfiguration(
+            site: state.site,
+            menuType: MenuType(homepageItem: topSiteItem),
+            toastContainer: UIView()
+        )
     }
 }
 

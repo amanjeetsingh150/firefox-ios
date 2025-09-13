@@ -12,6 +12,7 @@ struct ImageIdentifiers {
     public static let badgeMask = "badge-mask"
     public static let firefoxFavicon = "faviconFox"
     public static let foxConfirmation = "foxConfirmation"
+    public static let foxDefaultBrowser = "foxDefaultBrowser"
     public static let homeHeaderLogoBall = "fxHomeHeaderLogoBall"
     public static let homeHeaderLogoText = "fxHomeHeaderLogoText"
     public static let homepagePocket = "homepage-pocket"
@@ -30,12 +31,21 @@ struct ImageIdentifiers {
     public static let noBookmarksInRoot = "noBookmarksInRoot"
     public static let qrCodeScanBorder = "qrcode-scanBorder"
     public static let qrCodeScanLine = "qrcode-scanLine"
-    public static let shoppingNoAnalysisImage = "shoppingNoAnalysisImage"
-    public static let shoppingOptInCardImage = "shoppingOptInCardImage"
     public static let signinSync = "signin-sync"
     public static let syncOpenTab = "sync_open_tab"
     public static let radioButtonNotSelected = "radioButtonNotSelected"
     public static let radioButtonSelected = "radioButtonSelected"
+
+    public struct Appearance {
+        public static let automaticBrowserThemeGradient = "automaticBrowserThemeGradient"
+        public static let lightBrowserThemeGradient = "lightBrowserThemeGradient"
+        public static let darkBrowserThemeGradient = "darkBrowserThemeGradient"
+    }
+
+    public struct AddressBar {
+        public static let addressBarIllustrationBottom = "addressBarIllustrationBottom"
+        public static let addressBarIllustrationTop = "addressBarIllustrationTop"
+    }
 
     public struct Onboarding {
         public struct HeaderImages {
@@ -48,6 +58,8 @@ struct ImageIdentifiers {
             public static let theming = "onboardingThemeing"
             public static let toolbar = "onboardingToolbar"
             public static let customizeFirefox = "onboardingFoxyWindow"
+            public static let syncWithIcons = "onboardingSyncWithIcons"
+            public static let trackers = "onboardingTrackers"
         }
 
         public struct MultipleChoiceButtonImages {

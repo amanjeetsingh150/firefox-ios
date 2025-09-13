@@ -35,7 +35,7 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
 
     // MARK: - Properties
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
@@ -61,7 +61,7 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
     private lazy var passwordField: PasswordGeneratorPasswordFieldView = .build { [weak self] view in
         view.refreshPasswordButtonOnClick = {
             guard let self else {return}
-            store.dispatch(PasswordGeneratorAction(
+            store.dispatchLegacy(PasswordGeneratorAction(
                 windowUUID: self.windowUUID,
                 actionType: PasswordGeneratorActionType.userTappedRefreshPassword,
                 currentFrame: self.currentFrame)
@@ -86,10 +86,13 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
         self.currentFrame = currentFrame
         super.init(nibName: nil, bundle: nil)
         self.subscribeToRedux()
-        setupNotifications(forObserver: self,
-                           observing: [.DynamicFontChanged,
-                                       UIApplication.willResignActiveNotification,
-                                       UIApplication.didBecomeActiveNotification])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIContentSizeCategory.didChangeNotification,
+                        UIApplication.willResignActiveNotification,
+                        UIApplication.didBecomeActiveNotification]
+        )
     }
 
     deinit {
@@ -103,9 +106,9 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
     // MARK: - View Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
         configureUsePasswordButton()
         setupView()
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             UIAccessibility.post(notification: .screenChanged, argument: self.header)
@@ -168,9 +171,9 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
     // MARK: - Interaction Handlers
     @objc
     func useButtonOnClick() {
-        store.dispatch(PasswordGeneratorAction(windowUUID: windowUUID,
-                                               actionType: PasswordGeneratorActionType.userTappedUsePassword,
-                                               currentFrame: currentFrame))
+        store.dispatchLegacy(PasswordGeneratorAction(windowUUID: windowUUID,
+                                                     actionType: PasswordGeneratorActionType.userTappedUsePassword,
+                                                     currentFrame: currentFrame))
         dismiss(animated: true)
     }
 
@@ -194,7 +197,7 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
 
     // MARK: - Redux
     func subscribeToRedux() {
-        store.dispatch(
+        store.dispatchLegacy(
             ScreenAction(
                 windowUUID: windowUUID,
                 actionType: ScreenActionType.showScreen,
@@ -210,8 +213,8 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
         })
     }
 
-    func unsubscribeFromRedux() {
-        store.dispatch(
+    nonisolated func unsubscribeFromRedux() {
+        store.dispatchLegacy(
             ScreenAction(
                 windowUUID: windowUUID,
                 actionType: ScreenActionType.closeScreen,
@@ -234,14 +237,14 @@ class PasswordGeneratorViewController: UIViewController, StoreSubscriber, Themea
 
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
-        case .DynamicFontChanged:
+        case UIContentSizeCategory.didChangeNotification:
             applyDynamicFontChange()
         case UIApplication.willResignActiveNotification:
-            store.dispatch(PasswordGeneratorAction(windowUUID: windowUUID,
-                                                   actionType: PasswordGeneratorActionType.hidePassword))
+            store.dispatchLegacy(PasswordGeneratorAction(windowUUID: windowUUID,
+                                                         actionType: PasswordGeneratorActionType.hidePassword))
         case UIApplication.didBecomeActiveNotification:
-            store.dispatch(PasswordGeneratorAction(windowUUID: windowUUID,
-                                                   actionType: PasswordGeneratorActionType.showPassword))
+            store.dispatchLegacy(PasswordGeneratorAction(windowUUID: windowUUID,
+                                                         actionType: PasswordGeneratorActionType.showPassword))
         default: break
         }
     }

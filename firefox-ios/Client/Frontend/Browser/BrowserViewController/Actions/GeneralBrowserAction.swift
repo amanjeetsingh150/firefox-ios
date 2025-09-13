@@ -6,8 +6,11 @@ import Foundation
 import Redux
 import Common
 import WebKit
+import SummarizeKit
 
-class GeneralBrowserAction: Action {
+struct GeneralBrowserAction: Action {
+    let windowUUID: WindowUUID
+    let actionType: ActionType
     let selectedTabURL: URL?
     let isPrivateBrowsing: Bool?
     let toastType: ToastType?
@@ -15,6 +18,7 @@ class GeneralBrowserAction: Action {
     let buttonTapped: UIButton?
     let isNativeErrorPage: Bool?
     let frame: WKFrameInfo?
+    let summarizerConfig: SummarizerConfig?
     init(selectedTabURL: URL? = nil,
          isPrivateBrowsing: Bool? = nil,
          toastType: ToastType? = nil,
@@ -22,8 +26,11 @@ class GeneralBrowserAction: Action {
          buttonTapped: UIButton? = nil,
          isNativeErrorPage: Bool? = nil,
          frame: WKFrameInfo? = nil,
+         summarizerConfig: SummarizerConfig? = nil,
          windowUUID: WindowUUID,
          actionType: ActionType) {
+        self.windowUUID = windowUUID
+        self.actionType = actionType
         self.selectedTabURL = selectedTabURL
         self.isPrivateBrowsing = isPrivateBrowsing
         self.toastType = toastType
@@ -31,8 +38,7 @@ class GeneralBrowserAction: Action {
         self.showOverlay = showOverlay
         self.isNativeErrorPage = isNativeErrorPage
         self.frame = frame
-        super.init(windowUUID: windowUUID,
-                   actionType: actionType)
+        self.summarizerConfig = summarizerConfig
     }
 }
 
@@ -52,19 +58,28 @@ enum GeneralBrowserActionType: ActionType {
     case showReloadLongPressAction
     case showMenu
     case showLocationViewLongPressActionSheet
+    case showSummarizer
     case stopLoadingWebsite
     case reloadWebsite
     case reloadWebsiteNoCache
     case showShare
     case showReaderMode
+    case startAtHome
     case addNewTab
     case showNewTabLongPressActions
     case addToReadingListLongPressAction
     case clearData
     case showPasswordGenerator
+    case didSelectedTabChangeToHomepage
+    case enteredZeroSearchScreen
+    case didUnhideToolbar
+    case didCloseTabFromToolbar
+    case shakeMotionEnded
 }
 
-class GeneralBrowserMiddlewareAction: Action {
+struct GeneralBrowserMiddlewareAction: Action {
+    let windowUUID: WindowUUID
+    let actionType: ActionType
     let scrollOffset: CGPoint?
     let toolbarPosition: SearchBarPosition?
 
@@ -72,10 +87,10 @@ class GeneralBrowserMiddlewareAction: Action {
          toolbarPosition: SearchBarPosition? = nil,
          windowUUID: WindowUUID,
          actionType: ActionType) {
+        self.windowUUID = windowUUID
+        self.actionType = actionType
         self.scrollOffset = scrollOffset
         self.toolbarPosition = toolbarPosition
-        super.init(windowUUID: windowUUID,
-                   actionType: actionType)
     }
 }
 

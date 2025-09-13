@@ -4,22 +4,29 @@
 
 import Common
 import UIKit
-import Shared
 
 /// Each scene has it's own scene coordinator, which is the root coordinator for a scene.
-class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinishedLoadingDelegate {
+class SceneCoordinator: BaseCoordinator,
+                        LaunchCoordinatorDelegate,
+                        LaunchFinishedLoadingDelegate,
+                        FeatureFlaggable {
     var window: UIWindow?
     var windowUUID: WindowUUID { reservedWindowUUID.uuid }
+    private var isDeeplinkOptimizationRefactorEnabled: Bool {
+        return featureFlags.isFeatureEnabled(.deeplinkOptimizationRefactor, checking: .buildOnly)
+    }
     private let screenshotService: ScreenshotService
     private let sceneContainer: SceneContainer
     private let windowManager: WindowManager
     private let reservedWindowUUID: ReservedWindowUUID
+    private let introManager: IntroScreenManagerProtocol
 
     init(scene: UIScene,
          sceneSetupHelper: SceneSetupHelper = SceneSetupHelper(),
          screenshotService: ScreenshotService = ScreenshotService(),
          sceneContainer: SceneContainer = SceneContainer(),
-         windowManager: WindowManager = AppContainer.shared.resolve()) {
+         windowManager: WindowManager = AppContainer.shared.resolve(),
+         introManager: IntroScreenManagerProtocol) {
         // Note: this is where we singularly decide the UUID for this specific iOS browser window (UIScene).
         // The logic is handled by `reserveNextAvailableWindowUUID`, but this is the point at which a window's UUID
         // is set; this same UUID will be injected throughout several of the window's related components
@@ -33,6 +40,7 @@ class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinish
         self.screenshotService = screenshotService
         self.sceneContainer = sceneContainer
         self.windowManager = windowManager
+        self.introManager = introManager
 
         let navigationController = sceneSetupHelper.createNavigationController()
         let router = DefaultRouter(navigationController: navigationController)
@@ -46,7 +54,15 @@ class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinish
     func start() {
         router.setRootViewController(sceneContainer, hideBar: true)
 
-        let launchScreenVC = LaunchScreenViewController(windowUUID: windowUUID, coordinator: self)
+        let launchScreenVC: UIViewController
+        if introManager.isModernOnboardingEnabled && introManager.shouldShowIntroScreen {
+            // Show modern launch screen only for first-time users when modern onboarding is enabled
+            launchScreenVC = ModernLaunchScreenViewController(windowUUID: windowUUID, coordinator: self)
+        } else {
+            // Use legacy launch screen for returning users or when modern onboarding is disabled
+            launchScreenVC = LaunchScreenViewController(windowUUID: windowUUID, coordinator: self)
+        }
+
         router.push(launchScreenVC, animated: false)
     }
 
@@ -69,17 +85,15 @@ class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinish
     }
 
     private func canShowIntroOnboarding() -> Bool {
-        let profile: Profile = AppContainer.shared.resolve()
-        let introManager = IntroScreenManager(prefs: profile.prefs)
         let launchType = LaunchType.intro(manager: introManager)
-        return launchType.canLaunch(fromType: .SceneCoordinator)
+        let isIphone = UIDevice.current.userInterfaceIdiom == .phone
+        return launchType.canLaunch(fromType: .SceneCoordinator, isIphone: isIphone)
     }
 
     private func showIntroOnboardingIfNeeded() {
-        let profile: Profile = AppContainer.shared.resolve()
-        let introManager = IntroScreenManager(prefs: profile.prefs)
         let launchType = LaunchType.intro(manager: introManager)
-        if launchType.canLaunch(fromType: .SceneCoordinator) {
+        let isIphone = UIDevice.current.userInterfaceIdiom == .phone
+        if launchType.canLaunch(fromType: .SceneCoordinator, isIphone: isIphone) {
             startLaunch(with: launchType)
         }
     }
@@ -87,7 +101,8 @@ class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinish
     // MARK: - LaunchFinishedLoadingDelegate
 
     func launchWith(launchType: LaunchType) {
-        guard launchType.canLaunch(fromType: .SceneCoordinator) else {
+        let isIphone = UIDevice.current.userInterfaceIdiom == .phone
+        guard launchType.canLaunch(fromType: .SceneCoordinator, isIphone: isIphone) else {
             startBrowser(with: launchType)
             return
         }
@@ -136,6 +151,13 @@ class SceneCoordinator: BaseCoordinator, LaunchCoordinatorDelegate, LaunchFinish
 
         if let savedRoute {
             browserCoordinator.findAndHandle(route: savedRoute)
+            // In the case we have saved route it means we are starting the browser with a deeplink.
+            // A saved route is present when findAndHandle is called on the SceneCoordinator and BrowserCoordinator
+            // is not in the hierarchy yet.
+            guard isDeeplinkOptimizationRefactorEnabled,
+                  !AppEventQueue.hasSignalled(.recordStartupTimeOpenDeeplinkComplete),
+                  !AppEventQueue.hasSignalled(.recordStartupTimeOpenDeeplinkCancelled) else { return }
+            AppEventQueue.signal(event: .recordStartupTimeOpenDeeplinkComplete)
         }
     }
 

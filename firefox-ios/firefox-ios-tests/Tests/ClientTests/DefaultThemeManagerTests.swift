@@ -5,6 +5,7 @@
 import XCTest
 @testable import Common
 
+@MainActor
 final class DefaultThemeManagerTests: XCTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 
@@ -89,6 +90,25 @@ final class DefaultThemeManagerTests: XCTestCase {
             userDefaults.string(forKey: DefaultThemeManager.ThemeKeys.themeName),
             expectedResult.rawValue
         )
+    }
+
+    // MARK: - resolveTheme
+    func testDTM_inNormalMode_withForcePrivate_retrievesPrivateTheme() {
+        let sut = createSubject(with: userDefaults)
+        let theme = sut.resolvedTheme(with: true)
+
+        XCTAssertEqual(theme.type, ThemeType.privateMode)
+        XCTAssertEqual(userDefaults.string(forKey: DefaultThemeManager.ThemeKeys.themeName), ThemeType.light.rawValue)
+    }
+
+    func testDTM_inNormalMode_withoutForcePrivate_retrievesLightTheme() {
+        let sut = createSubject(with: userDefaults)
+        let expectedResult = ThemeType.light
+
+        let theme = sut.resolvedTheme(with: false)
+
+        XCTAssertEqual(theme.type, expectedResult)
+        XCTAssertEqual(userDefaults.string(forKey: DefaultThemeManager.ThemeKeys.themeName), expectedResult.rawValue)
     }
 
     // MARK: - System theme tests
@@ -243,7 +263,7 @@ final class DefaultThemeManagerTests: XCTestCase {
     // MARK: - Helper methods
 
     private func createSubject(with userDefaults: UserDefaultsInterface,
-                               file: StaticString = #file,
+                               file: StaticString = #filePath,
                                line: UInt = #line) -> DefaultThemeManager {
         let subject = DefaultThemeManager(
             userDefaults: userDefaults,

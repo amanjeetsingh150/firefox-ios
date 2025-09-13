@@ -4,7 +4,6 @@
 
 import Common
 import XCTest
-import Shared
 @testable import Client
 
 class HomepageMessageCardViewModelTests: XCTestCase {
@@ -74,6 +73,7 @@ class HomepageMessageCardViewModelTests: XCTestCase {
         XCTAssertEqual(messageManager.onMessageDismissedCalled, 0)
     }
 
+    @MainActor
     func testMessagePressed() {
         adaptor.message = createMessage(isExpired: false)
         let subject = createSubject()
@@ -104,6 +104,7 @@ class HomepageMessageCardViewModelTests: XCTestCase {
         XCTAssertEqual(dismissClosureCalled, 1)
     }
 
+    @MainActor
     func testConfigureCallsMethod() throws {
         let subject = createSubject()
         let cell = SpyHomepageMessageCardCell(frame: .zero)
@@ -128,7 +129,7 @@ class HomepageMessageCardViewModelTests: XCTestCase {
 
 // MARK: - Helpers
 extension HomepageMessageCardViewModelTests {
-    func createSubject(file: StaticString = #file,
+    func createSubject(file: StaticString = #filePath,
                        line: UInt = #line) -> HomepageMessageCardViewModel {
         let subject = HomepageMessageCardViewModel(dataAdaptor: adaptor,
                                                    theme: LightTheme(),

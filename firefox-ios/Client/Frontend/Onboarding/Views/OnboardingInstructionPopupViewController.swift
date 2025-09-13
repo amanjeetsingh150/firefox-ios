@@ -4,10 +4,11 @@
 
 import Common
 import ComponentLibrary
-import Shared
 import UIKit
 
-class OnboardingInstructionPopupViewController: UIViewController, Themeable {
+class OnboardingInstructionPopupViewController: UIViewController,
+                                                Themeable,
+                                                Notifiable {
     private enum UX {
         static let contentStackViewSpacing: CGFloat = 40
         static let textStackViewSpacing: CGFloat = 24
@@ -67,10 +68,10 @@ class OnboardingInstructionPopupViewController: UIViewController, Themeable {
     var viewModel: OnboardingDefaultBrowserModelProtocol
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var didTapButton = false
     var buttonTappedFinishFlow: (() -> Void)?
-    var dismissDelegate: BottomSheetDismissProtocol?
+    weak var dismissDelegate: BottomSheetDelegate?
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
 
@@ -97,20 +98,22 @@ class OnboardingInstructionPopupViewController: UIViewController, Themeable {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        listenForThemeChange(view)
-        setupNotifications()
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIApplication.didEnterBackgroundNotification]
+        )
+
         setupView()
         updateLayout()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         applyTheme()
-    }
-
-    deinit {
-        notificationCenter.removeObserver(self)
     }
 
     func setupView() {
@@ -174,14 +177,6 @@ class OnboardingInstructionPopupViewController: UIViewController, Themeable {
         )
     }
 
-    private func setupNotifications() {
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(appDidEnterBackgroundNotification),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil)
-    }
-
     private func updateLayout() {
         titleLabel.text = viewModel.title
         let buttonViewModel = PrimaryRoundedButtonViewModel(
@@ -223,11 +218,19 @@ class OnboardingInstructionPopupViewController: UIViewController, Themeable {
         }
     }
 
-    @objc
-    func appDidEnterBackgroundNotification() {
-        if didTapButton {
-            dismiss(animated: false)
-            buttonTappedFinishFlow?()
+    // MARK: - Notifiable
+
+    func handleNotifications(_ notification: Notification) {
+        switch notification.name {
+        case UIApplication.didEnterBackgroundNotification:
+            ensureMainThread {
+                if self.didTapButton {
+                    self.dismiss(animated: false)
+                    self.buttonTappedFinishFlow?()
+                }
+            }
+        default:
+            break
         }
     }
 

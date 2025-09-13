@@ -4,21 +4,30 @@
 
 @testable import Client
 
+import Common
 import Shared
 import Storage
 import XCTest
 
 class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     private var profile: MockProfile!
+    private var searchEnginesManager: SearchEnginesManager!
     private var contileProviderMock: ContileProviderMock!
     private var notificationCenter: MockNotificationCenter!
 
     override func setUp() {
         super.setUp()
+        DependencyHelperMock().bootstrapDependencies()
 
         notificationCenter = MockNotificationCenter()
         profile = MockProfile(databasePrefix: "FxHomeTopSitesManagerTests")
         profile.reopen()
+
+        searchEnginesManager = SearchEnginesManager(
+            prefs: profile.prefs,
+            files: profile.files,
+            engineProvider: MockSearchEngineProvider()
+        )
 
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
 
@@ -26,13 +35,14 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     }
 
     override func tearDown() {
-        super.tearDown()
-
         notificationCenter = nil
         contileProviderMock = nil
+        searchEnginesManager = nil
         profile.prefs.clearAll()
         profile.shutdown()
         profile = nil
+
+        super.tearDown()
     }
 
     func testData_whenNotLoaded() {
@@ -373,6 +383,7 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     func testSearchEngine_googleTile_doesntGetRemoved() {
         let googleSearchEngine = OpenSearchEngine(engineID: "12345",
                                                   shortName: "Google",
+                                                  telemetrySuffix: nil,
                                                   image: UIImage(),
                                                   searchTemplate: "https://google.com/find?q={searchTerm}",
                                                   suggestTemplate: nil,
@@ -388,6 +399,7 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     func testSearchEngine_pinnedTile_doesntGetRemoved() {
         let pinnedTileSearchEngine = OpenSearchEngine(engineID: "12345",
                                                       shortName: "Apinnedurl1",
+                                                      telemetrySuffix: nil,
                                                       image: UIImage(),
                                                       searchTemplate: "https://apinnedurl1.com/find?q={searchTerm}",
                                                       suggestTemplate: nil,
@@ -403,6 +415,7 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     func testSearchEngine_historyTile_doesntGetRemoved() {
         let historyTileSearchEngine = OpenSearchEngine(engineID: "12345",
                                                        shortName: "Aurl0",
+                                                       telemetrySuffix: nil,
                                                        image: UIImage(),
                                                        searchTemplate: "https://aurl0.com/find?q={searchTerm}",
                                                        suggestTemplate: nil,
@@ -417,6 +430,7 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
     func testSearchEngine_sponsoredTile_getsRemoved() {
         let sponsoredTileSearchEngine = OpenSearchEngine(engineID: "Firefox",
                                                          shortName: "Firefox",
+                                                         telemetrySuffix: nil,
                                                          image: UIImage(),
                                                          searchTemplate: "https://firefox.com/find?q={searchTerm}",
                                                          suggestTemplate: nil,
@@ -432,7 +446,7 @@ class TopSitesDataAdaptorTests: XCTestCase, FeatureFlaggable {
 }
 
 // MARK: - ContileProviderMock
-class ContileProviderMock: ContileProviderInterface, UnifiedAdsProviderInterface {
+final class ContileProviderMock: ContileProviderInterface, UnifiedAdsProviderInterface, @unchecked Sendable {
     typealias Mock = ContileProviderMock
     private var result: ContileResult
 
@@ -541,7 +555,7 @@ extension TopSitesDataAdaptorTests {
                        siteCount: Int = 10,
                        duplicatePinnedSiteURL: Bool = false,
                        expectedContileResult: ContileResult = .success([]),
-                       file: StaticString = #file,
+                       file: StaticString = #filePath,
                        line: UInt = #line) -> TopSitesDataAdaptorImplementation {
         let historyStub = TopSiteHistoryManagerStub(profile: profile)
         historyStub.siteCount = siteCount
@@ -559,6 +573,7 @@ extension TopSitesDataAdaptorTests {
                                                         contileProvider: contileProviderMock,
                                                         unifiedAdsProvider: contileProviderMock,
                                                         notificationCenter: notificationCenter,
+                                                        searchEnginesManager: searchEnginesManager,
                                                         dispatchGroup: dispatchGroup)
 
         trackForMemoryLeaks(subject, file: file, line: line)
@@ -570,7 +585,7 @@ extension TopSitesDataAdaptorTests {
     }
 
     func add(searchEngine: OpenSearchEngine) {
-        profile.searchEnginesManager.defaultEngine = searchEngine
+        searchEnginesManager.defaultEngine = searchEngine
     }
 }
 

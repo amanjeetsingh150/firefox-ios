@@ -4,7 +4,6 @@
 
 import Common
 import Redux
-import ToolbarKit
 
 final class SearchEngineSelectionMiddleware {
     private let profile: Profile
@@ -12,11 +11,11 @@ final class SearchEngineSelectionMiddleware {
     private let searchEnginesManager: SearchEnginesManagerProvider
 
     init(profile: Profile = AppContainer.shared.resolve(),
-         searchEnginesManager: SearchEnginesManagerProvider? = nil,
+         searchEnginesManager: SearchEnginesManagerProvider = AppContainer.shared.resolve(SearchEnginesManager.self),
          logger: Logger = DefaultLogger.shared) {
         self.profile = profile
         self.logger = logger
-        self.searchEnginesManager = searchEnginesManager ?? SearchEnginesManager(prefs: profile.prefs, files: profile.files)
+        self.searchEnginesManager = searchEnginesManager
     }
 
     lazy var searchEngineSelectionProvider: Middleware<AppState> = { [self] state, action in
@@ -28,7 +27,7 @@ final class SearchEngineSelectionMiddleware {
 
             guard !searchEngines.isEmpty else {
                 // The SearchEngineManager should have loaded these by now, but if not, attempt to fetch the search engines
-                self.searchEnginesManager.getOrderedEngines { [weak self] searchEngines in
+                self.searchEnginesManager.getOrderedEngines { [weak self] preferences, searchEngines in
                     self?.notifyDidLoad(windowUUID: action.windowUUID, searchEngines: searchEngines)
                 }
                 return
@@ -39,7 +38,7 @@ final class SearchEngineSelectionMiddleware {
         case SearchEngineSelectionActionType.didTapSearchEngine:
             // Trigger editing in the toolbar
             let action = ToolbarAction(windowUUID: action.windowUUID, actionType: ToolbarActionType.didStartEditingUrl)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
 
         default:
             break
@@ -52,6 +51,6 @@ final class SearchEngineSelectionMiddleware {
             actionType: SearchEngineSelectionActionType.didLoadSearchEngines,
             searchEngines: searchEngines.map({ $0.generateModel() })
         )
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 }

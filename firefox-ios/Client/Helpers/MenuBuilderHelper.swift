@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Shared
 
 class MenuBuilderHelper {
     struct MenuIdentifiers {
@@ -13,13 +12,19 @@ class MenuBuilderHelper {
     }
 
     func mainMenu(for builder: UIMenuBuilder) {
-        let newPrivateTab = UICommandAlternate(
-            title: .KeyboardShortcuts.NewPrivateTab,
-            action: #selector(BrowserViewController.newPrivateTabKeyCommand),
-            modifierFlags: [.shift]
-        )
+        builder.insertChild(makeApplicationMenu(), atStartOfMenu: .application)
+        builder.insertChild(makeFileMenu(), atStartOfMenu: .file)
+        builder.replace(menu: .find, with: makeFindMenu())
+        builder.remove(menu: .font)
+        builder.insertChild(makeViewMenu(), atStartOfMenu: .view)
+        builder.insertSibling(makeHistoryMenu(), afterMenu: .view)
+        builder.insertSibling(makeBookmarksMenu(), afterMenu: MenuIdentifiers.history)
+        builder.insertSibling(makeToolsMenu(), afterMenu: MenuIdentifiers.bookmarks)
+        builder.insertChild(makeWindowMenu(), atStartOfMenu: .window)
+    }
 
-        let applicationMenu = UIMenu(
+    private func makeApplicationMenu() -> UIMenu {
+        return UIMenu(
             options: .displayInline,
             children: [
                 UIKeyCommand(
@@ -30,6 +35,14 @@ class MenuBuilderHelper {
                     discoverabilityTitle: .AppSettingsTitle
                 )
             ]
+        )
+    }
+
+    private func makeFileMenu() -> UIMenu {
+        let newPrivateTab = UICommandAlternate(
+            title: .KeyboardShortcuts.NewPrivateTab,
+            action: #selector(BrowserViewController.newPrivateTabKeyCommand),
+            modifierFlags: [.shift]
         )
 
         let fileMenu = UIMenu(
@@ -70,6 +83,10 @@ class MenuBuilderHelper {
             ($0 as? UIKeyCommand)?.wantsPriorityOverSystemBehavior = true
         }
 
+        return fileMenu
+    }
+
+    private func makeFindMenu() -> UIMenu {
         let findMenu = UIMenu(
             options: .displayInline,
             children: [
@@ -93,6 +110,10 @@ class MenuBuilderHelper {
             ($0 as? UIKeyCommand)?.wantsPriorityOverSystemBehavior = true
         }
 
+        return findMenu
+    }
+
+    private func makeViewMenu() -> UIMenu {
         var viewMenuChildren: [UIMenuElement] = [
             UIKeyCommand(
                 title: .KeyboardShortcuts.ZoomIn,
@@ -140,7 +161,11 @@ class MenuBuilderHelper {
             ($0 as? UIKeyCommand)?.wantsPriorityOverSystemBehavior = true
         }
 
-        let historyMenu = UIMenu(
+        return viewMenu
+    }
+
+    private func makeHistoryMenu() -> UIMenu {
+        return UIMenu(
             title: .KeyboardShortcuts.Sections.History,
             identifier: MenuIdentifiers.history,
             options: .displayInline,
@@ -175,8 +200,10 @@ class MenuBuilderHelper {
                 )
             ]
         )
+    }
 
-        let bookmarksMenu = UIMenu(
+    private func makeBookmarksMenu() -> UIMenu {
+        return UIMenu(
             title: .KeyboardShortcuts.Sections.Bookmarks,
             identifier: MenuIdentifiers.bookmarks,
             options: .displayInline,
@@ -197,8 +224,10 @@ class MenuBuilderHelper {
                 )
             ]
         )
+    }
 
-        let toolsMenu = UIMenu(
+    private func makeToolsMenu() -> UIMenu {
+        return UIMenu(
             title: .KeyboardShortcuts.Sections.Tools,
             identifier: MenuIdentifiers.tools,
             options: .displayInline,
@@ -212,7 +241,9 @@ class MenuBuilderHelper {
                 )
             ]
         )
+    }
 
+    private func makeWindowMenu() -> UIMenu {
         let windowMenu = UIMenu(
             title: .KeyboardShortcuts.Sections.Window,
             options: .displayInline,
@@ -257,14 +288,6 @@ class MenuBuilderHelper {
             ($0 as? UIKeyCommand)?.wantsPriorityOverSystemBehavior = true
         }
 
-        builder.insertChild(applicationMenu, atStartOfMenu: .application)
-        builder.insertChild(fileMenu, atStartOfMenu: .file)
-        builder.replace(menu: .find, with: findMenu)
-        builder.remove(menu: .font)
-        builder.insertChild(viewMenu, atStartOfMenu: .view)
-        builder.insertSibling(historyMenu, afterMenu: .view)
-        builder.insertSibling(bookmarksMenu, afterMenu: MenuIdentifiers.history)
-        builder.insertSibling(toolsMenu, afterMenu: MenuIdentifiers.bookmarks)
-        builder.insertChild(windowMenu, atStartOfMenu: .window)
+        return windowMenu
     }
 }

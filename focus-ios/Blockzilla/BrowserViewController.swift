@@ -398,7 +398,7 @@ class BrowserViewController: UIViewController {
             let dismissOnboarding = { [unowned self] in
                 UserDefaults.standard.set(true, forKey: OnboardingConstants.onboardingDidAppear)
                 urlBar.activateTextField()
-                onboardingEventsHandler.route = nil
+                onboardingEventsHandler.dismissTooltip(route: .onboarding(.v2))
                 onboardingEventsHandler.send(.enterHome)
             }
                 return OnboardingFactory.make(onboardingType: onboardingType, dismissAction: dismissOnboarding, telemetry: onboardingTelemetry.handle(event:))
@@ -1231,7 +1231,7 @@ extension BrowserViewController: UIDropInteractionDelegate {
 
     func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
         _ = session.loadObjects(ofClass: URL.self) { urls in
-            guard let url = urls.first else {
+            guard let draggedUrl = urls.first, let url = URIFixup.getURL(entry: draggedUrl.absoluteString) else {
                 return
             }
 
@@ -1714,6 +1714,12 @@ extension BrowserViewController: LegacyWebControllerDelegate {
 
     func webControllerURLDidChange(_ controller: LegacyWebController, url: URL) {
         showToolbars()
+    }
+
+    func webControllerWillCancelNavigation(_ controller: any LegacyWebController) {
+        // Ensure the current location is refreshed after the web view has updated its URL
+        // for a navigation action cancelled within our delegate callback
+        DispatchQueue.main.async { self.urlBar.url = self.webViewController.url }
     }
 
     func webController(_ controller: LegacyWebController, didFailNavigationWithError error: Error) {

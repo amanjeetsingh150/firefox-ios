@@ -13,6 +13,7 @@ let standardImageIdentifiersPath = "./BrowserKit/Sources/Common/Constants/Standa
 checkAlphabeticalOrder(inFile: standardImageIdentifiersPath)
 checkBigPullRequest()
 checkCodeCoverage()
+failOnNewFilesWithoutCoverage()
 checkForPRDescription()
 checkForWebEngineFileChange()
 checkForCodeUsage()
@@ -35,6 +36,51 @@ func checkCodeCoverage() {
     )
 }
 
+func failOnNewFilesWithoutCoverage() {
+    let jsonPath = "coverage.json"
+
+    guard let data = FileManager.default.contents(atPath: jsonPath),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let targets = json["targets"] as? [[String: Any]] else {
+        fail("Could not parse coverage.json for per-file coverage")
+        return
+    }
+
+    // Build an array with files with 0 coverage
+    var filesWithoutCoverage = [String]()
+    for target in targets {
+        if let files = target["files"] as? [[String: Any]] {
+            for file in files {
+                if let path = file["name"] as? String,
+                      let coverage = file["lineCoverage"] as? Double, coverage == 0 {
+                    filesWithoutCoverage.append(path)
+                }
+            }
+        }
+    }
+
+    // Get new files filtering Test and Generated
+    let newSwiftFiles = danger.git.createdFiles.filter {
+        $0.hasSuffix(".swift") &&
+        !$0.contains("Tests") &&
+        !$0.contains("/Generated/")
+    }
+
+    let contactMessage = "Please add unit tests. (cc: @cyndichin @yoanarios)."
+    for file in newSwiftFiles {
+        let cleanedFile = URL(fileURLWithPath: file).lastPathComponent
+
+        // Try to find a file in coverage report that ends with this file
+        let matchingFile = filesWithoutCoverage.first { coveragePath in
+            coveragePath.hasSuffix(cleanedFile)
+        }
+
+        if let file = matchingFile {
+            warn("New file `\(file)` has 0% test coverage. \(contactMessage)")
+        }
+    }
+}
+
 // MARK: - PR guidelines
 
 // swiftlint:disable line_length
@@ -46,7 +92,7 @@ func checkBigPullRequest() {
 
     let additionsAndDeletions = additions + deletions
     if additionsAndDeletions > bigPRThreshold {
-        warn("Pull Request size seems relatively large. If this Pull Request contains multiple changes, please split each into separate PR will helps faster, easier review. Consider using epic branches for work that would affect main.")
+        warn("This Pull Request seems quite large. If it consists of multiple changes, try splitting them into separate PRs for a faster review process. Consider using epic branches for work impacting main.")
     }
 }
 

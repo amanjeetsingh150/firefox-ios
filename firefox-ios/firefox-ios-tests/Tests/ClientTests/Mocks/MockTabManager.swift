@@ -5,12 +5,15 @@
 import Foundation
 import WebKit
 import Common
+import XCTest
 
 @testable import Client
 
 class MockTabManager: TabManager {
     let windowUUID: WindowUUID
     var isRestoringTabs = false
+    var tabRestoreHasFinished = false
+    var selectedIndex = 0
     var selectedTab: Tab?
     var selectedTabUUID: UUID?
     var backupCloseTab: BackupCloseTab?
@@ -35,6 +38,11 @@ class MockTabManager: TabManager {
 
     var removeTabsByURLCalled = 0
 
+    var addTabWasCalled = false
+    var notifyCurrentTabDidFinishLoadingCalled = 0
+    var commitChangesCalled = 0
+    var selectTabExpectation: XCTestExpectation?
+
     init(
         windowUUID: WindowUUID = WindowUUID.XCTestDefaultUUID,
         recentlyAccessedNormalTabs: [Tab] = [Tab]()
@@ -44,11 +52,13 @@ class MockTabManager: TabManager {
     }
 
     subscript(index: Int) -> Tab? {
-        return nil
+        return tabs[index]
     }
 
     subscript(webView: WKWebView) -> Tab? {
-        return nil
+        return tabs.first {
+            $0.webView === webView
+        }
     }
 
     func selectTab(_ tab: Tab?, previous: Tab?) {
@@ -60,15 +70,13 @@ class MockTabManager: TabManager {
         if let previous = previous {
             lastSelectedPreviousTabs.append(previous)
         }
-    }
 
-    func getMostRecentHomepageTab() -> Tab? {
-        return addTab(nil, afterTab: nil, isPrivate: false)
+        selectTabExpectation?.fulfill()
     }
 
     func addDelegate(_ delegate: TabManagerDelegate) {}
 
-    func addNavigationDelegate(_ delegate: WKNavigationDelegate) {}
+    func setNavigationDelegate(_ delegate: WKNavigationDelegate) {}
 
     func removeDelegate(_ delegate: TabManagerDelegate, completion: (() -> Void)?) {}
 
@@ -83,19 +91,25 @@ class MockTabManager: TabManager {
 
     func removeTabs(_ tabs: [Tab]) {}
 
-    func removeTab(_ tabUUID: TabUUID) async {}
+    func removeTab(_ tabUUID: TabUUID) {}
 
-    func removeAllTabs(isPrivateMode: Bool) async {}
+    func removeAllTabs(isPrivateMode: Bool) {}
 
-    func removeTabs(by urls: [URL]) async {
+    func removeTabs(by urls: [URL]) {
         removeTabsByURLCalled += 1
     }
+
+    func removeNormalTabsOlderThan(period: TabsDeletionPeriod, currentDate: Date) {}
 
     func undoCloseAllTabs() {}
 
     func undoCloseTab() {}
 
     func clearAllTabsHistory() {}
+
+    func commitChanges() {
+        commitChangesCalled += 1
+    }
 
     func willSwitchTabMode(leavingPBM: Bool) {}
 
@@ -104,10 +118,6 @@ class MockTabManager: TabManager {
     func preserveTabs() {}
 
     func restoreTabs(_ forced: Bool) {}
-
-    func startAtHomeCheck() -> Bool {
-        false
-    }
 
     func getTabForUUID(uuid: String) -> Tab? {
         return nil
@@ -139,7 +149,8 @@ class MockTabManager: TabManager {
                 zombie: Bool,
                 isPrivate: Bool
     ) -> Tab {
-        return Tab(profile: MockProfile(), windowUUID: windowUUID)
+        addTabWasCalled = true
+        return Tab(profile: MockProfile(), isPrivate: isPrivate, windowUUID: windowUUID)
     }
 
     func backgroundRemoveAllTabs(isPrivate: Bool,
@@ -156,7 +167,13 @@ class MockTabManager: TabManager {
         return inactiveTabs
     }
 
-    func removeAllInactiveTabs() async {}
+    func removeAllInactiveTabs() {}
 
     func undoCloseInactiveTabs() async {}
+
+    func notifyCurrentTabDidFinishLoading() {
+        notifyCurrentTabDidFinishLoadingCalled += 1
+    }
+
+    func tabDidSetScreenshot(_ tab: Client.Tab) {}
 }

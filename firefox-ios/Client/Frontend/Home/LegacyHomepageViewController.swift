@@ -11,12 +11,12 @@ import UIKit
 
 import enum MozillaAppServices.VisitType
 
-class LegacyHomepageViewController:
-    UIViewController,
-    FeatureFlaggable,
-    Themeable,
-    ContentContainable,
-    SearchBarLocationProvider {
+class LegacyHomepageViewController: UIViewController,
+                                    FeatureFlaggable,
+                                    Themeable,
+                                    ContentContainable,
+                                    Screenshotable,
+                                    SearchBarLocationProvider {
     // MARK: - Typealiases
 
     private typealias a11y = AccessibilityIdentifiers.FirefoxHomepage
@@ -46,16 +46,19 @@ class LegacyHomepageViewController:
     private var collectionView: UICollectionView?
     private var lastContentOffsetY: CGFloat = 0
     private var logger: Logger
-    private let viewWillAppearEventThrottler = Throttler(seconds: 0.5)
+    private let viewWillAppearEventThrottler = GCDThrottler(seconds: 0.5)
 
     var windowUUID: WindowUUID { return tabManager.windowUUID }
     var currentWindowUUID: UUID? { return windowUUID }
+    weak var termsOfUseDelegate: TermsOfUseDelegate?
 
     var contentType: ContentType = .legacyHomepage
 
     var themeManager: ThemeManager
     var notificationCenter: NotificationProtocol
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
+
+    private var toolbarHelper: ToolbarHelperInterface
 
     // Content stack views contains collection view.
     lazy var contentStackView: UIStackView = .build { stackView in
@@ -76,6 +79,7 @@ class LegacyHomepageViewController:
          userDefaults: UserDefaultsInterface = UserDefaults.standard,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
          notificationCenter: NotificationProtocol = NotificationCenter.default,
+         toolbarHelper: ToolbarHelperInterface = ToolbarHelper(),
          logger: Logger = DefaultLogger.shared
     ) {
         self.overlayManager = overlayManager
@@ -98,13 +102,17 @@ class LegacyHomepageViewController:
         )
         self.syncTabContextualHintViewController =
         ContextualHintViewController(with: syncTabContextualViewProvider, windowUUID: tabManager.windowUUID)
-        self.contextMenuHelper = HomepageContextMenuHelper(viewModel: viewModel, toastContainer: toastContainer)
+        self.contextMenuHelper = HomepageContextMenuHelper(
+            profile: profile,
+            viewModel: viewModel,
+            toastContainer: toastContainer
+        )
 
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
+        self.toolbarHelper = toolbarHelper
         self.logger = logger
         super.init(nibName: nil, bundle: nil)
-        updateHeaderToShowPrivateModeToggle()
         viewModel.isZeroSearch = isZeroSearch
 
         contextMenuHelper.delegate = self
@@ -113,10 +121,13 @@ class LegacyHomepageViewController:
             return self.getPopoverSourceRect(sourceView: popoverView)
         }
 
-        setupNotifications(forObserver: self,
-                           observing: [.HomePanelPrefsChanged,
-                                       .TabsPrivacyModeChanged,
-                                       .WallpaperDidChange])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.HomePanelPrefsChanged,
+                        .TabsPrivacyModeChanged,
+                        .WallpaperDidChange]
+        )
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -126,7 +137,6 @@ class LegacyHomepageViewController:
     deinit {
         jumpBackInContextualHintViewController.stopTimer()
         syncTabContextualHintViewController.stopTimer()
-        notificationCenter.removeObserver(self)
     }
 
     // MARK: - View lifecycle
@@ -147,7 +157,7 @@ class LegacyHomepageViewController:
         setupSectionsAction()
         reloadView()
 
-        listenForThemeChange(view)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 
@@ -161,7 +171,6 @@ class LegacyHomepageViewController:
         }
 
         notificationCenter.post(name: .ShowHomepage, withUserInfo: windowUUID.userInfo)
-        notificationCenter.post(name: .HistoryUpdated)
 
         applyTheme()
         reloadView()
@@ -174,6 +183,10 @@ class LegacyHomepageViewController:
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             self?.displayWallpaperSelector()
+        }
+        // Add delay to ensure view hierarchy is stable before presenting
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.termsOfUseDelegate?.showTermsOfUse(context: .homepageOpened)
         }
     }
 
@@ -212,7 +225,6 @@ class LegacyHomepageViewController:
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         applyTheme()
-        updateHeaderToShowPrivateModeToggle()
 
         if previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass
             || previousTraitCollection?.verticalSizeClass != traitCollection.verticalSizeClass {
@@ -225,7 +237,7 @@ class LegacyHomepageViewController:
     /// When the trait collection changes the top taps display might have to change
     /// This requires an update of the toolbars.
     private func updateToolbarStateTraitCollectionIfNecessary(_ newCollection: UITraitCollection) {
-        let showTopTabs = ToolbarHelper().shouldShowTopTabs(for: newCollection)
+        let showTopTabs = toolbarHelper.shouldShowTopTabs(for: newCollection)
 
         // Only dispatch action when the value of top tabs being shown is different from what is saved in the state
         // to avoid having the toolbar re-displayed
@@ -238,16 +250,7 @@ class LegacyHomepageViewController:
             windowUUID: windowUUID,
             actionType: ToolbarActionType.traitCollectionDidChange
         )
-        store.dispatch(action)
-    }
-
-    // Displays or hides the private mode toggle button in the header
-    // Depends on feature flag and if user is on iPhone
-    private func updateHeaderToShowPrivateModeToggle() {
-        let featureFlagOn = featureFlags.isFeatureEnabled(.feltPrivacySimplifiedUI, checking: .buildOnly)
-        let showToggle = featureFlagOn && !shouldUseiPadSetup()
-        viewModel.headerViewModel.showPrivateModeToggle = showToggle
-        viewModel.headerViewModel.showiPadSetup = shouldUseiPadSetup()
+        store.dispatchLegacy(action)
     }
 
     // MARK: - Layout
@@ -262,9 +265,6 @@ class LegacyHomepageViewController:
         collectionView.register(LegacyLabelButtonHeaderView.self,
                                 forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
                                 withReuseIdentifier: LegacyLabelButtonHeaderView.cellIdentifier)
-        collectionView.register(PocketFooterView.self,
-                                forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter,
-                                withReuseIdentifier: PocketFooterView.cellIdentifier)
         collectionView.keyboardDismissMode = .onDrag
         collectionView.addGestureRecognizer(longPressRecognizer)
         collectionView.delegate = self
@@ -367,13 +367,15 @@ class LegacyHomepageViewController:
 
     // MARK: - Helpers
 
-    /// Configure isZeroSearch
+    /// Configure isZeroSearch & isPrivate
     /// - Parameter isZeroSearch: IsZeroSearch is true when the homepage is created from the tab tray, a long press
     /// on the tab bar to open a new tab or by pressing the home page button on the tab bar. Inline is false when
     /// it's the zero search page, aka when the home page is shown by clicking the url bar from a loaded web page.
     /// This needs to be set properly for telemetry and the contextual pop overs that appears on homepage
+    /// We need also to set isPrivate value when this configure method is being called
     func configure(isZeroSearch: Bool) {
         viewModel.isZeroSearch = isZeroSearch
+        viewModel.isPrivate = currentTab?.isPrivate ?? false
     }
 
     /// On iPhone, we call reloadOnRotation when the trait collection has changed, to ensure calculation is
@@ -399,11 +401,7 @@ class LegacyHomepageViewController:
         }
     }
 
-    private func adjustPrivacySensitiveSections(notification: Notification) {
-        guard let dict = notification.object as? NSDictionary,
-              let isPrivate = dict[Tab.privateModeKey] as? Bool
-        else { return }
-
+    private func adjustPrivacySensitiveSections(isPrivate: Bool) {
         let privacySectionState = isPrivate ? "Removing": "Adding"
         logger.log("\(privacySectionState) privacy sensitive sections", level: .info, category: .legacyHomepage)
         viewModel.isPrivate = isPrivate
@@ -427,7 +425,7 @@ class LegacyHomepageViewController:
     @objc
     private func dismissKeyboard() {
         /* homepage and error page, both are "internal" url, making
-           topsites on homepage inaccessible from error page 
+           topsites on homepage inaccessible from error page
            when address bar is selected hence using "about/home".
         */
         if currentTab?.lastKnownUrl?.absoluteString.hasPrefix("\(InternalURL.baseUrl)/\(AboutHomeHandler.path)") ?? false {
@@ -451,17 +449,20 @@ class LegacyHomepageViewController:
            selectedTab.isFxHomeTab,
            selectedTab.url?.displayURL == nil {
             let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.cancelEdit)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
             // On a website we just dismiss the keyboard
         } else {
             let action = ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.hideKeyboard)
-            store.dispatch(action)
+            store.dispatchLegacy(action)
         }
     }
 
     private func handleScroll(_ scrollView: UIScrollView, isUserInteraction: Bool) {
+        let isToolbarRefactorEnabled = featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly)
+
         // We only handle status bar overlay alpha if there's a wallpaper applied on the homepage
-        if WallpaperManager().currentWallpaper.hasImage {
+        // or if the toolbar refactor feature is turned on
+        if WallpaperManager().currentWallpaper.hasImage || isToolbarRefactorEnabled {
             let theme = themeManager.getCurrentTheme(for: windowUUID)
             statusBarScrollDelegate?.scrollViewDidScroll(scrollView,
                                                          statusBarFrame: statusBarFrame,
@@ -473,7 +474,7 @@ class LegacyHomepageViewController:
         if (lastContentOffsetY > 0 && scrollView.contentOffset.y <= 0) ||
             (lastContentOffsetY <= 0 && scrollView.contentOffset.y > 0) {
             lastContentOffsetY = scrollView.contentOffset.y
-            store.dispatch(
+            store.dispatchLegacy(
                 GeneralBrowserMiddlewareAction(
                     scrollOffset: scrollView.contentOffset,
                     windowUUID: windowUUID,
@@ -483,7 +484,7 @@ class LegacyHomepageViewController:
 
     private func showSiteWithURLHandler(_ url: URL, isGoogleTopSite: Bool = false) {
         let visitType = VisitType.bookmark
-        // Called from top sites, pocket, learn more in pocket section
+        // Called from top sites, merino, learn more in merino section
         homePanelDelegate?.homePanel(didSelectURL: url, visitType: visitType, isGoogleTopSite: isGoogleTopSite)
     }
 
@@ -496,11 +497,11 @@ class LegacyHomepageViewController:
 
         let viewModel = WallpaperSelectorViewModel(wallpaperManager: wallpaperManager)
         let viewController = WallpaperSelectorViewController(viewModel: viewModel, windowUUID: windowUUID)
-        var bottomSheetViewModel = BottomSheetViewModel(
+        let bottomSheetViewModel = BottomSheetViewModel(
+            shouldDismissForTapOutside: false,
             closeButtonA11yLabel: .CloseButtonTitle,
             closeButtonA11yIdentifier: AccessibilityIdentifiers.FirefoxHomepage.OtherButtons.closeButton
         )
-        bottomSheetViewModel.shouldDismissForTapOutside = false
         let bottomSheetVC = BottomSheetViewController(
             viewModel: bottomSheetViewModel,
             childViewController: viewController,
@@ -539,7 +540,7 @@ class LegacyHomepageViewController:
                 self.presentContextualHint(contextualHintViewController: self.jumpBackInContextualHintViewController)
             },
             sourceRect: rect,
-            andActionForButton: { [weak self] in self?.openTabsSettings() },
+            andActionForButton: { [weak self] in self?.openInactiveTabsSettings() },
             overlayState: overlayManager)
     }
 
@@ -608,23 +609,6 @@ extension LegacyHomepageViewController: UICollectionViewDelegate, UICollectionVi
             return headerView
         }
 
-        if kind == UICollectionView.elementKindSectionFooter {
-            guard let footerView = collectionView.dequeueReusableSupplementaryView(
-                ofKind: kind,
-                withReuseIdentifier: PocketFooterView.cellIdentifier,
-                for: indexPath) as? PocketFooterView else { return reusableView }
-            footerView.onTapLearnMore = {
-                guard let learnMoreURL = SupportUtils.URLForPocketLearnMore else {
-                    self.logger.log("Failed to retrieve learn more URL from SupportUtils.URLForPocketLearnMore",
-                                    level: .debug,
-                                    category: .legacyHomepage)
-                    return
-                }
-                self.showSiteWithURLHandler(learnMoreURL)
-            }
-            footerView.applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-            return footerView
-        }
         return reusableView
     }
 
@@ -659,6 +643,42 @@ extension LegacyHomepageViewController: UICollectionViewDelegate, UICollectionVi
             homePanelDelegate: homePanelDelegate,
             libraryPanelDelegate: libraryPanelDelegate
         )
+    }
+
+    // MARK: - Screenshotable
+
+    func screenshot(bounds: CGRect) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: bounds.size)
+
+        return renderer.image { context in
+            themeManager.getCurrentTheme(for: windowUUID).colors.layer1.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height))
+            // Draw the wallpaper separately, so the potential safe area coordinates is filled with the
+            // wallpaper
+            wallpaperView.drawHierarchy(
+                in: CGRect(
+                    x: 0,
+                    y: 0,
+                    width: bounds.width,
+                    height: wallpaperView.frame.height
+                ),
+                afterScreenUpdates: false
+            )
+
+            view.drawHierarchy(
+                in: CGRect(
+                    x: bounds.origin.x,
+                    y: -bounds.origin.y,
+                    width: bounds.width,
+                    height: collectionView?.frame.height ?? 0.0
+                ),
+                afterScreenUpdates: false
+            )
+        }
+    }
+
+    func screenshot(quality: CGFloat) -> UIImage? {
+        screenshot(bounds: view.bounds)
     }
 }
 
@@ -753,77 +773,19 @@ private extension LegacyHomepageViewController {
             self?.prepareSyncedTabContextualHint(onCell: syncedTabCell)
         }
 
-        // History highlights
-        viewModel.historyHighlightsViewModel.onTapItem = { [weak self] highlight in
-            guard let url = highlight.siteUrl else {
-                self?.openHistoryHighlightsSearchGroup(item: highlight)
-                return
-            }
-
-            self?.homePanelDelegate?.homePanel(didSelectURL: url,
-                                               visitType: .link,
-                                               isGoogleTopSite: false)
-        }
-
-        viewModel.historyHighlightsViewModel
-            .historyHighlightLongPressHandler = { [weak self] (highlightItem, sourceView) in
-                self?.contextMenuHelper.presentContextMenu(for: highlightItem,
-                                                           with: sourceView,
-                                                           sectionType: .historyHighlights)
-            }
-
-        viewModel.historyHighlightsViewModel.headerButtonAction = { [weak self] button in
-            self?.openHistory(button)
-        }
-
         // Pocket
         viewModel.pocketViewModel.onTapTileAction = { [weak self] url in
             self?.showSiteWithURLHandler(url)
         }
 
         viewModel.pocketViewModel.onLongPressTileAction = { [weak self] (site, sourceView) in
-            self?.contextMenuHelper.presentContextMenu(for: site, with: sourceView, sectionType: .pocket)
+            self?.contextMenuHelper.presentContextMenu(for: site, with: sourceView, sectionType: .merino)
         }
 
         // Customize home
         viewModel.customizeButtonViewModel.onTapAction = { [weak self] _ in
             self?.openCustomizeHomeSettings()
         }
-    }
-
-    private func openHistoryHighlightsSearchGroup(item: HighlightItem) {
-        guard let groupItem = item.group else { return }
-
-        var groupedSites = [Site]()
-        for item in groupItem {
-            groupedSites.append(buildSite(from: item))
-        }
-        let groupSite = ASGroup<Site>(searchTerm: item.displayTitle, groupedItems: groupedSites, timestamp: Date.now())
-
-        let asGroupListViewModel = SearchGroupedItemsViewModel(asGroup: groupSite, presenter: .recentlyVisited)
-        let asGroupListVC = SearchGroupedItemsViewController(
-            viewModel: asGroupListViewModel,
-            profile: viewModel.profile,
-            windowUUID: windowUUID
-        )
-
-        let dismissableController: DismissableNavigationViewController
-        dismissableController = DismissableNavigationViewController(rootViewController: asGroupListVC)
-
-        self.present(dismissableController, animated: true, completion: nil)
-
-        TelemetryWrapper.recordEvent(category: .action,
-                                     method: .tap,
-                                     object: .firefoxHomepage,
-                                     value: .historyHighlightsGroupOpen,
-                                     extras: nil)
-
-        asGroupListVC.libraryPanelDelegate = libraryPanelDelegate
-    }
-
-    private func buildSite(from highlight: HighlightItem) -> Site {
-        let itemURL = highlight.urlString ?? ""
-        return Site.createBasicSite(url: itemURL, title: highlight.displayTitle)
     }
 
     func openTabTray(_ sender: UIButton) {
@@ -850,17 +812,6 @@ private extension LegacyHomepageViewController {
         }
     }
 
-    func openHistory(_ sender: UIButton) {
-        homePanelDelegate?.homePanelDidRequestToOpenLibrary(panel: .history)
-
-        if sender.accessibilityIdentifier == a11y.MoreButtons.historyHighlights {
-            TelemetryWrapper.recordEvent(category: .action,
-                                         method: .tap,
-                                         object: .firefoxHomepage,
-                                         value: .historyHighlightsShowAll)
-        }
-    }
-
     func openCustomizeHomeSettings() {
         homePanelDelegate?.homePanelDidRequestToOpenSettings(at: .homePage)
         TelemetryWrapper.recordEvent(category: .action,
@@ -869,8 +820,8 @@ private extension LegacyHomepageViewController {
                                      value: .customizeHomepageButton)
     }
 
-    func openTabsSettings() {
-        homePanelDelegate?.homePanelDidRequestToOpenSettings(at: .tabs)
+    func openInactiveTabsSettings() {
+        homePanelDelegate?.homePanelDidRequestToOpenSettings(at: .browser)
     }
 
     func getPopoverSourceRect(sourceView: UIView?) -> CGRect {
@@ -975,21 +926,24 @@ extension LegacyHomepageViewController: HomepageViewModelDelegate {
 
 // MARK: - Notifiable
 extension LegacyHomepageViewController: Notifiable {
-    func handleNotifications(_ notification: Notification) {
-        ensureMainThread { [weak self] in
-            guard let self = self else { return }
+    nonisolated func handleNotifications(_ notification: Notification) {
+        switch notification.name {
+        case .TabsPrivacyModeChanged:
+            let notificationWindowUUID = notification.windowUUID
+            guard let dict = notification.object as? NSDictionary,
+                  let isPrivate = dict[Tab.privateModeKey] as? Bool
+            else { return }
 
-            switch notification.name {
-            case .TabsPrivacyModeChanged:
-                guard windowUUID == notification.windowUUID else { return }
-                self.adjustPrivacySensitiveSections(notification: notification)
-
-            case .HomePanelPrefsChanged,
-                    .WallpaperDidChange:
-                self.reloadView()
-
-            default: break
+            ensureMainThread {
+                guard self.windowUUID == notificationWindowUUID else { return }
+                self.adjustPrivacySensitiveSections(isPrivate: isPrivate)
             }
+        case .HomePanelPrefsChanged,
+                .WallpaperDidChange:
+            ensureMainThread {
+                self.reloadView()
+            }
+        default: break
         }
     }
 }

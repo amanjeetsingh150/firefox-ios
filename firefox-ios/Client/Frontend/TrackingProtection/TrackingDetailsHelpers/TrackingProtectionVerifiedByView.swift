@@ -5,8 +5,6 @@
 import Foundation
 import UIKit
 import Common
-import Shared
-import ComponentLibrary
 
 class TrackingProtectionVerifiedByView: UIView {
     private struct UX {
@@ -31,7 +29,7 @@ class TrackingProtectionVerifiedByView: UIView {
 
     // MARK: View Setup
     private func setupView() {
-        layer.cornerRadius = TPMenuUX.UX.viewCornerRadius
+        layer.cornerRadius = TPMenuUX.UX.newStyleCornerRadius
         layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         layer.masksToBounds = true
 

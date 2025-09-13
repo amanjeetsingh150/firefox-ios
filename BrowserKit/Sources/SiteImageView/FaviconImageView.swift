@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Common
 
 /// FaviconImageView supports the favicon image layout.
 /// By setting the view model, the image will be updated for you asynchronously
@@ -11,6 +10,7 @@ import Common
 /// - Favicon
 ///     - Can be set through `setFavicon(_ viewModel: SiteImageViewFaviconModel)`
 ///     - No theming calls needed
+@MainActor
 public class FaviconImageView: UIImageView, SiteImageView {
     // MARK: - Properties
     var uniqueID: UUID?
@@ -24,6 +24,10 @@ public class FaviconImageView: UIImageView, SiteImageView {
         self.imageFetcher = DefaultSiteImageHandler()
         super.init(frame: frame)
         setupUI()
+    }
+
+    public convenience init(completionHandler: @escaping () -> Void) {
+        self.init(frame: .zero, imageFetcher: DefaultSiteImageHandler(), completionHandler: completionHandler)
     }
 
     // Internal init used in unit tests only
@@ -61,7 +65,7 @@ public class FaviconImageView: UIImageView, SiteImageView {
 
     func setURL(_ viewModel: FaviconImageViewModel) {
         guard let siteURLString = viewModel.siteURLString,
-              let siteURL = URL(string: siteURLString, invalidCharacters: false),
+              let siteURL = URL(string: siteURLString),
               canMakeRequest(with: siteURLString)
         else { return }
 

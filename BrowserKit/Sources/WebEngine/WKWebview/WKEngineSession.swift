@@ -12,35 +12,88 @@ protocol SessionHandler: AnyObject {
     func received(error: NSError, forURL url: URL)
 }
 
+protocol WKJavascriptInterface: AnyObject {
+    /// Calls a javascript method.
+    /// - Parameter method: The method signature to be called in javascript world.
+    /// - Parameter scope: An optional string defining the scope in which the method should be called.
+    func callJavascriptMethod(_ method: String, scope: String?)
+}
+
 class WKEngineSession: NSObject,
                        EngineSession,
                        WKEngineWebViewDelegate,
+                       WKJavascriptInterface,
                        MetadataFetcherDelegate,
-                       AdsTelemetryScriptDelegate,
                        SessionHandler {
-    weak var delegate: EngineSessionDelegate?
-    private(set) var webView: WKEngineWebView
-    var sessionData: WKEngineSessionData
-    var telemetryProxy: EngineTelemetryProxy?
+    weak var delegate: EngineSessionDelegate? {
+        didSet {
+            uiHandler.delegate = delegate
+        }
+    }
+    weak var telemetryProxy: EngineTelemetryProxy?
+    weak var fullscreenDelegate: FullscreenDelegate?
 
+    private(set) var webView: WKEngineWebView
+    var sessionData = WKEngineSessionData()
+
+    private var scriptResponder: EngineSessionScriptResponder
     private var logger: Logger
     private var contentScriptManager: WKContentScriptManager
     private var metadataFetcher: MetadataFetcherHelper
     private var contentBlockingSettings: WKContentBlockingSettings = []
-    private let navigationHandler: WKNavigationHandler
+    let navigationHandler: WKNavigationHandler
     private let uiHandler: WKUIHandler
+    public var isActive = false {
+        didSet {
+            self.uiHandler.isActive = self.isActive
+        }
+    }
 
+    // TODO: With Swift 6 we can use default params in the init
+    @MainActor
+    public static func sessionFactory(
+        userScriptManager: WKUserScriptManager,
+        dependencies: EngineSessionDependencies,
+        configurationProvider: WKEngineConfigurationProvider,
+        readerModeDelegate: WKReaderModeDelegate? = nil
+    ) -> WKEngineSession? {
+        let webViewProvider = DefaultWKWebViewProvider()
+        let logger = DefaultLogger.shared
+        let contentScriptManager = DefaultContentScriptManager()
+        let scriptResponder = EngineSessionScriptResponder()
+        let metadataFetcher = DefaultMetadataFetcherHelper()
+        let navigationHandler = DefaultNavigationHandler()
+        let uiHandler = DefaultUIHandler(sessionDependencies: dependencies)
+
+        return WKEngineSession(
+            userScriptManager: userScriptManager,
+            dependencies: dependencies,
+            configurationProvider: configurationProvider,
+            webViewProvider: webViewProvider,
+            logger: logger,
+            contentScriptManager: contentScriptManager,
+            scriptResponder: scriptResponder,
+            metadataFetcher: metadataFetcher,
+            navigationHandler: navigationHandler,
+            uiHandler: uiHandler,
+            readerModeDelegate: readerModeDelegate
+        )
+    }
+
+    @MainActor
     init?(userScriptManager: WKUserScriptManager,
-          telemetryProxy: EngineTelemetryProxy? = nil,
+          dependencies: EngineSessionDependencies,
           configurationProvider: WKEngineConfigurationProvider,
-          webViewProvider: WKWebViewProvider = DefaultWKWebViewProvider(),
+          webViewProvider: WKWebViewProvider,
           logger: Logger = DefaultLogger.shared,
-          sessionData: WKEngineSessionData = WKEngineSessionData(),
-          contentScriptManager: WKContentScriptManager = DefaultContentScriptManager(),
-          metadataFetcher: MetadataFetcherHelper = DefaultMetadataFetcherHelper(),
-          navigationHandler: DefaultNavigationHandler = DefaultNavigationHandler(),
-          uiHandler: WKUIHandler = DefaultUIHandler()) {
-        guard let webView = webViewProvider.createWebview(configurationProvider: configurationProvider) else {
+          contentScriptManager: WKContentScriptManager,
+          scriptResponder: EngineSessionScriptResponder,
+          metadataFetcher: MetadataFetcherHelper,
+          navigationHandler: DefaultNavigationHandler,
+          uiHandler: WKUIHandler,
+          readerModeDelegate: WKReaderModeDelegate?) {
+        guard let webView = webViewProvider.createWebview(configurationProvider: configurationProvider,
+                                                          parameters: dependencies.webviewParameters) else {
             logger.log("WKEngineWebView creation failed on configuration",
                        level: .fatal,
                        category: .webview)
@@ -49,23 +102,24 @@ class WKEngineSession: NSObject,
 
         self.webView = webView
         self.logger = logger
-        self.sessionData = sessionData
         self.contentScriptManager = contentScriptManager
         self.metadataFetcher = metadataFetcher
         self.navigationHandler = navigationHandler
         self.uiHandler = uiHandler
+        self.scriptResponder = scriptResponder
+        self.telemetryProxy = dependencies.telemetryProxy
         super.init()
-
-        self.setupObservers()
 
         self.metadataFetcher.delegate = self
         navigationHandler.session = self
+
         uiHandler.delegate = delegate
+        uiHandler.isActive = isActive
         webView.uiDelegate = uiHandler
         webView.navigationDelegate = navigationHandler
         webView.delegate = self
         userScriptManager.injectUserScriptsIntoWebView(webView)
-        addContentScripts()
+        addContentScripts(readerModeDelegate: readerModeDelegate)
     }
 
     // TODO: FXIOS-7903 #17648 no return from this load(url:), we need a way to recordNavigationInTab
@@ -131,7 +185,7 @@ class WKEngineSession: NSObject,
             return
         }
 
-        // Reloads the current webpage, and performs end-to-end revalidation of the content 
+        // Reloads the current webpage, and performs end-to-end revalidation of the content
         // using cache-validating conditionals, if possible.
         if webView.reloadFromOrigin() != nil {
             logger.log("Reloaded webview from origin", level: .debug, category: .webview)
@@ -168,8 +222,29 @@ class WKEngineSession: NSObject,
         }
     }
 
-    func goToHistory(index: Int) {
-        // TODO: FXIOS-7907 #17651 Handle goToHistoryIndex in WKEngineSession (equivalent to goToBackForwardListItem)
+    func goToHistory(item: EngineSessionBackForwardListItem) {
+        guard let backForwardListItem = item as? WKBackForwardListItem else {
+            logger.log("""
+                        Going to an EngineSessionBackForwardListItem that is not of \
+                        type WKBackForwardListItem in WKEngineSession is not permitted
+                        """,
+                        level: .debug,
+                        category: .webview)
+            return
+        }
+        webView.go(to: backForwardListItem)
+    }
+
+    func currentHistoryItem() -> (EngineSessionBackForwardListItem)? {
+        return webView.currentBackForwardListItem()
+    }
+
+    func getBackListItems() -> [EngineSessionBackForwardListItem] {
+        return webView.backList()
+    }
+
+    func getForwardListItems() -> [EngineSessionBackForwardListItem] {
+        return webView.forwardList()
     }
 
     func restore(state: Data) {
@@ -182,11 +257,7 @@ class WKEngineSession: NSObject,
 
     func close() {
         contentScriptManager.uninstall(session: self)
-        webView.removeAllUserScripts()
-        removeObservers()
-        webView.navigationDelegate = nil
-        webView.uiDelegate = nil
-        webView.delegate = nil
+        webView.close()
         webView.removeFromSuperview()
 
         metadataFetcher.delegate = nil
@@ -237,68 +308,122 @@ class WKEngineSession: NSObject,
         webView.setValue(newZoom, forKey: zoomKey)
     }
 
-    // MARK: Observe values
-
-    private func setupObservers() {
-        WKEngineKVOConstants.allCases.forEach {
-            webView.addObserver(
-                self,
-                forKeyPath: $0.rawValue,
-                options: .new,
-                context: nil
-            )
-        }
+    func viewPrintFormatter() -> UIPrintFormatter {
+        return webView.viewPrintFormatter()
     }
 
-    private func removeObservers() {
-        WKEngineKVOConstants.allCases.forEach {
-            webView.removeObserver(self, forKeyPath: $0.rawValue)
-        }
+    // MARK: - SessionHandler
+
+    func commitURLChange() {
+        guard let url = webView.url else { return }
+
+        sessionData.url = url
+        delegate?.onLocationChange(url: url.absoluteString)
+
+        metadataFetcher.fetch(fromSession: self, url: url)
     }
 
-    override func observeValue(
-        forKeyPath keyPath: String?,
-        of object: Any?,
-        change: [NSKeyValueChangeKey: Any]?,
-        context: UnsafeMutableRawPointer?
-    ) {
-        guard let keyPath, let path = WKEngineKVOConstants(rawValue: keyPath) else {
-            logger.log("Unhandled KVO key: \(keyPath ?? "nil")", level: .debug, category: .webview)
+    func fetchMetadata(withURL url: URL) {
+        metadataFetcher.fetch(fromSession: self, url: url)
+    }
+
+    func received(error: NSError, forURL url: URL) {
+        telemetryProxy?.handleTelemetry(event: .showErrorPage(errorCode: error.code))
+        delegate?.onErrorPageRequest(error: error)
+    }
+
+    // MARK: - WKJavascriptInterface
+
+    func callJavascriptMethod(_ method: String, scope: String?) {
+        guard let scope else {
+            webView.evaluateJavascriptInDefaultContentWorld(method)
             return
         }
+        webView.evaluateJavaScript(method, in: nil, in: .world(name: scope), completionHandler: nil)
+    }
 
-        // Will be used as needed when we start using the engine session
-        switch path {
-        case .canGoBack:
-            guard let canGoBack = change?[.newKey] as? Bool else { break }
-            delegate?.onNavigationStateChange(canGoBack: canGoBack,
-                                              canGoForward: webView.canGoForward)
-        case .canGoForward:
-            guard let canGoForward = change?[.newKey] as? Bool else { break }
-            delegate?.onNavigationStateChange(canGoBack: webView.canGoBack,
-                                              canGoForward: canGoForward)
-        case .contentSize:
-            // TODO: FXIOS-8086 - Handle view port in WebEngine
-            break
-        case .estimatedProgress:
+    // MARK: - Content scripts
+
+    private func addContentScripts(readerModeDelegate: WKReaderModeDelegate?) {
+        scriptResponder.session = self
+        let searchProviders = delegate?.adsSearchProviderModels() ?? []
+        contentScriptManager.addContentScript(AdsTelemetryContentScript(delegate: scriptResponder,
+                                                                        searchProviderModels: searchProviders),
+                                              name: AdsTelemetryContentScript.name(),
+                                              forSession: self)
+        contentScriptManager.addContentScript(FocusContentScript(delegate: scriptResponder),
+                                              name: FocusContentScript.name(),
+                                              forSession: self)
+
+        let readerMode = ReaderModeContentScript(session: self)
+        readerMode.delegate = readerModeDelegate
+        contentScriptManager.addContentScript(readerMode,
+                                              name: ReaderModeContentScript.name(),
+                                              forSession: self)
+
+        contentScriptManager.addContentScriptToPage(
+            PrintContentScript(webView: webView),
+            name: PrintContentScript.name(),
+            forSession: self
+        )
+    }
+
+    @MainActor
+    func setReaderMode(style: ReaderModeStyle, namespace: ReaderModeInfo) {
+        webView.evaluateJavascriptInDefaultContentWorld(
+            "\(namespace.rawValue).setStyle(\(style.encode()))"
+        ) { object, error in
+            return
+        }
+    }
+
+    // MARK: - WKEngineWebViewDelegate
+
+    func tabWebView(_ webView: WKEngineWebView, findInPageSelection: String) {
+        delegate?.findInPage(with: findInPageSelection)
+    }
+
+    func tabWebView(_ webView: WKEngineWebView, searchSelection: String) {
+        delegate?.search(with: searchSelection)
+    }
+
+    func tabWebViewInputAccessoryView(_ webView: WKEngineWebView) -> EngineInputAccessoryView {
+        return delegate?.onWillDisplayAccessoryView() ?? .default
+    }
+
+    func webViewPropertyChanged(_ property: WKEngineWebViewProperty) {
+        switch property {
+        case .loading(let isLoading):
+            delegate?.onLoadingStateChange(loading: isLoading)
+        case .estimatedProgress(let progress):
             if let url = webView.url, !WKInternalURL.isValid(url: url) {
-                delegate?.onProgress(progress: webView.estimatedProgress)
+                delegate?.onProgress(progress: progress)
             } else {
                 delegate?.onHideProgressBar()
             }
-        case .loading:
-            guard let loading = change?[.newKey] as? Bool else { break }
-            setupLoadingSpinnerFor(webView, isLoading: loading)
-            delegate?.onLoadingStateChange(loading: loading)
-        case .title:
-            guard let title = webView.title else { break }
-            handleTitleChange(title: title)
         case .URL:
             handleURLChange()
-        case .hasOnlySecureContent:
-            handleHasOnlySecureContentChanged(webView.hasOnlySecureContent)
+        case .title(let title):
+            handleTitleChange(title: title)
+        case .canGoBack(let canGoBack):
+            delegate?.onNavigationStateChange(canGoBack: canGoBack, canGoForward: webView.canGoForward)
+        case .canGoForward(let canGoForward):
+            delegate?.onNavigationStateChange(canGoBack: webView.canGoBack, canGoForward: canGoForward)
+        case .contentSize:
+            // TODO: FXIOS-8086 - Handle view port in WebEngine
+            break
+        case .hasOnlySecureContent(let hasOnlySecureContent):
+            handleHasOnlySecureContentChanged(hasOnlySecureContent)
+        case .isFullScreen(let isFullScreen):
+            handleFullscreen(isFullScreen: isFullScreen)
         }
     }
+
+    func webViewNeedsReload() {
+        reload()
+    }
+
+    // MARK: - WebView Properties Change
 
     private func handleHasOnlySecureContentChanged(_ value: Bool) {
         sessionData.hasOnlySecureContent = value
@@ -310,14 +435,6 @@ class WKEngineSession: NSObject,
         if !title.isEmpty, title != sessionData.title {
             sessionData.title = title
             delegate?.onTitleChange(title: title)
-        }
-    }
-
-    private func setupLoadingSpinnerFor(_ webView: WKEngineWebView, isLoading: Bool) {
-        if isLoading {
-            webView.engineScrollView?.refreshControl?.beginRefreshing()
-        } else {
-            webView.engineScrollView?.refreshControl?.endRefreshing()
         }
     }
 
@@ -344,65 +461,17 @@ class WKEngineSession: NSObject,
         commitURLChange()
     }
 
-    // MARK: - SessionHandler
-
-    func commitURLChange() {
-        guard let url = webView.url else { return }
-
-        sessionData.url = url
-        delegate?.onLocationChange(url: url.absoluteString)
-
-        metadataFetcher.fetch(fromSession: self, url: url)
-    }
-
-    func fetchMetadata(withURL url: URL) {
-        metadataFetcher.fetch(fromSession: self, url: url)
-    }
-
-    func received(error: NSError, forURL url: URL) {
-        telemetryProxy?.handleTelemetry(event: .showErrorPage(errorCode: error.code))
-        delegate?.onErrorPageRequest(error: error)
-    }
-
-    // MARK: - Content scripts
-
-    private func addContentScripts() {
-        contentScriptManager.addContentScript(AdsTelemetryContentScript(delegate: self),
-                                              name: AdsTelemetryContentScript.name(),
-                                              forSession: self)
-    }
-
-    // MARK: - WKEngineWebViewDelegate
-
-    func tabWebView(_ webView: WKEngineWebView, findInPageSelection: String) {
-        delegate?.findInPage(with: findInPageSelection)
-    }
-
-    func tabWebView(_ webView: WKEngineWebView, searchSelection: String) {
-        delegate?.search(with: searchSelection)
-    }
-
-    func tabWebViewInputAccessoryView(_ webView: WKEngineWebView) -> EngineInputAccessoryView {
-        return delegate?.onWillDisplayAccessoryView() ?? .default
+    func handleFullscreen(isFullScreen: Bool) {
+        if isFullScreen {
+            fullscreenDelegate?.enteringFullscreen()
+        } else {
+            fullscreenDelegate?.exitingFullscreen()
+        }
     }
 
     // MARK: - MetadataFetcherDelegate
 
     func didLoad(pageMetadata: EnginePageMetadata) {
         delegate?.didLoad(pageMetadata: pageMetadata)
-    }
-
-    // MARK: - AdsTelemetryScriptDelegate
-
-    func trackAdsClickedOnPage(providerName: String) {
-        telemetryProxy?.handleTelemetry(event: .trackAdsClickedOnPage(providerName: providerName))
-    }
-
-    func trackAdsFoundOnPage(providerName: String, urls: [String]) {
-        telemetryProxy?.handleTelemetry(event: .trackAdsFoundOnPage(providerName: providerName, adUrls: urls))
-    }
-
-    func searchProviderModels() -> [EngineSearchProviderModel] {
-        return delegate?.adsSearchProviderModels() ?? []
     }
 }

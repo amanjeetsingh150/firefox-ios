@@ -5,6 +5,7 @@
 import Foundation
 import Storage
 import Common
+import WebEngine
 
 /// A handler can be a plain old swift object. It does not need to extend any
 /// other object, but can.
@@ -77,7 +78,6 @@ protocol TabEventHandler: AnyObject {
     func tabDidClose(_ tab: Tab)
     func tabDidToggleDesktopMode(_ tab: Tab)
     func tabDidChangeContentBlocking(_ tab: Tab)
-    func tabDidSetScreenshot(_ tab: Tab, hasHomeScreenshot: Bool)
 }
 
 // Provide default implementations, because we don't want to litter the code with
@@ -91,7 +91,6 @@ extension TabEventHandler {
     func tabDidClose(_ tab: Tab) {}
     func tabDidToggleDesktopMode(_ tab: Tab) {}
     func tabDidChangeContentBlocking(_ tab: Tab) {}
-    func tabDidSetScreenshot(_ tab: Tab, hasHomeScreenshot: Bool) {}
 }
 
 enum TabEventLabel: String {
@@ -116,7 +115,6 @@ enum TabEvent {
     case didClose
     case didToggleDesktopMode
     case didChangeContentBlocking
-    case didSetScreenshot(isHome: Bool)
 
     var label: TabEventLabel {
         let str = "\(self)".components(separatedBy: "(")[0] // Will grab just the name from 'didChangeURL(...)'
@@ -144,8 +142,6 @@ enum TabEvent {
             handler.tabDidToggleDesktopMode(tab)
         case .didChangeContentBlocking:
             handler.tabDidChangeContentBlocking(tab)
-        case .didSetScreenshot(let hasHomeScreenshot):
-            handler.tabDidSetScreenshot(tab, hasHomeScreenshot: hasHomeScreenshot)
         }
     }
 }
@@ -176,7 +172,8 @@ private let center = NotificationCenter()
 
 private struct AssociatedKeys {
     // This property's address will be used as a unique address for the associated object's handle
-    static var observers: UInt8 = 0
+    // TODO: FXIOS-12595 This global property is not concurrency safe
+    nonisolated(unsafe) static var observers: UInt8 = 0
 }
 
 private class ObserverWrapper: NSObject {

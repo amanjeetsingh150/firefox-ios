@@ -4,7 +4,6 @@
 
 import Common
 import Redux
-import ToolbarKit
 
 struct NavigationBarState: StateType, Equatable {
     var windowUUID: WindowUUID
@@ -86,21 +85,15 @@ struct NavigationBarState: StateType, Equatable {
     }
 
     private static func handleDidLoadToolbarsAction(state: Self, action: Action) -> Self {
-        guard let displayBorder = (action as? ToolbarAction)?.displayNavBorder
+        guard let displayBorder = (action as? ToolbarAction)?.displayNavBorder,
+              let toolbarAction = action as? ToolbarAction
         else {
             return defaultState(from: state)
         }
 
-        let actions = [
-            backAction(enabled: false),
-            forwardAction(enabled: false),
-            searchAction,
-            tabsAction(),
-            menuAction()
-        ]
         return NavigationBarState(
             windowUUID: state.windowUUID,
-            actions: actions,
+            actions: navigationActions(action: toolbarAction, navigationBarState: state),
             displayBorder: displayBorder
         )
     }
@@ -167,7 +160,6 @@ struct NavigationBarState: StateType, Equatable {
     }
 
     // MARK: - Navigation Toolbar Actions
-
     private static func navigationActions(
         action: ToolbarAction,
         navigationBarState: NavigationBarState)
@@ -176,6 +168,9 @@ struct NavigationBarState: StateType, Equatable {
 
         guard let toolbarState = store.state.screenState(ToolbarState.self, for: .toolbar, window: action.windowUUID)
         else { return actions }
+
+        let isLoadAction = action.actionType as? ToolbarActionType == .didLoadToolbars
+        let layout = isLoadAction ? action.toolbarLayout : toolbarState.toolbarLayout
 
         let isUrlChangeAction = action.actionType as? ToolbarActionType == .urlDidChange
         let url = isUrlChangeAction ? action.url : toolbarState.addressToolbar.url
@@ -195,11 +190,21 @@ struct NavigationBarState: StateType, Equatable {
 
         actions = [
             backAction(enabled: canGoBack),
-            forwardAction(enabled: canGoForward),
-            middleAction,
-            tabsAction(numberOfTabs: numberOfTabs, isPrivateMode: toolbarState.isPrivateMode),
-            menuAction(showWarningBadge: showWarningBadge)
+            forwardAction(enabled: canGoForward)
         ]
+
+        switch layout {
+        case .version1, .none:
+            actions.append(middleAction)
+            actions.append(menuAction(iconName: StandardImageIdentifiers.Large.moreHorizontalRound,
+                                      showWarningBadge: showWarningBadge))
+            actions.append(tabsAction(numberOfTabs: numberOfTabs, isPrivateMode: toolbarState.isPrivateMode))
+        case .version2:
+            actions.append(middleAction)
+            actions.append(tabsAction(numberOfTabs: numberOfTabs, isPrivateMode: toolbarState.isPrivateMode))
+            actions.append(menuAction(iconName: StandardImageIdentifiers.Large.moreHorizontalRound,
+                                      showWarningBadge: showWarningBadge))
+        }
 
         return actions
     }
@@ -209,7 +214,6 @@ struct NavigationBarState: StateType, Equatable {
                                               canShowDataClearanceAction: Bool,
                                               isNewTabFeatureEnabled: Bool)
     -> ToolbarActionConfiguration {
-        // WT ToDo
         let canShowDataClearanceAction = canShowDataClearanceAction && isPrivateMode
         let isNewTabEnabled = isNewTabFeatureEnabled
         let middleActionForWebpage = canShowDataClearanceAction ?
@@ -224,7 +228,7 @@ struct NavigationBarState: StateType, Equatable {
     private static func backAction(enabled: Bool) -> ToolbarActionConfiguration {
         return ToolbarActionConfiguration(
             actionType: .back,
-            iconName: StandardImageIdentifiers.Large.back,
+            iconName: StandardImageIdentifiers.Large.chevronLeft,
             isFlippedForRTL: true,
             isEnabled: enabled,
             contextualHintType: ContextualHintType.navigation.rawValue,
@@ -235,7 +239,7 @@ struct NavigationBarState: StateType, Equatable {
     private static func forwardAction(enabled: Bool) -> ToolbarActionConfiguration {
         return ToolbarActionConfiguration(
             actionType: .forward,
-            iconName: StandardImageIdentifiers.Large.forward,
+            iconName: StandardImageIdentifiers.Large.chevronRight,
             isFlippedForRTL: true,
             isEnabled: enabled,
             a11yLabel: .TabToolbarForwardAccessibilityLabel,
@@ -244,6 +248,10 @@ struct NavigationBarState: StateType, Equatable {
 
     private static func tabsAction(numberOfTabs: Int = 1,
                                    isPrivateMode: Bool = false) -> ToolbarActionConfiguration {
+        let largeContentTitle = numberOfTabs > 99 ?
+            .Toolbars.TabsButtonOverflowLargeContentTitle :
+            String(format: .Toolbars.TabsButtonLargeContentTitle, NSNumber(value: numberOfTabs))
+
         return ToolbarActionConfiguration(
             actionType: .tabs,
             iconName: StandardImageIdentifiers.Large.tab,
@@ -251,14 +259,15 @@ struct NavigationBarState: StateType, Equatable {
             maskImageName: isPrivateMode ? ImageIdentifiers.badgeMask : nil,
             numberOfTabs: numberOfTabs,
             isEnabled: true,
+            largeContentTitle: largeContentTitle,
             a11yLabel: .Toolbars.TabsButtonAccessibilityLabel,
             a11yId: AccessibilityIdentifiers.Toolbar.tabsButton)
     }
 
-    private static func menuAction(showWarningBadge: Bool = false) -> ToolbarActionConfiguration {
+    private static func menuAction(iconName: String, showWarningBadge: Bool = false) -> ToolbarActionConfiguration {
         return ToolbarActionConfiguration(
             actionType: .menu,
-            iconName: StandardImageIdentifiers.Large.appMenu,
+            iconName: iconName,
             badgeImageName: showWarningBadge ? StandardImageIdentifiers.Large.warningFill : nil,
             maskImageName: showWarningBadge ? ImageIdentifiers.menuWarningMask : nil,
             isEnabled: true,

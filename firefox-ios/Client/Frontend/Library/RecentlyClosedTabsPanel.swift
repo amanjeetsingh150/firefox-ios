@@ -16,12 +16,13 @@ private struct RecentlyClosedPanelUX {
 }
 
 protocol RecentlyClosedPanelDelegate: AnyObject {
+    @MainActor
     func openRecentlyClosedSiteInNewTab(_ url: URL, isPrivate: Bool)
 }
 
 class RecentlyClosedTabsPanel: UIViewController, LibraryPanel, Themeable {
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
 
     weak var libraryPanelDelegate: LibraryPanelDelegate?
@@ -71,7 +72,8 @@ class RecentlyClosedTabsPanel: UIViewController, LibraryPanel, Themeable {
             tableViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
         title = .RecentlyClosedTabsPanelTitle
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
     }
 

@@ -109,9 +109,9 @@ tasks:
               tasks_for in ["action", "cron"]
               || (isPullRequest && pullRequestAction in ["opened", "reopened", "synchronize"])
               || (tasks_for == "github-push" && short_head_branch == "main")
-              || (tasks_for == "github-release" && releaseAction == "published")
+              || (tasks_for == "github-push" && short_head_branch[:8] == "release/")
             then:
-                taskId: 
+                taskId:
                     $if: 'tasks_for != "action"'
                     then: '${ownTaskId}'
                 taskGroupId:
@@ -155,7 +155,7 @@ tasks:
                 routes:
                     $flattenDeep:
                         - checks
-                        - $if: 'level == "3"'
+                        - $if: '!isPullRequest'
                           then:
                             - tc-treeherder.v2.${project}.${head_sha}
                             - $if: 'tasks_for == "github-push"'

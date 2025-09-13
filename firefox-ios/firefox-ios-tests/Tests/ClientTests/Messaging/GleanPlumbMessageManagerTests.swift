@@ -32,10 +32,10 @@ class GleanPlumbMessageManagerTests: XCTestCase {
     }
 
     override func tearDown() {
-        super.tearDown()
-
         messagingStore = nil
         subject = nil
+        Glean.shared.resetGlean(clearStores: true)
+        super.tearDown()
     }
 
     func testMessagingFeatureIsCoenrolling() {
@@ -48,6 +48,12 @@ class GleanPlumbMessageManagerTests: XCTestCase {
                 "messaging": [
                     "messages": [
                         "default-browser": [
+                            "title": "Default Browser/DefaultBrowserCard.Title",
+                            "text": "Default Browser/DefaultBrowserCard.Description",
+                            "button-label": "Default Browser/DefaultBrowserCard.Button.v2",
+                            "surface": "new-tab-card",
+                            "style": "FALLBACK",
+                            "action": "MAKE_DEFAULT_BROWSER_WITH_TUTORIAL",
                             "trigger-if-all": ["ALWAYS"],
                             "except-if-any": []
                         ]
@@ -264,6 +270,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.shown)
     }
 
+    @MainActor
     func testManagerOnMessagePressed() {
         let message = createMessage(messageId: messageId, action: "://test-action")
         subject.onMessagePressed(message, window: nil)
@@ -273,6 +280,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_withoutExpiring() {
         let message = createMessage(messageId: messageId, action: "://test-action")
         subject.onMessagePressed(message, window: nil, shouldExpire: false)
@@ -282,6 +290,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_linkWithScheme() {
         // {uuid} works for the mock message helper, but in reality, you'd use {app_id};
         // this test is showing that:
@@ -298,6 +307,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_linkWithEmbeddedParam() {
         // Test shows query params can be part of the action.
         let message = createMessage(messageId: messageId, action: "itms-apps://itunes.apple.com/app/id?utm_param=foo")
@@ -310,6 +320,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_linkWithEmbeddedParamAndOneActionParam() {
         // Test shows query param can be part of the action or part of the action-params.
         let message = createMessage(messageId: messageId,
@@ -326,6 +337,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_linkWithOneParam() {
         // This test is showing:
         // 1. that string templating happens in the query param values
@@ -342,6 +354,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.clicked)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_linkWithTwoParams() {
         let message = createMessage(messageId: messageId,
                                     action: "://open-url",
@@ -362,6 +375,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
 
     // FXIOS-8107: Disabled test as history highlights has been disabled to fix app hangs / slowness
     // Reloads for notification
+    @MainActor
     func testManagerOnMessagePressed_withMalformedURL() {
         let message = createMessage(messageId: messageId, action: "http://www.google.com?q=א")
         subject.onMessagePressed(message, window: nil)
@@ -372,6 +386,7 @@ class GleanPlumbMessageManagerTests: XCTestCase {
         testEventMetricRecordingSuccess(metric: GleanMetrics.Messaging.malformed)
     }
 
+    @MainActor
     func testManagerOnMessagePressed_withNoAction() {
         let message = createMessage(messageId: messageId, action: nil)
         subject.onMessagePressed(message, window: nil)

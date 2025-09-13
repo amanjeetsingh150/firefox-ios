@@ -6,7 +6,6 @@ import Common
 import ComponentLibrary
 import Foundation
 import UIKit
-import Shared
 
 class ContextualHintViewController: UIViewController,
                                     OnViewDismissable,
@@ -23,7 +22,7 @@ class ContextualHintViewController: UIViewController,
     // MARK: - Properties
     private var viewProvider: ContextualHintViewProvider
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     private let windowUUID: WindowUUID
 
@@ -55,8 +54,6 @@ class ContextualHintViewController: UIViewController,
     override func viewDidLoad() {
         super.viewDidLoad()
         commonInit()
-        listenForThemeChange(view)
-        applyTheme()
         isPresenting = true
     }
 
@@ -66,6 +63,9 @@ class ContextualHintViewController: UIViewController,
         onViewSummoned = nil
         view.setNeedsLayout()
         view.layoutIfNeeded()
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -164,7 +164,6 @@ class ContextualHintViewController: UIViewController,
         if delegate == nil { presentationController?.delegate = self }
 
         var viewModel = ContextualHintViewModel(
-            isActionType: viewProvider.isActionType,
             actionButtonTitle: viewProvider.getCopyFor(.action),
             title: viewProvider.getCopyFor(.title),
             description: viewProvider.getCopyFor(.description),

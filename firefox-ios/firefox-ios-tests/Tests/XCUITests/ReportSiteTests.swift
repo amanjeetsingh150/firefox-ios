@@ -6,32 +6,30 @@ import Common
 import XCTest
 import Shared
 
-class ReportSiteTests: BaseTestCase {
-    override func setUpApp() {
-        setUpLaunchArguments()
-    }
-
+// Commented this for the moment because current Menu does not contain any Report Broken Site option
+/*
+class ReportSiteTests: FeatureFlaggedTestBase {
     // https://mozilla.testrail.io/index.php?/cases/view/2831278
     func testReportSiteIssueOn() {
         launchAndGoToMenu()
         mozWaitForElementToExist(app.tables.cells[AccessibilityIdentifiers.MainMenu.reportBrokenSite])
     }
-
+    
     // https://mozilla.testrail.io/index.php?/cases/view/2831279
     func testReportSiteIssueOff() {
-        var launchArgs = app.launchArguments + ["\(LaunchArguments.LoadExperiment)reportSiteIssueOff"]
-        launchArgs = launchArgs + ["\(LaunchArguments.ExperimentFeatureName)general-app-features"]
-        app.launchArguments = launchArgs
-
+        addLaunchArgument(jsonFileName: "reportSiteIssueOff",
+                          featureName: "general-app-features")
+        
         launchAndGoToMenu()
         mozWaitForElementToNotExist(app.tables.cells[AccessibilityIdentifiers.MainMenu.reportBrokenSite])
     }
-
+    
     // MARK: Helper
     func launchAndGoToMenu() {
         app.launch()
-
+        
         navigator.openURL(path(forTestPage: "test-mozilla-book.html"))
         navigator.goto(ToolsBrowserTabMenu)
     }
 }
+*/

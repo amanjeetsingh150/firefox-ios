@@ -4,9 +4,9 @@
 
 import Common
 import XCTest
-import Shared
 @testable import Client
 
+@MainActor
 class FirefoxHomeViewModelTests: XCTestCase {
     var profile: MockProfile!
 

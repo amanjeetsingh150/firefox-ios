@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
+import XCTest
 
 class UrlBarTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306888
@@ -41,11 +42,7 @@ class UrlBarTests: BaseTestCase {
         mozWaitForElementToExist(app.tables.cells.staticTexts[defaultSearchEngine2])
         navigator.goto(SettingsScreen)
         app.navigationBars.buttons["Done"].waitAndTap()
-        if iPad() {
-            app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
-        } else {
-            app.buttons[AccessibilityIdentifiers.Toolbar.homeButton].waitAndTap()
-        }
+        app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
         tapUrlBarValidateKeyboardAndIcon()
         typeSearchTermAndHitGo(searchTerm: "Firefox")
         // The search is conducted correctly trough the default search engine

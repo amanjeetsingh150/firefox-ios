@@ -6,7 +6,6 @@ import Foundation
 import Common
 import ComponentLibrary
 import Redux
-import Shared
 
 final class NativeErrorPageViewController: UIViewController,
                                            Themeable,
@@ -15,9 +14,9 @@ final class NativeErrorPageViewController: UIViewController,
     typealias SubscriberStateType = NativeErrorPageState
     private let windowUUID: WindowUUID
 
-    // MARK: Themable Variables
+    // MARK: Themeable Variables
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     var currentWindowUUID: UUID? {
         windowUUID
@@ -158,7 +157,7 @@ final class NativeErrorPageViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .nativeErrorPage)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
         let uuid = windowUUID
         store.subscribe(self, transform: {
             return $0.select({ appState in
@@ -167,11 +166,11 @@ final class NativeErrorPageViewController: UIViewController,
         })
     }
 
-    func unsubscribeFromRedux() {
+    nonisolated func unsubscribeFromRedux() {
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .nativeErrorPage)
-        store.dispatch(action)
+        store.dispatchLegacy(action)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -184,10 +183,12 @@ final class NativeErrorPageViewController: UIViewController,
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        listenForThemeChange(view)
+
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
-        store.dispatch(NativeErrorPageAction(windowUUID: windowUUID,
-                                             actionType: NativeErrorPageActionType.errorPageLoaded))
+
+        store.dispatchLegacy(NativeErrorPageAction(windowUUID: windowUUID,
+                                                   actionType: NativeErrorPageActionType.errorPageLoaded))
     }
 
     override func viewWillTransition(
@@ -323,7 +324,7 @@ final class NativeErrorPageViewController: UIViewController,
 
     @objc
     private func didTapReload() {
-        store.dispatch(
+        store.dispatchLegacy(
             GeneralBrowserAction(
                 isNativeErrorPage: true,
                 windowUUID: windowUUID,

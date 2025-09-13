@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 @testable import Client
+@testable import ToolbarKit
 import Common
 import XCTest
 
-class AddressToolbarContainerModelTests: XCTestCase {
+final class AddressToolbarContainerModelTests: XCTestCase {
     private var mockProfile: MockProfile!
-    private var searchEnginesManager: SearchEnginesManager!
+    private var searchEnginesManager: SearchEnginesManagerProvider!
     private let windowUUID: WindowUUID = .XCTestDefaultUUID
 
     override func setUp() {
@@ -16,27 +17,30 @@ class AddressToolbarContainerModelTests: XCTestCase {
         DependencyHelperMock().bootstrapDependencies()
 
         mockProfile = MockProfile()
-
-        // The MockProfile creates a SearchEnginesManager with a `MockSearchEngineProvider`
-        searchEnginesManager = mockProfile.searchEnginesManager
+        searchEnginesManager = SearchEnginesManager(
+            prefs: mockProfile.prefs,
+            files: mockProfile.files,
+            engineProvider: MockSearchEngineProvider()
+        )
     }
 
     override func tearDown() {
-        super.tearDown()
         mockProfile = nil
         searchEnginesManager = nil
+        DependencyHelperMock().reset()
+        super.tearDown()
     }
 
     func testSearchWordFromURLWhenUrlIsNilThenSearchWordIsNil() {
         let viewModel = createSubject(withState: createBasicToolbarState())
-        XCTAssertNil(viewModel.searchTermFromURL(nil, searchEnginesManager: searchEnginesManager))
+        XCTAssertNil(viewModel.searchTermFromURL(nil))
     }
 
     func testSearchWordFromURLWhenUsingGoogleSearchThenSearchWordIsCorrect() {
         let viewModel = createSubject(withState: createBasicToolbarState())
         let searchTerm = "test"
         let url = URL(string: "http://firefox.com/find?q=\(searchTerm)")
-        let result = viewModel.searchTermFromURL(url, searchEnginesManager: searchEnginesManager)
+        let result = viewModel.searchTermFromURL(url)
         XCTAssertEqual(searchTerm, result)
     }
 
@@ -44,7 +48,7 @@ class AddressToolbarContainerModelTests: XCTestCase {
         let viewModel = createSubject(withState: createBasicToolbarState())
         let searchTerm = "test"
         let url = URL(string: "internal://local?q=\(searchTerm)")
-        XCTAssertNil(viewModel.searchTermFromURL(url, searchEnginesManager: searchEnginesManager))
+        XCTAssertNil(viewModel.searchTermFromURL(url))
     }
 
     func testUsesDefaultSearchEngine_WhenNoSearchEngineSelected() {
@@ -73,6 +77,44 @@ class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertEqual(viewModel.searchEngineImage, selectedSearchEngine.image)
     }
 
+    func testConfigureSkeletonAddressBar_withNilParameters() {
+        let model = createSubject(withState: createBasicToolbarState())
+        let config = model.configureSkeletonAddressBar(with: nil, isReaderModeAvailableOrActive: nil)
+
+        XCTAssertTrue(config.leadingPageActions.isEmpty)
+        XCTAssertTrue(config.trailingPageActions.isEmpty)
+        XCTAssertNil(config.locationViewConfiguration.url)
+    }
+
+    func testConfigureSkeletonAddressBar_withNilURL_andReaderModeAvailable() {
+        let model = createSubject(withState: createBasicToolbarState())
+        let config = model.configureSkeletonAddressBar(with: nil, isReaderModeAvailableOrActive: true)
+
+        XCTAssertTrue(config.leadingPageActions.isEmpty)
+        XCTAssertTrue(config.trailingPageActions.isEmpty)
+        XCTAssertNil(config.locationViewConfiguration.url)
+    }
+
+    func testConfigureSkeletonAddressBar_withURL_andReaderModeAvailable() {
+        let model = createSubject(withState: createBasicToolbarState())
+        let testURL = URL(string: "https://example.com")
+        let config = model.configureSkeletonAddressBar(with: testURL, isReaderModeAvailableOrActive: true)
+
+        XCTAssertEqual(config.leadingPageActions.count, 1)
+        XCTAssertEqual(config.trailingPageActions.count, 2)
+        XCTAssertEqual(config.locationViewConfiguration.url, testURL)
+    }
+
+    func testConfigureSkeletonAddressBar_withURL_andReaderModeNotAvailable() {
+        let model = createSubject(withState: createBasicToolbarState())
+        let testURL = URL(string: "https://example.com")
+        let config = model.configureSkeletonAddressBar(with: testURL, isReaderModeAvailableOrActive: false)
+
+        XCTAssertEqual(config.leadingPageActions.count, 1)
+        XCTAssertEqual(config.trailingPageActions.count, 1)
+        XCTAssertEqual(config.locationViewConfiguration.url, testURL)
+    }
+
     // MARK: - Private helpers
 
     private func createSubject(withState state: ToolbarState) -> AddressToolbarContainerModel {
@@ -84,7 +126,8 @@ class AddressToolbarContainerModelTests: XCTestCase {
     private func createAddressBarState(withSearchEngine: SearchEngineModel?) -> AddressBarState {
         return AddressBarState(windowUUID: windowUUID,
                                navigationActions: [],
-                               pageActions: [],
+                               leadingPageActions: [],
+                               trailingPageActions: [],
                                browserActions: [],
                                borderPosition: nil,
                                url: nil,
@@ -97,8 +140,9 @@ class AddressToolbarContainerModelTests: XCTestCase {
                                shouldSelectSearchTerm: true,
                                isLoading: false,
                                readerModeState: nil,
+                               canSummarize: false,
                                didStartTyping: false,
-                               showQRPageAction: true,
+                               isEmptySearch: true,
                                alternativeSearchEngine: withSearchEngine)
     }
 
@@ -109,6 +153,7 @@ class AddressToolbarContainerModelTests: XCTestCase {
     private func createBasicToolbarState() -> ToolbarState {
         return ToolbarState(windowUUID: windowUUID,
                             toolbarPosition: .top,
+                            toolbarLayout: .version1,
                             isPrivateMode: false,
                             addressToolbar: createAddressBarState(withSearchEngine: nil),
                             navigationToolbar: createBasicNavigationBarState(),
@@ -117,16 +162,19 @@ class AddressToolbarContainerModelTests: XCTestCase {
                             canGoBack: true,
                             canGoForward: true,
                             numberOfTabs: 1,
+                            scrollAlpha: 1,
                             showMenuWarningBadge: false,
                             isNewTabFeatureEnabled: false,
                             canShowDataClearanceAction: false,
                             canShowNavigationHint: false,
-                            shouldAnimate: false)
+                            shouldAnimate: false,
+                            isTranslucent: false)
     }
 
     private func createToolbarStateWithAlternativeSearchEngine(searchEngine: SearchEngineModel) -> ToolbarState {
         return ToolbarState(windowUUID: windowUUID,
                             toolbarPosition: .top,
+                            toolbarLayout: .version1,
                             isPrivateMode: false,
                             addressToolbar: createAddressBarState(withSearchEngine: searchEngine),
                             navigationToolbar: createBasicNavigationBarState(),
@@ -135,10 +183,12 @@ class AddressToolbarContainerModelTests: XCTestCase {
                             canGoBack: true,
                             canGoForward: true,
                             numberOfTabs: 1,
+                            scrollAlpha: 1,
                             showMenuWarningBadge: false,
                             isNewTabFeatureEnabled: false,
                             canShowDataClearanceAction: false,
                             canShowNavigationHint: false,
-                            shouldAnimate: false)
+                            shouldAnimate: false,
+                            isTranslucent: false)
     }
 }

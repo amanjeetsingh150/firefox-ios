@@ -4,25 +4,32 @@
 
 import Common
 import Foundation
-import Shared
 import Redux
+import SwiftUI
 
 protocol SettingsCoordinatorDelegate: AnyObject {
+    @MainActor
     func openURLinNewTab(_ url: URL)
+
+    @MainActor
     func openDebugTestTabs(count: Int)
+
+    @MainActor
     func didFinishSettings(from coordinator: SettingsCoordinator)
 }
 
-class SettingsCoordinator: BaseCoordinator,
-                           SettingsDelegate,
-                           SettingsFlowDelegate,
-                           GeneralSettingsDelegate,
-                           PrivacySettingsDelegate,
-                           PasswordManagerCoordinatorDelegate,
-                           AccountSettingsDelegate,
-                           AboutSettingsDelegate,
-                           ParentCoordinatorDelegate,
-                           QRCodeNavigationHandler {
+final class SettingsCoordinator: BaseCoordinator,
+                                 SettingsDelegate,
+                                 SettingsFlowDelegate,
+                                 GeneralSettingsDelegate,
+                                 PrivacySettingsDelegate,
+                                 PasswordManagerCoordinatorDelegate,
+                                 AccountSettingsDelegate,
+                                 AboutSettingsDelegate,
+                                 ParentCoordinatorDelegate,
+                                 QRCodeNavigationHandler,
+                                 BrowsingSettingsDelegate,
+                                 AppearanceSettingsDelegate {
     var settingsViewController: AppSettingsScreen?
     private let wallpaperManager: WallpaperManagerInterface
     private let profile: Profile
@@ -31,6 +38,7 @@ class SettingsCoordinator: BaseCoordinator,
     private let gleanUsageReportingMetricsService: GleanUsageReportingMetricsService
     weak var parentCoordinator: SettingsCoordinatorDelegate?
     private var windowUUID: WindowUUID { return tabManager.windowUUID }
+    private let settingsTelemetry: SettingsTelemetry
 
     init(
         router: Router,
@@ -38,13 +46,15 @@ class SettingsCoordinator: BaseCoordinator,
         profile: Profile = AppContainer.shared.resolve(),
         tabManager: TabManager,
         themeManager: ThemeManager = AppContainer.shared.resolve(),
-        gleanUsageReportingMetricsService: GleanUsageReportingMetricsService = AppContainer.shared.resolve()
+        gleanUsageReportingMetricsService: GleanUsageReportingMetricsService = AppContainer.shared.resolve(),
+        gleanWrapper: GleanWrapper = DefaultGleanWrapper()
     ) {
         self.wallpaperManager = wallpaperManager
         self.profile = profile
         self.tabManager = tabManager
         self.themeManager = themeManager
         self.gleanUsageReportingMetricsService = gleanUsageReportingMetricsService
+        self.settingsTelemetry = SettingsTelemetry(gleanWrapper: gleanWrapper)
         super.init(router: router)
 
         // It's important we initialize AppSettingsTableViewController with a settingsDelegate and parentCoordinator
@@ -90,6 +100,14 @@ class SettingsCoordinator: BaseCoordinator,
 
     private func getSettingsViewController(settingsSection section: Route.SettingsSection) -> UIViewController? {
         switch section {
+        case .appIcon:
+            let viewController = UIHostingController(
+                rootView: AppIconSelectionView(
+                    windowUUID: windowUUID
+                )
+            )
+            viewController.title = .Settings.AppIconSelection.ScreenTitle
+            return viewController
         case .addresses:
             let viewModel = AddressAutofillSettingsViewModel(
                 profile: profile,
@@ -118,7 +136,10 @@ class SettingsCoordinator: BaseCoordinator,
             return viewController
 
         case .search:
-            let viewController = SearchSettingsTableViewController(profile: profile, windowUUID: windowUUID)
+            let viewController = SearchSettingsTableViewController(
+                profile: profile,
+                windowUUID: windowUUID
+            )
             return viewController
 
         case .clearPrivateData:
@@ -138,14 +159,21 @@ class SettingsCoordinator: BaseCoordinator,
             return viewController
 
         case .theme:
-            return ThemeSettingsController(windowUUID: windowUUID)
+            if themeManager.isNewAppearanceMenuOn {
+                let appearanceView = AppearanceSettingsView(windowUUID: windowUUID,
+                                                            delegate: self)
+                return UIHostingController(rootView: appearanceView)
+            } else {
+                return ThemeSettingsController(windowUUID: windowUUID)
+            }
 
         case .wallpaper:
             if wallpaperManager.canSettingsBeShown {
                 let viewModel = WallpaperSettingsViewModel(
                     wallpaperManager: wallpaperManager,
                     tabManager: tabManager,
-                    theme: themeManager.getCurrentTheme(for: windowUUID)
+                    theme: themeManager.getCurrentTheme(for: windowUUID),
+                    windowUUID: windowUUID
                 )
                 let wallpaperVC = WallpaperSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
                 wallpaperVC.settingsDelegate = self
@@ -163,12 +191,14 @@ class SettingsCoordinator: BaseCoordinator,
             contentBlockerVC.tabManager = tabManager
             return contentBlockerVC
 
-        case .tabs:
-            return TabsSettingsViewController(windowUUID: windowUUID)
+        case .browser:
+            return BrowsingSettingsViewController(profile: profile, windowUUID: windowUUID)
 
         case .toolbar:
             let viewModel = SearchBarSettingsViewModel(prefs: profile.prefs)
-            return SearchBarSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
+            return LegacyFeatureFlagsManager.shared.isFeatureEnabled(.addressBarMenu, checking: .buildOnly)
+               ? UIHostingController(rootView: AddressBarSettingsView(windowUUID: windowUUID, viewModel: viewModel))
+               : SearchBarSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
 
         case .topSites:
             let viewController = TopSitesSettingsViewController(windowUUID: windowUUID)
@@ -262,6 +292,12 @@ class SettingsCoordinator: BaseCoordinator,
 
     // MARK: PrivacySettingsDelegate
 
+    func pressedAutoFillsPasswords() {
+        let viewController = AutoFillPasswordSettingsViewController(profile: profile, windowUUID: windowUUID)
+        viewController.parentCoordinator = self
+        router.push(viewController)
+    }
+
     func pressedAddressAutofill() {
         let viewModel = AddressAutofillSettingsViewModel(
             profile: profile,
@@ -317,16 +353,23 @@ class SettingsCoordinator: BaseCoordinator,
 
     // MARK: GeneralSettingsDelegate
 
+    func pressedCustomizeAppIcon() {
+        settingsTelemetry.optionSelected(option: .AppIconSelection)
+
+        let viewController = UIHostingController(
+            rootView: AppIconSelectionView(
+                windowUUID: windowUUID
+            )
+        )
+        viewController.title = .Settings.AppIconSelection.ScreenTitle
+        router.push(viewController)
+    }
+
     func pressedHome() {
         let viewController = HomePageSettingViewController(prefs: profile.prefs,
                                                            settingsDelegate: self,
                                                            tabManager: tabManager)
         viewController.profile = profile
-        router.push(viewController)
-    }
-
-    func pressedMailApp() {
-        let viewController = OpenWithSettingsViewController(prefs: profile.prefs, windowUUID: windowUUID)
         router.push(viewController)
     }
 
@@ -337,7 +380,10 @@ class SettingsCoordinator: BaseCoordinator,
     }
 
     func pressedSearchEngine() {
-        let viewController = SearchSettingsTableViewController(profile: profile, windowUUID: windowUUID)
+        let viewController = SearchSettingsTableViewController(
+            profile: profile,
+            windowUUID: windowUUID
+        )
         router.push(viewController)
     }
 
@@ -349,21 +395,49 @@ class SettingsCoordinator: BaseCoordinator,
 
     func pressedToolbar() {
         let viewModel = SearchBarSettingsViewModel(prefs: profile.prefs)
-        let viewController = SearchBarSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
-        router.push(viewController)
-    }
-
-    func pressedTabs() {
-        let viewController = TabsSettingsViewController(windowUUID: windowUUID)
-        router.push(viewController)
+        if LegacyFeatureFlagsManager.shared.isFeatureEnabled(.addressBarMenu, checking: .buildOnly) {
+            let viewController = UIHostingController(
+                rootView: AddressBarSettingsView(
+                windowUUID: windowUUID,
+                viewModel: viewModel))
+            viewController.title = .Settings.AddressBar.AddressBarMenuTitle
+            router.push(viewController)
+        } else {
+            let viewController = SearchBarSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
+            router.push(viewController)
+        }
     }
 
     func pressedTheme() {
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .themeSettings)
-        store.dispatch(action)
-        router.push(ThemeSettingsController(windowUUID: windowUUID))
+        store.dispatchLegacy(action)
+
+        if themeManager.isNewAppearanceMenuOn {
+            let appearanceView = AppearanceSettingsView(windowUUID: windowUUID,
+                                                        delegate: self)
+            let viewController = UIHostingController(rootView: appearanceView)
+            viewController.title = .SettingsAppearanceTitle
+            router.push(viewController)
+        } else {
+            router.push(ThemeSettingsController(windowUUID: windowUUID))
+        }
+    }
+
+    func pressedBrowsing() {
+        let viewController = BrowsingSettingsViewController(profile: profile,
+                                                            windowUUID: windowUUID)
+        viewController.parentCoordinator = self
+        router.push(viewController)
+    }
+
+    func pressedSummarize() {
+        let viewController = SummarizeSettingsViewController(
+            prefs: profile.prefs,
+            windowUUID: windowUUID
+        )
+        router.push(viewController)
     }
 
     // MARK: AccountSettingsDelegate
@@ -400,6 +474,18 @@ class SettingsCoordinator: BaseCoordinator,
         router.push(viewController)
     }
 
+    // MARK: - BrowsingSettingsDelegate
+
+    func pressedMailApp() {
+        let viewController = OpenWithSettingsViewController(prefs: profile.prefs, windowUUID: windowUUID)
+        router.push(viewController)
+    }
+
+    func pressedAutoPlay() {
+        let viewController = AutoplaySettingsViewController(prefs: profile.prefs, windowUUID: windowUUID)
+        router.push(viewController)
+    }
+
     // MARK: - SupportSettingsDelegate
 
     func pressedOpenSupportPage(url: URL) {
@@ -412,6 +498,15 @@ class SettingsCoordinator: BaseCoordinator,
     func didFinishPasswordManager(from coordinator: PasswordManagerCoordinator) {
         didFinish()
         remove(child: coordinator)
+    }
+
+    // MARK: - AppearanceSettingsDelegate
+
+    func pressedPageZoom() {
+        let appearanceView = PageZoomSettingsView(windowUUID: windowUUID)
+        let viewController = UIHostingController(rootView: appearanceView)
+        viewController.title = .Settings.Appearance.PageZoom.PageZoomTitle
+        router.push(viewController)
     }
 
     // MARK: - AboutSettingsDelegate

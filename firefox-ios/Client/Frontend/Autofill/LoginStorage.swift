@@ -7,13 +7,14 @@ import Storage
 import struct MozillaAppServices.Login
 
 protocol LoginStorage {
+    @MainActor
     func listLogins() async throws -> [Login]
 }
 
 extension RustLogins: LoginStorage {
     func listLogins() async throws -> [Login] {
         return try await withCheckedThrowingContinuation { continuation in
-            self.listLogins().upon { result in
+            self.listLogins { result in
                 switch result {
                 case .success(let logins):
                     continuation.resume(returning: logins)

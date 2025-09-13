@@ -44,7 +44,7 @@ final class WKInternalURL: InternalURL {
     }
 
     static func isValid(url: URL) -> Bool {
-        let isWebServerUrl = url.absoluteString.hasPrefix("http://localhost:\(WKEngineInfo.webserverPort)/")
+        let isWebServerUrl = url.absoluteString.hasPrefix("http://localhost:\(EngineConstants.webserverPort)/")
         if isWebServerUrl, url.path.hasPrefix("/test-fixture/") {
             // internal test pages need to be treated as external pages
             return false
@@ -92,7 +92,7 @@ final class WKInternalURL: InternalURL {
 
     private var extractedUrlParam: URL? {
         if let nestedUrl = url.getQuery()[WKInternalURL.Param.url.rawValue]?.removingPercentEncoding {
-            return URL(string: nestedUrl, invalidCharacters: false)
+            return URL(string: nestedUrl)
         }
         return nil
     }

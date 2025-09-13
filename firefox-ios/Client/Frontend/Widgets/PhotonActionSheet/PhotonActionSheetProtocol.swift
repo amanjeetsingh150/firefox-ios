@@ -5,7 +5,6 @@
 import Common
 import Foundation
 import Shared
-import Storage
 import UIKit
 
 protocol PhotonActionSheetProtocol {
@@ -14,6 +13,7 @@ protocol PhotonActionSheetProtocol {
     var themeManager: ThemeManager { get }
 }
 
+@MainActor
 extension PhotonActionSheetProtocol {
     typealias PresentableVC = UIViewController & UIPopoverPresentationControllerDelegate
 
@@ -47,38 +47,43 @@ extension PhotonActionSheetProtocol {
     }
 
     func getLongPressLocationBarActions(with view: UIView, alertContainer: UIView) -> [PhotonRowActions] {
-        let pasteGoAction = SingleActionViewModel(title: .PasteAndGoTitle,
-                                                  iconString: StandardImageIdentifiers.Large.clipboard) { _ in
-            if let pasteboardContents = UIPasteboard.general.string {
-                if let urlBar = view as? URLBarView {
-                    urlBar.delegate?.urlBar(urlBar, didSubmitText: pasteboardContents)
-                } else if let toolbar = view as? AddressToolbarContainer {
-                    toolbar.delegate?.openBrowser(searchTerm: pasteboardContents)
+        let pasteGoAction = SingleActionViewModel(
+            title: .PasteAndGoTitle,
+            iconString: StandardImageIdentifiers.Large.clipboard,
+            tapHandler: { _ in
+                if let pasteboardContents = UIPasteboard.general.string {
+                    if let urlBar = view as? URLBarView {
+                        urlBar.delegate?.urlBar(urlBar, didSubmitText: pasteboardContents)
+                    } else if let toolbar = view as? AddressToolbarContainer {
+                        toolbar.delegate?.openBrowser(searchTerm: pasteboardContents)
+                    }
                 }
-            }
-        }
-        pasteGoAction.accessibilityId = AccessibilityIdentifiers.Photon.pasteAndGoAction
+            },
+            accessibilityId: AccessibilityIdentifiers.Photon.pasteAndGoAction
+        )
 
-        let pasteAction = SingleActionViewModel(title: .PasteTitle,
-                                                iconString: StandardImageIdentifiers.Large.clipboard) { _ in
-            if let pasteboardContents = UIPasteboard.general.string {
-                if let urlBar = view as? URLBarView {
-                    urlBar.enterOverlayMode(pasteboardContents, pasted: true, search: true)
-                } else if let toolbar = view as? AddressToolbarContainer {
-                    toolbar.enterOverlayMode(pasteboardContents, pasted: true, search: true)
+        let pasteAction = SingleActionViewModel(
+            title: .PasteTitle,
+            iconString: StandardImageIdentifiers.Large.clipboard,
+            tapHandler: { _ in
+                if let pasteboardContents = UIPasteboard.general.string {
+                    if let urlBar = view as? URLBarView {
+                        urlBar.enterOverlayMode(pasteboardContents, pasted: true, search: true)
+                    } else if let toolbar = view as? AddressToolbarContainer {
+                        toolbar.enterOverlayMode(pasteboardContents, pasted: true, search: true)
+                    }
                 }
-            }
-        }
-        pasteAction.accessibilityId = AccessibilityIdentifiers.Photon.pasteAction
+            },
+            accessibilityId: AccessibilityIdentifiers.Photon.pasteAction
+        )
 
-        let copyAddressAction = SingleActionViewModel(title: .CopyAddressTitle,
-                                                      iconString: StandardImageIdentifiers.Large.link) { _ in
+        let copyAddressAction = SingleActionViewModel(
+            title: .CopyAddressTitle,
+            iconString: StandardImageIdentifiers.Large.link
+        ) { [tabManager] _ in
             let currentURL = tabManager.selectedTab?.currentURL()
             if let url = tabManager.selectedTab?.canonicalURL?.displayURL ?? currentURL {
                 UIPasteboard.general.url = url
-                SimpleToast().showAlertWithText(.LegacyAppMenu.AppMenuCopyURLConfirmMessage,
-                                                bottomContainer: alertContainer,
-                                                theme: themeManager.getCurrentTheme(for: tabManager.windowUUID))
             }
         }
 

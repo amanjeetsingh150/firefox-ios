@@ -7,6 +7,7 @@ import Redux
 @testable import Client
 import XCTest
 
+@MainActor
 protocol StoreTestUtility {
     func setupAppState() -> AppState
     func setupStore()
@@ -32,7 +33,7 @@ class StoreTestUtilityHelper {
         store = Store(
             state: AppState(),
             reducer: AppState.reducer,
-            middlewares: middlewares
+            middlewares: []
         )
     }
 }

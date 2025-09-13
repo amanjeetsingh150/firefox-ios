@@ -8,11 +8,17 @@ import WebKit
 import Common
 
 protocol TopTabsDelegate: AnyObject {
+    @MainActor
     func topTabsDidPressTabs()
+    @MainActor
     func topTabsDidPressNewTab(_ isPrivate: Bool)
+    @MainActor
     func topTabsDidLongPressNewTab(button: UIButton)
+    @MainActor
     func topTabsDidChangeTab()
+    @MainActor
     func topTabsDidPressPrivateMode()
+    @MainActor
     func topTabsShowCloseTabsToast()
 }
 
@@ -21,7 +27,7 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
         static let trailingEdgeSpace: CGFloat = 10
         static let topTabsViewHeight: CGFloat = 44
         static let topTabsBackgroundShadowWidth: CGFloat = 12
-        static let faderPading: CGFloat = 8
+        static let faderPadding: CGFloat = 8
         static let animationSpeed: TimeInterval = 0.1
     }
 
@@ -40,10 +46,12 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
     var tabCellIdentifier: TabDisplayerDelegate.TabCellIdentifier = TopTabCell.cellIdentifier
     var profile: Profile
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
     var currentWindowUUID: UUID? { windowUUID }
     var windowUUID: WindowUUID { tabManager.windowUUID }
+
+    private var toolbarHelper: ToolbarHelperInterface
 
     // MARK: - UI Elements
     lazy var collectionView: UICollectionView = {
@@ -116,11 +124,13 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
     init(tabManager: TabManager,
          profile: Profile,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
-         notificationCenter: NotificationProtocol = NotificationCenter.default) {
+         notificationCenter: NotificationProtocol = NotificationCenter.default,
+         toolbarHelper: ToolbarHelperInterface = ToolbarHelper()) {
         self.tabManager = tabManager
         self.profile = profile
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
+        self.toolbarHelper = toolbarHelper
         super.init(nibName: nil, bundle: nil)
         collectionView.dataSource = topTabDisplayManager
         collectionView.delegate = tabLayoutDelegate
@@ -147,7 +157,21 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
     }
 
     deinit {
-        tabManager.removeDelegate(self.topTabDisplayManager, completion: nil)
+        // TODO: FXIOS-13097 This is a work around until we can leverage isolated deinits.
+        // Also we will remove Tab Manager Delegates as part of FXIOS-13097
+        guard Thread.isMainThread else {
+            assertionFailure(
+            """
+            TopTabsViewController was not deallocated on the main thread.
+            Tab manager delegate was not removed.
+            """
+            )
+            return
+        }
+
+        MainActor.assumeIsolated {
+            tabManager.removeDelegate(topTabDisplayManager, completion: nil)
+        }
     }
 
     override func viewDidLoad() {
@@ -156,11 +180,15 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
         collectionView.dragDelegate = topTabDisplayManager
         collectionView.dropDelegate = topTabDisplayManager
 
-        listenForThemeChange(view)
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
+        applyTheme()
         setupLayout()
 
-        setupNotifications(forObserver: self,
-                           observing: [.TabsTrayDidClose])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [.TabsTrayDidClose]
+        )
 
         // Setup UIDropInteraction to handle dragging and dropping
         // links onto the "New Tab" button.
@@ -183,11 +211,21 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
         let currentTheme = themeManager.getCurrentTheme(for: windowUUID)
         let colors = currentTheme.colors
 
-        view.backgroundColor = colors.layer3
+        let isToolbarRefactorEnabled = featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly)
+
+        if isToolbarRefactorEnabled,
+           let toolbarState = store.state.screenState(ToolbarState.self, for: .toolbar, window: windowUUID),
+           toolbarState.isTranslucent {
+            view.backgroundColor = colors.layerSurfaceLow.withAlphaComponent(toolbarHelper.backgroundAlpha())
+            collectionView.backgroundColor = .clear
+        } else {
+            view.backgroundColor = colors.layer3
+            collectionView.backgroundColor = view.backgroundColor
+        }
+
         tabsButton.applyTheme(theme: currentTheme)
         privateModeButton.applyTheme(theme: currentTheme)
         newTab.tintColor = colors.iconPrimary
-        collectionView.backgroundColor = view.backgroundColor
         collectionView.reloadData()
         topTabDisplayManager.refreshStore()
     }
@@ -211,6 +249,7 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
     @objc
     func newTabTapped() {
         delegate?.topTabsDidPressNewTab(self.topTabDisplayManager.isPrivate)
+        store.dispatchLegacy(TopTabsAction(windowUUID: windowUUID, actionType: TopTabsActionType.didTapNewTab))
     }
 
     @objc
@@ -248,7 +287,7 @@ class TopTabsViewController: UIViewController, Themeable, Notifiable, FeatureFla
                 } else {
                     // Padding is added to ensure the tab is completely visible (none of the tab is under the fader)
                     let padFrame = frame.insetBy(
-                        dx: -(UX.topTabsBackgroundShadowWidth+UX.faderPading),
+                        dx: -(UX.topTabsBackgroundShadowWidth+UX.faderPadding),
                         dy: 0
                     )
                     if animated {
@@ -363,10 +402,12 @@ extension TopTabsViewController: TabDisplayerDelegate {
 }
 
 extension TopTabsViewController: TopTabCellDelegate {
+    @MainActor
     func tabCellDidClose(_ cell: UICollectionViewCell) {
         topTabDisplayManager.closeActionPerformed(forCell: cell)
         delegate?.topTabsShowCloseTabsToast()
         NotificationCenter.default.post(name: .TopTabsTabClosed, object: nil, userInfo: windowUUID.userInfo)
+        store.dispatchLegacy(TopTabsAction(windowUUID: windowUUID, actionType: TopTabsActionType.didTapCloseTab))
     }
 }
 

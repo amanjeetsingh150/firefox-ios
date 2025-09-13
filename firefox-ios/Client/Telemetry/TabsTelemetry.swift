@@ -10,6 +10,12 @@ final class TabsTelemetry {
     /// how long it takes to switch to a new tab
     private var tabSwitchTimerId: GleanTimerId?
 
+    private let gleanWrapper: GleanWrapper
+
+    init(gleanWrapper: GleanWrapper = DefaultGleanWrapper()) {
+        self.gleanWrapper = gleanWrapper
+    }
+
     func startTabSwitchMeasurement() {
         tabSwitchTimerId = GleanMetrics.Tabs.tabSwitch.start()
     }
@@ -20,29 +26,9 @@ final class TabsTelemetry {
         tabSwitchTimerId = nil
     }
 
-    static func trackTabsQuantity(tabManager: TabManager) {
-        let privateExtra = [
-            TelemetryWrapper.EventExtraKey.tabsQuantity.rawValue: Int64(tabManager.privateTabs.count)
-        ]
-        TelemetryWrapper.recordEvent(category: .information,
-                                     method: .background,
-                                     object: .tabPrivateQuantity,
-                                     extras: privateExtra)
-
-        let normalExtra = [
-            TelemetryWrapper.EventExtraKey.tabsQuantity.rawValue: Int64(tabManager.normalActiveTabs.count)
-        ]
-        TelemetryWrapper.recordEvent(category: .information,
-                                     method: .background,
-                                     object: .tabNormalQuantity,
-                                     extras: normalExtra)
-
-        let inactiveExtra = [
-            TelemetryWrapper.EventExtraKey.tabsQuantity.rawValue: Int64(tabManager.inactiveTabs.count)
-        ]
-        TelemetryWrapper.recordEvent(category: .information,
-                                     method: .background,
-                                     object: .tabInactiveQuantity,
-                                     extras: inactiveExtra)
+    func trackConsecutiveCrashTelemetry(attemptNumber: UInt) {
+        let extras = GleanMetrics.Webview.ProcessDidTerminateExtra(consecutiveCrash: Int32(attemptNumber))
+        gleanWrapper.recordEvent(for: GleanMetrics.Webview.processDidTerminate,
+                                 extras: extras)
     }
 }

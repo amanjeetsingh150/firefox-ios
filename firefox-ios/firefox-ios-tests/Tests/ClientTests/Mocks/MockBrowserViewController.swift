@@ -3,15 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
-import Storage
-
+import WebKit
 @testable import Client
 
 import enum MozillaAppServices.VisitType
 
 class MockBrowserViewController: BrowserViewController {
-    var switchToPrivacyModeCalled = false
-    var switchToPrivacyModeIsPrivate = false
     var switchToTabForURLOrOpenCalled = false
     var switchToTabForURLOrOpenURL: URL?
     var switchToTabForURLOrOpenUUID: String?
@@ -31,7 +28,6 @@ class MockBrowserViewController: BrowserViewController {
     var openURLInNewTabURL: URL?
     var openURLInNewTabIsPrivate = false
 
-    var switchToPrivacyModeCount = 0
     var switchToTabForURLOrOpenCount = 0
     var openBlankNewTabCount = 0
     var handleQueryCount = 0
@@ -55,10 +51,32 @@ class MockBrowserViewController: BrowserViewController {
     var lastVisitType: VisitType?
     var isPrivate = false
 
-    override func switchToPrivacyMode(isPrivate: Bool) {
-        switchToPrivacyModeCalled = true
-        switchToPrivacyModeIsPrivate = isPrivate
-        switchToPrivacyModeCount += 1
+    var showDocumentLoadingViewCalled = 0
+    var removeDocumentLoadingViewCalled = 0
+
+    var mockContentContainer = MockContentContainer()
+
+    var viewControllerToPresent: UIViewController?
+
+    var createWebViewCalled = 0
+    var runJavaScriptAlertPanelCalled = 0
+    var runJavaScriptConfirmPanelCalled = 0
+    var runJavaScriptTextInputPanelCalled = 0
+    var webViewDidCloseCalled = 0
+    var contextMenuConfigurationCalled = 0
+    var requestMediaCapturePermissionCalled = 0
+    var contextMenuDidEndForElementCalled = 0
+    override var newTabSettings: NewTabPage {
+        return overrideNewTabSettings
+    }
+    var overrideNewTabSettings: NewTabPage = .topSites
+
+    override var presentedViewController: UIViewController? {
+        return viewControllerToPresent
+    }
+
+    override var contentContainer: ContentContainer {
+        return mockContentContainer
     }
 
     override func switchToTabForURLOrOpen(
@@ -143,5 +161,37 @@ class MockBrowserViewController: BrowserViewController {
         didSelectURLCalled = true
         lastOpenedURL = url
         lastVisitType = visitType
+    }
+
+    override func showDocumentLoadingView() {
+        showDocumentLoadingViewCalled += 1
+    }
+
+    override func removeDocumentLoadingView() {
+        removeDocumentLoadingViewCalled += 1
+    }
+
+    override func willNavigateAway(from tab: Tab?) {}
+}
+
+class MockContentContainer: ContentContainer {
+    var shouldHaveNativeErrorPage = false
+
+    override var contentView: Screenshotable? {
+        return MockScreenshotView()
+    }
+
+    override var hasNativeErrorPage: Bool {
+        return shouldHaveNativeErrorPage
+    }
+}
+
+class MockScreenshotView: Screenshotable {
+    func screenshot(quality: CGFloat) -> UIImage? {
+        return UIImage.checkmark
+    }
+
+    func screenshot(bounds: CGRect) -> UIImage? {
+        return UIImage.checkmark
     }
 }

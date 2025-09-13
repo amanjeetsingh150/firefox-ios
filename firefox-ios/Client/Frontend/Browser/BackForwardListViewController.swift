@@ -14,10 +14,13 @@ private struct BackForwardViewUX {
 
 /// Provides information about the size of various BrowserViewController's subviews.
 protocol BrowserFrameInfoProvider: AnyObject {
+    @MainActor
     func getBottomContainerSize() -> CGSize
 
+    @MainActor
     func getHeaderSize() -> CGSize
 
+    @MainActor
     func getOverKeyboardContainerSize() -> CGSize
 }
 
@@ -38,7 +41,7 @@ class BackForwardListViewController: UIViewController,
 
     // MARK: - Theme
     var themeManager: ThemeManager
-    var themeObserver: NSObjectProtocol?
+    var themeListenerCancellable: Any?
     var notificationCenter: NotificationProtocol
 
     lazy var tableView: UITableView = .build { tableView in
@@ -55,10 +58,12 @@ class BackForwardListViewController: UIViewController,
 
     var tabManager: TabManager?
     weak var browserFrameInfoProvider: BrowserFrameInfoProvider?
-    var currentItem: WKBackForwardListItem?
-    var listData = [WKBackForwardListItem]()
+    var currentItem: BackForwardListItem?
+    var listData = [BackForwardListItem]()
     let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
+
+    private var toolbarHelper: ToolbarHelperInterface
 
     var tableHeight: CGFloat {
         return min(BackForwardViewUX.RowHeight * CGFloat(listData.count), self.view.frame.height/2)
@@ -74,13 +79,15 @@ class BackForwardListViewController: UIViewController,
 
     init(profile: Profile,
          windowUUID: WindowUUID,
-         backForwardList: WKBackForwardList,
+         backForwardList: BackForwardList,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
-         notificationCenter: NotificationProtocol = NotificationCenter.default) {
+         notificationCenter: NotificationProtocol = NotificationCenter.default,
+         toolbarHelper: ToolbarHelperInterface = ToolbarHelper()) {
         self.profile = profile
         self.windowUUID = windowUUID
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
+        self.toolbarHelper = toolbarHelper
         super.init(nibName: nil, bundle: nil)
 
         loadSites(backForwardList)
@@ -89,14 +96,18 @@ class BackForwardListViewController: UIViewController,
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        listenForThemeChange(view)
         setupLayout()
+        listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
+
         scrollTableViewToIndex(currentRow)
         setupDismissTap()
 
-        setupNotifications(forObserver: self,
-                           observing: [UIAccessibility.reduceTransparencyStatusDidChangeNotification])
+        startObservingNotifications(
+            withNotificationCenter: notificationCenter,
+            forObserver: self,
+            observing: [UIAccessibility.reduceTransparencyStatusDidChangeNotification]
+        )
     }
 
     private func setupLayout() {
@@ -146,7 +157,7 @@ class BackForwardListViewController: UIViewController,
         shadow.backgroundColor = theme.colors.shadowDefault
     }
 
-    func homeAndNormalPagesOnly(_ bfList: WKBackForwardList) {
+    func homeAndNormalPagesOnly(_ bfList: BackForwardList) {
         let items = bfList.forwardList.reversed() + [bfList.currentItem].compactMap({ $0 }) + bfList.backList.reversed()
 
         // error url's are OK as they are used to populate history on session restore.
@@ -162,7 +173,7 @@ class BackForwardListViewController: UIViewController,
         }
     }
 
-    func loadSites(_ bfList: WKBackForwardList) {
+    func loadSites(_ bfList: BackForwardList) {
         currentItem = bfList.currentItem
 
         homeAndNormalPagesOnly(bfList)
@@ -208,7 +219,7 @@ class BackForwardListViewController: UIViewController,
     // the back/forward list can be shown at the top or bottom of the screen
     // the position depends on the address bar position and whether the navigation toolbar is shown or not
     private func isDisplayedAtBottom(for traitCollection: UITraitCollection, isBottomSearchBar: Bool) -> Bool {
-        let showNavToolbar = ToolbarHelper().shouldShowNavigationToolbar(for: traitCollection)
+        let showNavToolbar = toolbarHelper.shouldShowNavigationToolbar(for: traitCollection)
         return showNavToolbar || isBottomSearchBar
     }
 
@@ -311,7 +322,7 @@ class BackForwardListViewController: UIViewController,
         let viewModel = BackForwardCellViewModel(site: site,
                                                  connectingForwards: indexPath.item != 0,
                                                  connectingBackwards: indexPath.item != listData.count-1,
-                                                 isCurrentTab: listData[indexPath.item] == currentItem,
+                                                 isCurrentTab: listData[indexPath.item].url == currentItem?.url,
                                                  strokeBackgroundColor: currentTheme().colors.iconPrimary)
 
         cell.configure(viewModel: viewModel, theme: currentTheme())
@@ -319,7 +330,12 @@ class BackForwardListViewController: UIViewController,
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tabManager?.selectedTab?.goToBackForwardListItem(listData[indexPath.item])
+        let item = listData[indexPath.row]
+        if let item = item as? TemporaryDocumentBackForwardListItem {
+            tabManager?.selectedTab?.goToBackForwardListItem(item.localItem)
+        } else if let item = item as? WKBackForwardListItem {
+            tabManager?.selectedTab?.goToBackForwardListItem(item)
+        }
         dismiss(animated: true, completion: nil)
     }
 

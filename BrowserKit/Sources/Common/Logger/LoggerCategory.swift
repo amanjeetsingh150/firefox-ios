@@ -11,6 +11,9 @@ public enum LoggerCategory: String {
     /// Related to content (trackers, advertisements) blocking
     case adblock
 
+    /// Related to setting an alternative app icon and resetting to the default app icon.
+    case appIcon
+
     /// Related to address, credit card and password autofill
     case autofill
 
@@ -42,14 +45,26 @@ public enum LoggerCategory: String {
     /// Related to the main menu.
     case mainMenu
 
+    /// Related to Merino AS.
+    case merino
+
+    /// Related to onboarding
+    case onboarding
+
     /// Related to redux library or integration
     case redux
+
+    /// Related to the settings
+    case settings
 
     /// Related to the setup of services on app launch.
     case setup
 
     /// Related to showing the share sheet from multiple places in the app.
     case shareSheet
+
+    /// Related to the shortcuts library
+    case shortcutsLibrary
 
     /// Related to storage (keychain, SQL database, store of different types, etc).
     case storage
@@ -59,6 +74,9 @@ public enum LoggerCategory: String {
 
     /// Related to the tabs UI, setup and management
     case tabs
+
+    /// Related to Glean telemetry pings and events
+    case telemetry
 
     /// Webview scripts, webview delegate, webserver like GCDWebserver, showing webview alerts, webview navigation
     case webview

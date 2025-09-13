@@ -1,9 +1,9 @@
 {
-    "url": "https://api.github.com/repos/FirefoxUX/acorn-icons/releases/198599624",
-    "assets_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/releases/198599624/assets",
-    "upload_url": "https://uploads.github.com/repos/FirefoxUX/acorn-icons/releases/198599624/assets{?name,label}",
-    "html_url": "https://github.com/FirefoxUX/acorn-icons/releases/tag/v1.27.0",
-    "id": 198599624,
+    "url": "https://api.github.com/repos/FirefoxUX/acorn-icons/releases/240598973",
+    "assets_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/releases/240598973/assets",
+    "upload_url": "https://uploads.github.com/repos/FirefoxUX/acorn-icons/releases/240598973/assets{?name,label}",
+    "html_url": "https://github.com/FirefoxUX/acorn-icons/releases/tag/v1.49.1",
+    "id": 240598973,
     "author": {
         "login": "cwzilla",
         "id": 87655586,
@@ -25,16 +25,18 @@
         "user_view_type": "public",
         "site_admin": false
     },
-    "node_id": "RE_kwDOI1CID84L1mPI",
-    "tag_name": "v1.27.0",
+    "node_id": "RE_kwDOI1CID84OVz-9",
+    "tag_name": "v1.49.1",
     "target_commitish": "main",
-    "name": "v1.27.0",
+    "name": "v1.49.1",
     "draft": false,
+    "immutable": false,
     "prerelease": false,
-    "created_at": "2025-02-05T14:47:06Z",
-    "published_at": "2025-02-05T14:48:14Z",
+    "created_at": "2025-08-18T13:05:38Z",
+    "updated_at": "2025-08-18T13:06:39Z",
+    "published_at": "2025-08-18T13:06:39Z",
     "assets": [],
-    "tarball_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/tarball/v1.27.0",
-    "zipball_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/zipball/v1.27.0",
-    "body": "# Changelog\r\n## [1.27.0]\r\n### Added\r\n- PDF\r\n  - signatureLarge.pdf\r\n\r\n- SVG\r\n  - signature-24.svg\r\n\r\n- XML\r\n  - ic_signature_24.xml"
+    "tarball_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/tarball/v1.49.1",
+    "zipball_url": "https://api.github.com/repos/FirefoxUX/acorn-icons/zipball/v1.49.1",
+    "body": "# [Changelog]\r\n### [1.49.1]\r\n### Changed\r\n\r\n- PDF\r\n  - globeSmall.pdf\r\n  - globeMedium.pdf\r\n  - globeLarge.pdf\r\n\r\n- SVG\r\n  - globe-16.svg\r\n  - globe-20.svg\r\n  - globe-24.svg\r\n\r\n- XML\r\n  - ic_globe_16.xml\r\n  - ic_globe_20.xml\r\n  - ic_globe_24.xml"
 }

@@ -16,11 +16,11 @@ enum ContextualHintType: String {
     case jumpBackIn = "JumpBackIn"
     case jumpBackInSyncedTab = "JumpBackInSyncedTab"
     case inactiveTabs = "InactiveTabs"
-    case toolbarLocation = "ToolbarLocation"
     case mainMenu = "MainMenu"
-    case shoppingExperience = "ShoppingExperience"
     case dataClearance = "DataClearance"
     case navigation = "Navigation"
+    case toolbarUpdate = "ToolbarUpdate"
+    case summarizeToolbarEntry = "SummarizeToolbarEntry"
 }
 
 class ContextualHintViewProvider: ContextualHintPrefsKeysProvider, SearchBarLocationProvider {
@@ -49,7 +49,8 @@ class ContextualHintViewProvider: ContextualHintPrefsKeysProvider, SearchBarLoca
         let hintEligibilityUtility = ContextualHintEligibilityUtility(
             with: profile,
             overlayState: overlayState,
-            isCFRToolbarFeatureEnabled: featureFlags.isFeatureEnabled(.isToolbarCFREnabled, checking: .buildOnly))
+            isToolbarUpdateCFRFeatureEnabled: featureFlags.isFeatureEnabled(.toolbarUpdateHint, checking: .buildOnly)
+        )
 
         return hintEligibilityUtility.canPresent(hintType)
     }
@@ -82,7 +83,6 @@ class ContextualHintViewProvider: ContextualHintPrefsKeysProvider, SearchBarLoca
 
         switch hintType {
         case .inactiveTabs: timeInterval = 0.25
-        case .toolbarLocation: timeInterval = 0.5
         default: timeInterval = 1.25
         }
 
@@ -104,31 +104,12 @@ class ContextualHintViewProvider: ContextualHintPrefsKeysProvider, SearchBarLoca
     // MARK: Text
 
     func getCopyFor(_ copyType: ContextualHintCopyType) -> String {
-        let copyProvider: ContextualHintCopyProvider
-
-        switch hintType {
-        case .toolbarLocation: copyProvider = ContextualHintCopyProvider(arrowDirecton: arrowDirection)
-        default: copyProvider = ContextualHintCopyProvider()
-        }
-
-        return copyProvider.getCopyFor(copyType, of: hintType)
-    }
-
-    var isActionType: Bool {
-        switch hintType {
-        case .inactiveTabs,
-                .toolbarLocation,
-                .shoppingExperience:
-            return true
-
-        default: return false
-        }
+        return ContextualHintCopyProvider().getCopyFor(copyType, of: hintType)
     }
 
     // MARK: - Telemetry
     func sendTelemetryEvent(for eventType: CFRTelemetryEvent) {
-        let hintTypeExtra = hintType == .toolbarLocation ? getToolbarLocation() : hintType.rawValue
-        let extra = [TelemetryWrapper.EventExtraKey.cfrType.rawValue: hintTypeExtra]
+        let extra = [TelemetryWrapper.EventExtraKey.cfrType.rawValue: hintType.rawValue]
 
         switch eventType {
         case .closeButton:
@@ -155,12 +136,6 @@ class ContextualHintViewProvider: ContextualHintPrefsKeysProvider, SearchBarLoca
                                          extras: extra)
             hasSentTelemetryEvent = true
         }
-    }
-
-    private func getToolbarLocation() -> String {
-        guard isBottomSearchBar else { return "ToolbarLocationTop" }
-
-        return "ToolbarLocationBottom"
     }
 
     // MARK: - Present

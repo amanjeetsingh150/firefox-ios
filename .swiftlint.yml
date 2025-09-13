@@ -30,13 +30,13 @@ only_rules: # Only enforce these rules, ignore all others
   - mark
   - no_space_in_method_call
   - ns_number_init_as_function_reference
-  - operator_whitespace
+  - function_name_whitespace
   - orphaned_doc_comment
   - private_over_fileprivate
   - protocol_property_accessors_order
   - redundant_discardable_let
   - redundant_objc_attribute
-  - redundant_optional_initialization
+  - implicit_optional_initialization
   - redundant_string_enum_value
   - redundant_void_return
   - return_arrow_whitespace
@@ -57,7 +57,6 @@ only_rules: # Only enforce these rules, ignore all others
   - void_return
   - file_header
   - redundant_type_annotation
-  - attributes
   - closing_brace
   - closure_end_indentation
   - contains_over_filter_count
@@ -86,6 +85,7 @@ only_rules: # Only enforce these rules, ignore all others
   - accessibility_trait_for_button
   - force_cast
   - closure_body_length
+  - function_body_length
   - implicitly_unwrapped_optional
 
 # These rules were originally opted into. Disabling for now to get
@@ -103,8 +103,12 @@ line_length:
   ignores_interpolated_strings: true
 
 closure_body_length:
-  warning: 50
-  error: 50
+  warning: 34
+  error: 34
+
+function_body_length:
+  warning: 161
+  error: 161
 
 file_header:
   required_string: |
@@ -149,6 +153,8 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   # Focus specific
   - focus-ios/Blockzilla/Generated
   - focus-ios-tests/tools/Localizations
+  # Application-services specific
+  - MozillaRustComponents/
 
 included:
   - /Users/vagrant/git
