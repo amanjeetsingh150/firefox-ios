@@ -3,8 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import UIKit
+import Common
 
-final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable {
+final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable, TrendingSearchEngine {
+    static let logger: Logger = DefaultLogger.shared
     static let supportsSecureCoding = true
 
     struct UX {
@@ -23,26 +25,19 @@ final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable {
     /// documents. Post-consolidation we send the engineID + suffix (if available)
     var telemetryID: String {
         guard !isCustomEngine else { return "custom" }
-        if SearchEngineFlagManager.isSECEnabled {
-            if let suffix = telemetrySuffix, !suffix.isEmpty {
-                return engineID + "-" + suffix
-            } else {
-                return engineID
-            }
+        if let suffix = telemetrySuffix, !suffix.isEmpty {
+            return engineID + "-" + suffix
         } else {
             return engineID
         }
     }
 
     private let suggestTemplate: String?
+    private let trendingTemplate: String?
     private let searchTermComponent = "{searchTerms}"
     private let searchQueryComponentKey: String?
     private let googleEngineID = {
-        if SearchEngineFlagManager.isSECEnabled {
-            return "google"
-        } else {
-            return "google-b-1-m"
-        }
+        return "google"
     }()
 
     var headerSearchTitle: String {
@@ -74,11 +69,13 @@ final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable {
          image: UIImage,
          searchTemplate: String,
          suggestTemplate: String?,
+         trendingTemplate: String? = nil,
          isCustomEngine: Bool) {
         self.shortName = shortName
         self.image = image
         self.searchTemplate = searchTemplate
         self.suggestTemplate = suggestTemplate
+        self.trendingTemplate = trendingTemplate
         self.telemetrySuffix = telemetrySuffix
         self.isCustomEngine = isCustomEngine
         self.engineID = engineID
@@ -107,10 +104,16 @@ final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable {
         self.isCustomEngine = isCustomEngine
         self.image = image
 
-        self.engineID = (aDecoder.decodeObject(forKey: CodingKeys.engineID.rawValue) as? String) ??
-        Self.generateCustomEngineID()
+        self.engineID = (aDecoder.decodeObject(forKey: CodingKeys.engineID.rawValue) as? String) ?? {
+            let customID = Self.generateCustomEngineID()
+            OpenSearchEngine.logger.log("[SEC] Decoding '\(shortName)', applied custom ID: \(customID)",
+                                        level: .info,
+                                        category: .remoteSettings)
+            return customID
+        }()
         self.telemetrySuffix = aDecoder.decodeObject(forKey: CodingKeys.telemetrySuffix.rawValue) as? String
         self.suggestTemplate = nil
+        self.trendingTemplate = nil
 
         self.searchQueryComponentKey = OpenSearchEngine.getQueryArgFromTemplate(
             searchTemplate: self.searchTemplate,
@@ -146,6 +149,12 @@ final class OpenSearchEngine: NSObject, NSSecureCoding, Sendable {
             return getURLFromTemplate(suggestTemplate, query: query)
         }
         return nil
+    }
+
+    /// Returns the trending search URL for the specific search engine.
+    func trendingURLForEngine() -> URL? {
+        guard let trendingTemplate else { return nil }
+        return getURLFromTemplate(trendingTemplate, query: "")
     }
 
     /// Returns the query that was used to construct a given search URL

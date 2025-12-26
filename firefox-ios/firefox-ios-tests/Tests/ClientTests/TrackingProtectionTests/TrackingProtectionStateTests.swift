@@ -10,17 +10,18 @@ import Redux
 final class TrackingProtectionStateTests: XCTestCase {
     private var mockProfile: MockProfile!
 
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
         mockProfile = MockProfile()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         mockProfile = nil
+        try await super.tearDown()
     }
 
+    @MainActor
     func testDismissTrackingProtectionAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -37,6 +38,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertEqual(newState.shouldClearCookies, false)
     }
 
+    @MainActor
     func testNavigateToSettingsAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -51,6 +53,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertNil(newState.displayView)
     }
 
+    @MainActor
     func testShowTrackingProtectionDetailsAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -65,6 +68,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertNil(newState.navigateTo)
     }
 
+    @MainActor
     func testShowBlockedTrackersDetailsAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -79,6 +83,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertNil(newState.navigateTo)
     }
 
+    @MainActor
     func testToggleTrackingProtectionStatusAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -93,6 +98,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertNil(newState.displayView)
     }
 
+    @MainActor
     func testUpdateBlockedTrackerStatsAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()
@@ -108,6 +114,7 @@ final class TrackingProtectionStateTests: XCTestCase {
         XCTAssertNil(newState.displayView)
     }
 
+    @MainActor
     func testUpdateConnectionStatusAction() {
         let initialState = createSubject()
         let reducer = trackingProtectionReducer()

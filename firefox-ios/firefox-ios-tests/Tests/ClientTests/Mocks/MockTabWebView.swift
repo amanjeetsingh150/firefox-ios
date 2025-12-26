@@ -95,20 +95,21 @@ final class MockTabWebView: TabWebView {
     }
 }
 
+@MainActor
 class MockTab: Tab {
     private var isHomePage: Bool
     var enqueueDocumentCalled = 0
 
-    init(profile: Profile, windowUUID: WindowUUID, isHomePage: Bool = false) {
+    init(profile: Profile, isPrivate: Bool = false, windowUUID: WindowUUID, isHomePage: Bool = false) {
         self.isHomePage = isHomePage
-        super.init(profile: profile, windowUUID: windowUUID)
+        super.init(profile: profile, isPrivate: isPrivate, windowUUID: windowUUID)
     }
 
     override var isFxHomeTab: Bool {
         return isHomePage
     }
 
-    override func getSessionCookies(_ completion: @escaping ([HTTPCookie]) -> Void) {
+    override func getSessionCookies(_ completion: @escaping @MainActor @Sendable ([HTTPCookie]) -> Void) {
         completion([])
     }
 

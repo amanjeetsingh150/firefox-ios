@@ -6,26 +6,21 @@ import SwiftUI
 import ComponentLibrary
 import Common
 
-public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtocol>: View {
-    @State private var textColor: Color = .clear
-    @State private var secondaryTextColor: Color = .clear
-    @State private var cardBackgroundColor: Color = .clear
-
+public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtocol>: ThemeableView {
+    @State public var theme: Theme
     @StateObject private var viewModel: TosFlowViewModel<ViewModel>
-    let windowUUID: WindowUUID
-    var themeManager: ThemeManager
-    public let onEmbededLinkAction: (TosAction) -> Void
+    public let windowUUID: WindowUUID
+    public var themeManager: ThemeManager
 
     public init(
         viewModel: TosFlowViewModel<ViewModel>,
         windowUUID: WindowUUID,
-        themeManager: ThemeManager,
-        onEmbededLinkAction: @escaping (TosAction) -> Void
+        themeManager: ThemeManager
     ) {
         self._viewModel = StateObject(wrappedValue: viewModel)
         self.windowUUID = windowUUID
         self.themeManager = themeManager
-        self.onEmbededLinkAction = onEmbededLinkAction
+        self.theme = themeManager.getCurrentTheme(for: windowUUID)
     }
 
     // MARK: - Body
@@ -35,42 +30,41 @@ public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtoc
             let heightScale = geometry.size.height / UX.CardView.baseHeight
             let scale = min(widthScale, heightScale)
             ZStack {
-                AnimatedGradientMetalView(windowUUID: windowUUID, themeManager: themeManager)
+                AnimatedGradientView(windowUUID: windowUUID, themeManager: themeManager)
                     .ignoresSafeArea()
                     .accessibilityHidden(true)
                 VStack {
                     cardContent(geometry: geometry, scale: scale)
                     Spacer()
+                        .frame(height: UX.CardView.pageControlHeight)
+                        .padding(.bottom)
                 }
                 .padding(.top, UX.CardView.cardTopPadding)
-                .onAppear {
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .ThemeDidChange)) {
-                    guard let uuid = $0.windowUUID, uuid == windowUUID else { return }
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
             }
+            .animation(.easeOut, value: geometry.size)
         }
+        .listenToThemeChanges(theme: $theme, manager: themeManager, windowUUID: windowUUID)
     }
 
     @ViewBuilder
     private func cardContent(geometry: GeometryProxy, scale: CGFloat) -> some View {
         VStack {
             GeometryReader { geometry in
-                ScrollView(.vertical) {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: UX.CardView.spacing * scale) {
                         Spacer()
-                        imageView(scale: scale)
-                        titleView
+                        VStack(spacing: UX.CardView.spacing * scale) {
+                            imageView(scale: scale)
+                            titleView
+                        }
                         bodyView
                         Spacer()
                         links
                         Spacer()
                     }
                     .padding(UX.CardView.verticalPadding * scale)
-                        .frame(width: geometry.size.width)
-                        .frame(minHeight: geometry.size.height)
+                    .frame(width: geometry.size.width)
+                    .frame(minHeight: geometry.size.height)
                 }
                 .scrollBounceBehavior(basedOnSize: true)
             }
@@ -78,26 +72,23 @@ public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtoc
                 .padding(UX.CardView.verticalPadding * scale)
                 .padding(.bottom)
         }
-        .frame(height: geometry.size.height * UX.CardView.cardHeightRatio)
-        .background(
-            RoundedRectangle(cornerRadius: UX.CardView.cornerRadius)
-                .fill(cardBackgroundColor)
-                .accessibilityHidden(true)
-        )
+        .cardBackground(theme: theme, cornerRadius: UX.CardView.cornerRadius)
         .padding(.horizontal, UX.CardView.horizontalPadding * scale)
         .accessibilityElement(children: .contain)
+        .padding(.vertical)
     }
 
     // MARK: - Subviews
 
     var links: some View {
-        VStack(alignment: .center, spacing: UX.Onboarding.Spacing.standard) {
+        VStack(alignment: UX.CardView.horizontalAlignmentForCurrentLocale, spacing: UX.Onboarding.Spacing.standard) {
             ForEach(Array(viewModel.configuration.embededLinkText.enumerated()), id: \.element.linkText) { index, link in
                 AttributedLinkText<TosAction>(
-                    theme: themeManager.getCurrentTheme(for: windowUUID),
+                    theme: theme,
                     fullText: link.fullText,
                     linkText: link.linkText,
                     action: link.action,
+                    textAlignment: UX.CardView.textAlignmentForCurrentLocale,
                     linkAction: viewModel.handleEmbededLinkAction(action:)
                 )
             }
@@ -119,8 +110,8 @@ public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtoc
 
     var titleView: some View {
         Text(viewModel.configuration.title)
-            .font(UX.CardView.titleFont)
-            .foregroundColor(textColor)
+            .font(UX.CardView.titleFontForCurrentLocale)
+            .foregroundColor(Color(theme.colors.textPrimary))
             .multilineTextAlignment(.center)
             .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)TitleLabel")
             .accessibility(addTraits: .isHeader)
@@ -131,30 +122,23 @@ public struct TermsOfServiceCompactView<ViewModel: OnboardingCardInfoModelProtoc
         Text(viewModel.configuration.body)
             .fixedSize(horizontal: false, vertical: true)
             .font(UX.CardView.bodyFont)
-            .foregroundColor(secondaryTextColor)
-            .multilineTextAlignment(.center)
+            .foregroundColor(Color(theme.colors.textSecondary))
+            .multilineTextAlignment(UX.CardView.textAlignmentForCurrentLocale)
+            .frame(maxWidth: .infinity, alignment: UX.CardView.frameAlignmentForCurrentLocale)
             .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)DescriptionLabel")
             .accessibilityLabel(viewModel.configuration.body)
     }
 
     var primaryButton: some View {
-        Button(
-            viewModel.configuration.buttons.primary.title,
+        OnboardingPrimaryButton(
+            title: viewModel.configuration.buttons.primary.title,
             action: {
                 viewModel.handleEmbededLinkAction(
                     action: .accept
                 )
-            }
+            },
+            theme: theme,
+            accessibilityIdentifier: "\(viewModel.configuration.a11yIdRoot)PrimaryButton"
         )
-        .font(UX.CardView.primaryActionFont)
-        .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)PrimaryButton")
-        .buttonStyle(PrimaryButtonStyle(theme: themeManager.getCurrentTheme(for: windowUUID)))
-    }
-
-    private func applyTheme(theme: Theme) {
-        let color = theme.colors
-        textColor = Color(color.textPrimary)
-        secondaryTextColor = Color(color.textSecondary)
-        cardBackgroundColor = Color(color.layer2)
     }
 }

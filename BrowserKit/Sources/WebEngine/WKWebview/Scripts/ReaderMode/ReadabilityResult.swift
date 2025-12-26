@@ -6,7 +6,7 @@ import Common
 import Foundation
 
 /// This struct captures the response from the Readability.js code.
-public struct ReadabilityResult {
+public struct ReadabilityResult: Sendable {
     /// The `dir` global attribute is an enumerated attribute that indicates the directionality of the element's text
     enum Direction: String {
         /// Direction for languages that are written from the left to the right
@@ -93,7 +93,7 @@ public struct ReadabilityResult {
 }
 
 // NSObject wrapper around ReadabilityResult Swift struct for adding into the NSCache
-class ReadabilityResultWrapper: NSObject {
+final class ReadabilityResultWrapper: NSObject {
     let result: ReadabilityResult
 
     init(readabilityResult: ReadabilityResult) {

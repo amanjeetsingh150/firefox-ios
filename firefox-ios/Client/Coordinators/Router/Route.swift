@@ -5,7 +5,7 @@
 import Foundation
 
 /// An enumeration representing different navigational routes in an application.
-enum Route: Equatable {
+enum Route {
     /// Represents a search route that takes a URL, a boolean value indicating whether the search
     /// is private or not and an optional set of search options.
     ///
@@ -108,6 +108,7 @@ enum Route: Equatable {
         case mailto
         case newTab = "newtab"
         case search
+        case relayMask
         case browser
         case theme
         case toolbar

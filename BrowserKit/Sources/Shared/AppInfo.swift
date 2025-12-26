@@ -22,7 +22,7 @@ extension AppInfo {
     /// Please be aware that we needed to migrate this webserverPort in WebEngine.WKEngineInfo
     /// due to Shared target issues in #17721. This webserverPort needs to be deleted with
     /// FXIOS-7960 once the WebEngine package is integrated in Firefox iOS
-    public static nonisolated(unsafe) var webserverPort = 6571
+    nonisolated(unsafe) public static var webserverPort = 6571
 
     /// Return the keychain access group.
     public static func keychainAccessGroupWithPrefix(_ prefix: String) -> String {
@@ -41,7 +41,9 @@ extension AppInfo {
         if UserDefaults.standard.bool(forKey: AppInfo.debugPrefIsChinaEdition) {
             return true
         }
-        return Locale.current.identifier == "zh_CN"
+        // FIXME: FXIOS-14170 China FxA is no longer available, do not enable ChinaEdition based on locale
+        // return Locale.current.identifier == "zh_CN"
+        return false
     }()
 
     // The App Store page identifier for the Firefox iOS application

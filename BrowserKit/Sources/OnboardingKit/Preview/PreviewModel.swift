@@ -49,12 +49,12 @@ private struct PreviewModel: OnboardingCardInfoModelProtocol {
     var image: UIImage? { UIImage(named: imageID, in: Bundle.module, compatibleWith: nil) }
 }
 
-public enum OnboardingType: String, Codable, Sendable {
+enum OnboardingType: String, Codable, Sendable {
     case freshInstall = "fresh-install"
     case upgrade
 }
 
-public enum OnboardingMultipleChoiceAction: String, CaseIterable, Codable, Sendable {
+enum OnboardingMultipleChoiceAction: String, CaseIterable, Codable, Sendable {
     case themeDark = "theme-dark"
     case themeLight = "theme-light"
     case themeSystemDefault = "theme-system-default"
@@ -78,7 +78,7 @@ public enum OnboardingMultipleChoiceAction: String, CaseIterable, Codable, Senda
     }
 }
 
-public enum OnboardingInstructionsPopupActions: String, CaseIterable, Codable, Sendable {
+enum OnboardingInstructionsPopupActions: String, CaseIterable, Codable, Sendable {
     case dismiss
     case dismissAndNextCard = "dismiss-and-next-card"
     case openIosFxSettings = "open-ios-fx-settings"
@@ -87,7 +87,7 @@ public enum OnboardingInstructionsPopupActions: String, CaseIterable, Codable, S
     var id: String { rawValue }
 }
 
-public enum OnboardingActions: String, CaseIterable, Codable, Sendable {
+enum OnboardingActions: String, CaseIterable, Codable, Sendable {
     case endOnboarding = "end-onboarding"
     case forwardOneCard = "forward-one-card"
     case forwardTwoCard = "forward-two-card"
@@ -231,7 +231,9 @@ extension PreviewModel {
         themeManager: DefaultThemeManager(sharedContainerIdentifier: ""),
         viewModel: OnboardingFlowViewModel(
             onboardingCards: PreviewModel.all,
-            onActionTap: { _, _, _ in },
+            skipText: "Skip",
+            onActionTap: { _, _, _ in
+            },
             onMultipleChoiceActionTap: { _, _ in },
             onComplete: { _ in }
         )
@@ -248,8 +250,7 @@ extension PreviewModel {
             onComplete: {}
         ),
         windowUUID: .DefaultUITestingUUID,
-        themeManager: DefaultThemeManager(sharedContainerIdentifier: ""),
-        onEmbededLinkAction: { _ in }
+        themeManager: DefaultThemeManager(sharedContainerIdentifier: "")
     )
 }
 

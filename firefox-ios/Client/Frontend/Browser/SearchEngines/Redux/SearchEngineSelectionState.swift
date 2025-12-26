@@ -5,7 +5,7 @@
 import Common
 import Redux
 
-struct SearchEngineSelectionState: ScreenState, Equatable {
+struct SearchEngineSelectionState: ScreenState {
     var windowUUID: WindowUUID
     var shouldDismiss: Bool
     // Default search engine should appear in position 0
@@ -14,7 +14,7 @@ struct SearchEngineSelectionState: ScreenState, Equatable {
     var selectedSearchEngine: SearchEngineModel?
 
     init(appState: AppState, uuid: WindowUUID) {
-        guard let state = store.state.screenState(
+        guard let state = appState.screenState(
             SearchEngineSelectionState.self,
             for: .searchEngineSelection,
             window: uuid

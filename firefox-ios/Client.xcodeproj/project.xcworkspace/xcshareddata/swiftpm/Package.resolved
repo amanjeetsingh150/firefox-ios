@@ -1,5 +1,5 @@
 {
-  "originHash" : "fd9e7ee0a5a4a51afa470f26a1227faf19a6a9a8d18a6fe0350eae566b77a495",
+  "originHash" : "8e4e4df87f14a9940451e64286d5469d4efa8c163c4dc6180cb11640a9d49b7f",
   "pins" : [
     {
       "identity" : "a-star",
@@ -43,7 +43,7 @@
       "location" : "https://github.com/nbhasin2/GCDWebServer.git",
       "state" : {
         "branch" : "master",
-        "revision" : "7674c93e79ee5aac17681acace324761325e7346"
+        "revision" : "0039b4d377874784258154c2c551d146320a8985"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mozilla/glean-swift",
       "state" : {
-        "revision" : "ef4ef0d2344800abf7e7d4f23c62c1d6acd10ffe",
-        "version" : "65.0.3"
+        "revision" : "8470fb7d0ff00d1d0f845ec445fbc70b4c6cbab3",
+        "version" : "66.3.0"
       }
     },
     {

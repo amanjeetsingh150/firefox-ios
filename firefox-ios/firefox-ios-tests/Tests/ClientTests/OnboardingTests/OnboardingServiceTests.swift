@@ -40,6 +40,8 @@ class MockOnboardingNavigationDelegate: OnboardingNavigationDelegate {
 }
 
 final class MockIntroScreenManager: IntroScreenManagerProtocol {
+    var onboardingVariant: Client.OnboardingVariant
+
     /// Controls what `shouldShowIntroScreen` returns
     var stubShouldShowIntroScreen: Bool
 
@@ -51,10 +53,12 @@ final class MockIntroScreenManager: IntroScreenManagerProtocol {
 
     init(
         shouldShowIntro: Bool = false,
-        isModernEnabled: Bool = false
+        isModernEnabled: Bool = false,
+        onboardingVariant: Client.OnboardingVariant = .legacy
     ) {
         self.stubShouldShowIntroScreen = shouldShowIntro
         self.stubIsModernOnboardingEnabled = isModernEnabled
+        self.onboardingVariant = onboardingVariant
     }
 
     var shouldShowIntroScreen: Bool {
@@ -77,6 +81,56 @@ class MockSearchBarLocationSaver: SearchBarLocationSaverProtocol {
     func saveUserSearchBarLocation(profile: Profile, userInterfaceIdiom: UIUserInterfaceIdiom) {
         saveUserSearchBarLocationCalled = true
         savedProfile = profile
+    }
+}
+
+class MockOnboardingTelemetryUtility: OnboardingTelemetryProtocol {
+    var sendCardViewTelemetryCalled = false
+    var sendButtonActionTelemetryCalled = false
+    var sendMultipleChoiceButtonActionTelemetryCalled = false
+    var sendDismissOnboardingTelemetryCalled = false
+    var sendGoToSettingsButtonTappedTelemetryCalled = false
+    var sendDismissButtonTappedTelemetryCalled = false
+
+    var cardName: String?
+    var action: OnboardingActions?
+    var primaryButton: Bool?
+    var multipleChoiceAction: OnboardingMultipleChoiceAction?
+
+    func sendCardViewTelemetry(from cardName: String) {
+        sendCardViewTelemetryCalled = true
+        self.cardName = cardName
+    }
+
+    func sendButtonActionTelemetry(from cardName: String,
+                                   with action: OnboardingActions,
+                                   and primaryButton: Bool) {
+        sendButtonActionTelemetryCalled = true
+        self.cardName = cardName
+        self.action = action
+        self.primaryButton = primaryButton
+    }
+
+    func sendMultipleChoiceButtonActionTelemetry(
+        from cardName: String,
+        with action: OnboardingMultipleChoiceAction
+    ) {
+        sendMultipleChoiceButtonActionTelemetryCalled = true
+        self.cardName = cardName
+        self.multipleChoiceAction = action
+    }
+
+    func sendDismissOnboardingTelemetry(from cardName: String) {
+        sendDismissOnboardingTelemetryCalled = true
+        self.cardName = cardName
+    }
+
+    func sendGoToSettingsButtonTappedTelemetry() {
+        sendGoToSettingsButtonTappedTelemetryCalled = true
+    }
+
+    func sendDismissButtonTappedTelemetry() {
+        sendDismissButtonTappedTelemetryCalled = true
     }
 }
 
@@ -103,9 +157,10 @@ final class OnboardingServiceTests: XCTestCase {
     var mockSearchBarLocationSaver: MockSearchBarLocationSaver!
     var mockProfile: MockProfile!
     var mockThemeManager: MockThemeManager!
+    var mockTelemetryUtility: MockOnboardingTelemetryUtility!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
         mockDelegate = MockOnboardingServiceDelegate()
         mockNavigationDelegate = MockOnboardingNavigationDelegate()
@@ -116,6 +171,7 @@ final class OnboardingServiceTests: XCTestCase {
         mockSearchBarLocationSaver = MockSearchBarLocationSaver()
         mockProfile = MockProfile(databasePrefix: "OnboardingServiceTests")
         mockThemeManager = MockThemeManager()
+        mockTelemetryUtility = MockOnboardingTelemetryUtility()
 
         sut = OnboardingService(
             userDefaults: mockUserDefaults,
@@ -130,11 +186,11 @@ final class OnboardingServiceTests: XCTestCase {
             notificationCenter: mockNotificationCenter,
             searchBarLocationSaver: mockSearchBarLocationSaver
         )
+        sut.telemetryUtility = mockTelemetryUtility
         DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
         sut = nil
         mockDelegate = nil
@@ -146,7 +202,7 @@ final class OnboardingServiceTests: XCTestCase {
         mockSearchBarLocationSaver = nil
         mockProfile = nil
         mockThemeManager = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Request Notifications Tests

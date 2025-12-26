@@ -6,6 +6,7 @@ import Foundation
 import WebKit
 import Glean
 import Storage
+import Common
 
 /// Type-specific information to record in telemetry about a visible search
 /// suggestion.
@@ -138,12 +139,14 @@ enum SearchTelemetryValues {
     }
 }
 
-class SearchTelemetry {
+// TODO: FXIOS-13477 Make SearchTelemetry actually sendable
+class SearchTelemetry: @unchecked Sendable {
     var code = ""
     var provider: SearchEngine = .none
     var shouldSetGoogleTopSiteSearch = false
     var shouldSetUrlTypeSearch = false
     private var tabManager: TabManager
+    private let gleanWrapper: GleanWrapper
 
     var interactionType: SearchTelemetryValues.Interaction = .typed
     var selectedResult: SearchTelemetryValues.SelectedResult = .unknown
@@ -155,13 +158,16 @@ class SearchTelemetry {
     var visibleFilteredRemoteClientTabs = [ClientTabsSearchWrapper]()
     var visibleSuggestions = [String]()
     var visibleFirefoxSuggestions = [RustFirefoxSuggestion]()
+    var hasSeenRecentSearches = false
+    var hasSeenTrendingSearches = false
     var visibleData = [Site]()
 
     var searchQuery = ""
     var savedQuery = ""
 
-    init(tabManager: TabManager) {
+    init(tabManager: TabManager, gleanWrapper: GleanWrapper = DefaultGleanWrapper()) {
         self.tabManager = tabManager
+        self.gleanWrapper = gleanWrapper
     }
 
     // MARK: Searchbar SAP
@@ -196,7 +202,7 @@ class SearchTelemetry {
     }
 
     // MARK: Track Regular and Follow-on SAP from Tab and TopSite
-
+    @MainActor
     func trackTabAndTopSiteSAP(_ tab: Tab, webView: WKWebView) {
         let provider = tab.getProviderForUrl()
         let code = SearchPartner.getCode(
@@ -238,18 +244,19 @@ class SearchTelemetry {
     // MARK: Impression Telemetry
     func startImpressionTimer() {
         impressionTelemetryTimer?.invalidate()
-        impressionTelemetryTimer = Timer.scheduledTimer(timeInterval: 1.0,
-                                                        target: self,
-                                                        selector: #selector(recordURLBarSearchImpressionTelemetryEvent),
-                                                        userInfo: nil,
-                                                        repeats: false)
+        impressionTelemetryTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { [weak self] _ in
+            guard let self = self else { return }
+            ensureMainThread {
+                self.recordURLBarSearchImpressionTelemetryEvent()
+            }
+        })
     }
 
     func stopImpressionTimer() {
         impressionTelemetryTimer?.invalidate()
     }
 
-    @objc
+    @MainActor
     func recordURLBarSearchImpressionTelemetryEvent() {
         guard let tab = tabManager.selectedTab else { return }
         let reasonKey = TelemetryWrapper.EventExtraKey.UrlbarTelemetry.reason.rawValue
@@ -298,6 +305,7 @@ class SearchTelemetry {
     }
 
     // MARK: Engagement Telemetry
+    @MainActor
     func recordURLBarSearchEngagementTelemetryEvent() {
         guard let tab = tabManager.selectedTab else { return }
 
@@ -358,6 +366,7 @@ class SearchTelemetry {
                                      extras: extraDetails)
     }
 
+    @MainActor
     func recordURLBarSearchAbandonmentTelemetryEvent() {
         guard let tab = tabManager.selectedTab else { return }
 
@@ -402,6 +411,7 @@ class SearchTelemetry {
                                      extras: extraDetails)
     }
 
+    @MainActor
     func checkSAP(for tab: Tab?) -> SearchTelemetryValues.Sap {
         guard let tab = tab else { return .urlbar }
         if tab.isFxHomeTab || tab.isCustomHomeTab {
@@ -430,6 +440,11 @@ class SearchTelemetry {
         visibleFilteredOpenedTabs.removeAll()
         visibleFirefoxSuggestions.removeAll()
         visibleFilteredRemoteClientTabs.removeAll()
+    }
+
+    func clearZeroSearchSectionSeen() {
+        hasSeenRecentSearches = false
+        hasSeenTrendingSearches = false
     }
 
     // Comma separated list of result types in order.
@@ -500,6 +515,34 @@ class SearchTelemetry {
         }
 
         return groupTypes.joined(separator: ",")
+    }
+
+    // MARK: Trending Searches
+    func trendingSearchesShown(count: Int) {
+        let countExtra = GleanMetrics.SearchTrendingSearches.SuggestionsShownExtra(count: Int32(count))
+        gleanWrapper.recordEvent(for: GleanMetrics.SearchTrendingSearches.suggestionsShown, extras: countExtra)
+    }
+
+    func trendingSearchesTapped(at index: Int) {
+        let position = "\(index + 1)"
+        let positionExtra = GleanMetrics.SearchTrendingSearches.SuggestionTappedExtra(position: Int32(position))
+        gleanWrapper.recordEvent(for: GleanMetrics.SearchTrendingSearches.suggestionTapped, extras: positionExtra)
+    }
+
+    // MARK: Recent Searches
+    func recentSearchesShown(count: Int) {
+        let countExtra = GleanMetrics.SearchRecentSearches.SuggestionsShownExtra(count: Int32(count))
+        gleanWrapper.recordEvent(for: GleanMetrics.SearchRecentSearches.suggestionsShown, extras: countExtra)
+    }
+
+    func recentSearchesTapped(at index: Int) {
+        let position = "\(index + 1)"
+        let positionExtra = GleanMetrics.SearchRecentSearches.SuggestionTappedExtra(position: Int32(position))
+        gleanWrapper.recordEvent(for: GleanMetrics.SearchRecentSearches.suggestionTapped, extras: positionExtra)
+    }
+
+    func recentSearchesClearButtonTapped() {
+        gleanWrapper.recordEvent(for: GleanMetrics.SearchRecentSearches.clearButtonTapped)
     }
 }
 

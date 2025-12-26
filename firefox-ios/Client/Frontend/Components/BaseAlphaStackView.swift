@@ -5,6 +5,7 @@
 import Common
 import Foundation
 
+@MainActor
 protocol AlphaDimmable {
     func updateAlphaForSubviews(_ alpha: CGFloat)
 }
@@ -13,10 +14,6 @@ class BaseAlphaStackView: UIStackView, AlphaDimmable, ThemeApplicable {
     var isClearBackground = false
     var isSpacerClearBackground = false
     lazy var toolbarHelper: ToolbarHelperInterface = ToolbarHelper()
-
-    private var isToolbarRefactorEnabled: Bool {
-        return FxNimbus.shared.features.toolbarRefactorFeature.value().enabled
-    }
 
     private var isToolbarTranslucencyEnabled: Bool {
         return FxNimbus.shared.features.toolbarRefactorFeature.value().translucency
@@ -122,7 +119,7 @@ class BaseAlphaStackView: UIStackView, AlphaDimmable, ThemeApplicable {
     }
 
     func applyTheme(theme: Theme) {
-        let color: UIColor = isToolbarRefactorEnabled ? theme.colors.layerSurfaceLow : theme.colors.layer1
+        let color: UIColor = theme.colors.layerSurfaceLow
         let backgroundAlpha = toolbarHelper.glassEffectAlpha
 
         backgroundColor = isClearBackground ? .clear : color

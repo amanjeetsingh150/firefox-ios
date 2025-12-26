@@ -104,6 +104,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
                    level: .info,
                    category: .lifecycle)
 
+        // Perform migration of changed UA file
+        Tab.ChangeUserAgent.performMigration()
+
         return true
     }
 
@@ -112,16 +115,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         var recordCompleteToken: ActionToken?
         var recordCancelledToken: ActionToken?
         recordCompleteToken = AppEventQueue.wait(for: .recordStartupTimeOpenDeeplinkComplete) { [weak self] in
-            self?.shareTelemetry.sendOpenDeeplinkTimeRecord()
-            guard let recordCancelledToken, let recordCompleteToken  else { return }
-            AppEventQueue.cancelAction(token: recordCancelledToken)
-            AppEventQueue.cancelAction(token: recordCompleteToken)
+            ensureMainThread { [weak self] in
+                self?.shareTelemetry.sendOpenDeeplinkTimeRecord()
+                guard let recordCancelledToken, let recordCompleteToken  else { return }
+                AppEventQueue.cancelAction(token: recordCancelledToken)
+                AppEventQueue.cancelAction(token: recordCompleteToken)
+            }
         }
         recordCancelledToken = AppEventQueue.wait(for: .recordStartupTimeOpenDeeplinkCancelled) { [weak self] in
-            self?.shareTelemetry.cancelOpenURLTimeRecord()
-            guard let recordCancelledToken, let recordCompleteToken  else { return }
-            AppEventQueue.cancelAction(token: recordCancelledToken)
-            AppEventQueue.cancelAction(token: recordCompleteToken)
+            ensureMainThread { [weak self] in
+                self?.shareTelemetry.cancelOpenURLTimeRecord()
+                guard let recordCancelledToken, let recordCompleteToken  else { return }
+                AppEventQueue.cancelAction(token: recordCancelledToken)
+                AppEventQueue.cancelAction(token: recordCompleteToken)
+            }
         }
     }
 
@@ -147,6 +154,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
             suggestBackgroundUtility = BackgroundFirefoxSuggestIngestUtility(firefoxSuggest: firefoxSuggest)
         }
 
+        metricKitWrapper.beginObservingMXPayloads()
+
         let topSitesProvider = TopSitesProviderImplementation(
             placesFetcher: profile.places,
             pinnedSiteFetcher: profile.pinnedSites,
@@ -156,6 +165,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         widgetManager = TopSitesWidgetManager(topSitesProvider: topSitesProvider)
 
         addObservers()
+
+        /// Prewarm translation resources off the main thread
+        /// This will fetch the translator WASM and model attachments for the device language.
+        /// Running this on a utility QoS to avoid impacting app launch time.
+        if featureFlags.isFeatureEnabled(.translation, checking: .buildOnly) {
+            DispatchQueue.global(qos: .utility).async {
+                ASTranslationModelsFetcher().prewarmResourcesForStartup()
+            }
+        }
 
         logger.log("didFinishLaunchingWithOptions end",
                    level: .info,
@@ -183,6 +201,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         profile.syncManager?.applicationDidBecomeActive()
         webServerUtil?.setUpWebServer()
 
+        // Process any pending app extension telemetry events (e.g., from Share Extension)
+        TelemetryWrapper.shared.processPendingAppExtensionTelemetry(profile: profile)
+
         TelemetryWrapper.recordEvent(category: .action, method: .foreground, object: .app)
 
         // update top sites widget
@@ -193,8 +214,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
             self?.profile.cleanupHistoryIfNeeded()
         }
 
-        DispatchQueue.global().async { [weak self] in
-            self?.profile.pollCommands(forcePoll: false)
+        DispatchQueue.global().async { [weak profile] in
+            profile?.pollCommands(forcePoll: false)
         }
 
         updateWallpaperMetadata()
@@ -260,8 +281,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, FeatureFlaggable {
         requiredEvents += windowManager.allWindowUUIDs(includingReserved: true).map { .tabRestoration($0) }
         isLoadingBackgroundTabs = true
         AppEventQueue.wait(for: requiredEvents) { [weak self] in
-            self?.isLoadingBackgroundTabs = false
-            self?.backgroundTabLoader.loadBackgroundTabs()
+            ensureMainThread { [weak self] in
+                self?.isLoadingBackgroundTabs = false
+                self?.backgroundTabLoader.loadBackgroundTabs()
+            }
         }
     }
 
@@ -336,15 +359,18 @@ extension AppDelegate: Notifiable {
     /// When migrated to Scenes, these methods aren't called.
     /// Consider this a temporary solution to calling into those methods.
     func handleNotifications(_ notification: Notification) {
-        switch notification.name {
-        case UIApplication.didBecomeActiveNotification:
-            applicationDidBecomeActive(UIApplication.shared)
-        case UIApplication.willResignActiveNotification:
-            applicationWillResignActive(UIApplication.shared)
-        case UIApplication.didEnterBackgroundNotification:
-            applicationDidEnterBackground(UIApplication.shared)
+        let name = notification.name
+        ensureMainThread {
+            switch name {
+            case UIApplication.didBecomeActiveNotification:
+                self.applicationDidBecomeActive(UIApplication.shared)
+            case UIApplication.willResignActiveNotification:
+                self.applicationWillResignActive(UIApplication.shared)
+            case UIApplication.didEnterBackgroundNotification:
+                self.applicationDidEnterBackground(UIApplication.shared)
 
-        default: break
+            default: break
+            }
         }
     }
 }

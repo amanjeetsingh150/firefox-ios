@@ -7,11 +7,8 @@ import Common
 import ComponentLibrary
 
 // MARK: - Updated OnboardingBasicCardViewCompact
-struct OnboardingBasicCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol>: View {
-    @State private var textColor: Color = .clear
-    @State private var secondaryTextColor: Color = .clear
-    @State private var cardBackgroundColor: Color = .clear
-    @State private var secondaryActionColor: Color = .clear
+struct OnboardingBasicCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol>: ThemeableView {
+    @State var theme: Theme
     @Environment(\.sizeCategory)
     private var sizeCategory
 
@@ -30,74 +27,63 @@ struct OnboardingBasicCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol
         self.windowUUID = windowUUID
         self.themeManager = themeManager
         self.onBottomButtonAction = onBottomButtonAction
+        self.theme = themeManager.getCurrentTheme(for: windowUUID)
     }
 
     var body: some View {
         GeometryReader { geometry in
             cardContent(geometry: geometry)
-                .padding(.top, UX.CardView.cardTopPadding)
-                .onAppear {
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .ThemeDidChange)) {
-                    guard let uuid = $0.windowUUID, uuid == windowUUID else { return }
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
         }
+        .listenToThemeChanges(theme: $theme, manager: themeManager, windowUUID: windowUUID)
     }
 
     @ViewBuilder
     private func cardContent(geometry: GeometryProxy) -> some View {
-        VStack(spacing: UX.CardView.cardSecondaryContainerPadding(for: sizeCategory)) {
+        ScrollView(showsIndicators: false) {
             VStack {
-                ScrollView {
-                    VStack(spacing: UX.CardView.spacing) {
-                        titleView
-                            .padding(.top, UX.CardView.titleTopPadding)
-                        imageView
-                        bodyView
-                        Spacer()
-                    }
-                    .padding(.horizontal, UX.CardView.horizontalPadding)
-                }
-                .scrollBounceBehavior(basedOnSize: true)
+                titleView
+                    .padding(.top, UX.CardView.titleCompactTopPadding)
 
-                primaryButton
-                    .padding(UX.CardView.verticalPadding)
+                Spacer(minLength: UX.CardView.minContentSpacing)
+                VStack(spacing: UX.CardView.contentSpacing) {
+                    imageView(geometry: geometry)
+                    bodyView
+                }
+                Spacer(minLength: UX.CardView.minContentSpacing)
+                VStack(spacing: UX.CardView.buttonsSpacing) {
+                    primaryButton
+                    secondaryButton
+                }
+                .padding(.bottom, UX.CardView.buttonsBottomPadding)
             }
-            .frame(
-                width: geometry.size.width,
-                height: geometry.size.height * UX.CardView.cardHeightRatio
-            )
-            .background(
-                RoundedRectangle(cornerRadius: UX.CardView.cornerRadius)
-                    .fill(cardBackgroundColor)
-                    .accessibilityHidden(true)
-            )
-            secondaryButton
-            Spacer()
+            .padding(.horizontal, UX.CardView.cardHorizontalPadding)
+            .frame(minHeight: geometry.size.height, maxHeight: .infinity, alignment: .center)
         }
+        .scrollBounceBehavior(basedOnSize: true)
+        .cardBackground(theme: theme, cornerRadius: UX.CardView.cornerRadius)
     }
 
     var titleView: some View {
         Text(viewModel.title)
-            .font(UX.CardView.titleFont)
-            .foregroundColor(textColor)
+            .font(UX.CardView.titleFontForCurrentLocale)
+            .foregroundColor(theme.colors.textPrimary.color)
             .multilineTextAlignment(.center)
             .accessibility(identifier: "\(viewModel.a11yIdRoot)TitleLabel")
             .accessibility(addTraits: .isHeader)
             .if(sizeCategory <= .large) { view in
                 view.frame(minHeight: UX.CardView.titleAlignmentMinHeightPadding, alignment: .topLeading)
             }
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
-    var imageView: some View {
+    func imageView(geometry: GeometryProxy) -> some View {
         if let img = viewModel.image {
+            let imgHeight = min(img.size.height, geometry.size.height * 0.4)
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(height: UX.CardView.imageHeight)
+                .frame(maxHeight: imgHeight)
                 .accessibilityHidden(true)
                 .accessibility(identifier: "\(viewModel.a11yIdRoot)ImageView")
         }
@@ -106,50 +92,40 @@ struct OnboardingBasicCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol
     var bodyView: some View {
         Text(viewModel.body)
             .font(UX.CardView.bodyFont)
-            .foregroundColor(secondaryTextColor)
-            .multilineTextAlignment(.center)
+            .foregroundColor(theme.colors.textSecondary.color)
+            .multilineTextAlignment(UX.CardView.textAlignmentForCurrentLocale)
+            .lineLimit(nil)
             .accessibility(identifier: "\(viewModel.a11yIdRoot)DescriptionLabel")
     }
 
     var primaryButton: some View {
-        Button(
-            viewModel.buttons.primary.title,
+        OnboardingPrimaryButton(
+            title: viewModel.buttons.primary.title,
             action: {
                 onBottomButtonAction(
                     viewModel.buttons.primary.action,
                     viewModel.name
                 )
-            }
+            },
+            theme: theme,
+            accessibilityIdentifier: "\(viewModel.a11yIdRoot)PrimaryButton"
         )
-        .font(UX.CardView.primaryActionFont)
-        .accessibility(identifier: "\(viewModel.a11yIdRoot)PrimaryButton")
-        .buttonStyle(PrimaryButtonStyle(theme: themeManager.getCurrentTheme(for: windowUUID)))
     }
 
     @ViewBuilder
     var secondaryButton: some View {
         if let secondary = viewModel.buttons.secondary {
-            Button(
-                secondary.title,
+            OnboardingSecondaryButton(
+                title: secondary.title,
                 action: {
                     onBottomButtonAction(
                         secondary.action,
                         viewModel.name
                     )
-                })
-            .font(UX.CardView.secondaryActionFont)
-            .foregroundColor(secondaryActionColor)
-            .padding(.top, UX.CardView.secondaryButtonTopPadding)
-            .padding(.bottom, UX.CardView.secondaryButtonBottomPadding)
-            .accessibility(identifier: "\(viewModel.a11yIdRoot)SecondaryButton")
+                },
+                theme: theme,
+                accessibilityIdentifier: "\(viewModel.a11yIdRoot)SecondaryButton"
+            )
         }
-    }
-
-    private func applyTheme(theme: Theme) {
-        let color = theme.colors
-        textColor = Color(color.textPrimary)
-        secondaryTextColor = Color(color.textSecondary)
-        cardBackgroundColor = Color(color.layer2)
-        secondaryActionColor = Color(color.textOnDark)
     }
 }

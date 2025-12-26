@@ -6,31 +6,29 @@ import UIKit
 
 enum ContentType {
     case homepage
-    case legacyHomepage
     case privateHomepage
     case nativeErrorPage
     case webview
 }
 
+@MainActor
 protocol ContentContainable: UIViewController {
     var contentType: ContentType { get }
 }
 
 /// A container for view controllers, currently used to embed content in BrowserViewController
-class ContentContainer: UIView,
-                        FeatureFlaggable {
+class ContentContainer: UIView, FeatureFlaggable {
+    var toolbarHelper: ToolbarHelperInterface = ToolbarHelper()
+
     private var isSwipingTabsEnabled: Bool {
-        return featureFlags.isFeatureEnabled(.toolbarSwipingTabs, checking: .buildOnly)
+        return toolbarHelper.isSwipingTabsEnabled
     }
+
     private var type: ContentType?
     private(set) var contentController: ContentContainable?
 
     var contentView: Screenshotable? {
         return contentController?.view
-    }
-
-    var hasLegacyHomepage: Bool {
-        return type == .legacyHomepage
     }
 
     var hasPrivateHomepage: Bool {
@@ -42,7 +40,7 @@ class ContentContainer: UIView,
     }
 
     var hasAnyHomepage: Bool {
-        return hasLegacyHomepage || hasHomepage || hasPrivateHomepage
+        return hasHomepage || hasPrivateHomepage
     }
 
     var hasWebView: Bool {
@@ -58,7 +56,7 @@ class ContentContainer: UIView,
     /// If the content shouldn't be removed then it's view hierarchy is kept on screen.
     private var shouldRemovePreviousContent: Bool {
         if isSwipingTabsEnabled {
-            return !hasWebView && !hasHomepage && !hasLegacyHomepage && !hasPrivateHomepage
+            return !hasWebView && !hasHomepage && !hasPrivateHomepage
         }
         return !hasWebView
     }
@@ -69,8 +67,6 @@ class ContentContainer: UIView,
     /// - Returns: True when we can add the view controller to the container
     func canAdd(content: ContentContainable) -> Bool {
         switch type {
-        case .legacyHomepage:
-            return !(content is LegacyHomepageViewController)
         case .nativeErrorPage:
             return !(content is NativeErrorPageViewController)
         case .homepage:

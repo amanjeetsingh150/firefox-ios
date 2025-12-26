@@ -6,9 +6,8 @@ import SwiftUI
 import Common
 import ComponentLibrary
 
-struct OnboardingMultipleChoiceCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol>: View {
-    @State private var textColor: Color = .clear
-    @State private var cardBackgroundColor: Color = .clear
+struct OnboardingMultipleChoiceCardViewCompact<ViewModel: OnboardingCardInfoModelProtocol>: ThemeableView {
+    @State var theme: Theme
     @State private var selectedAction: ViewModel.OnboardingMultipleChoiceActionType
     @Environment(\.sizeCategory)
     var sizeCategory
@@ -31,6 +30,7 @@ struct OnboardingMultipleChoiceCardViewCompact<ViewModel: OnboardingCardInfoMode
         self.themeManager = themeManager
         self.onBottomButtonAction = onBottomButtonAction
         self.onMultipleChoiceAction = onMultipleChoiceAction
+        self.theme = themeManager.getCurrentTheme(for: windowUUID)
         guard let defaultAction = viewModel.defaultSelectedButton?.action else {
             return nil
         }
@@ -39,78 +39,88 @@ struct OnboardingMultipleChoiceCardViewCompact<ViewModel: OnboardingCardInfoMode
 
     var body: some View {
         GeometryReader { geometry in
-            scrollViewContent(geometry: geometry)
-                .padding(.top, UX.CardView.cardTopPadding)
-            .onAppear {
-                applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .ThemeDidChange)) {
-                guard let uuid = $0.windowUUID, uuid == windowUUID else { return }
-                applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-            }
+            cardContent(geometry: geometry)
         }
+        .listenToThemeChanges(theme: $theme, manager: themeManager, windowUUID: windowUUID)
     }
 
-    private func scrollViewContent(geometry: GeometryProxy) -> some View {
-        VStack {
-            ScrollView {
-                VStack(spacing: UX.CardView.spacing) {
-                    titleView
-                        .padding(.top, UX.CardView.titleTopPadding)
-                    OnboardingSegmentedControl<ViewModel.OnboardingMultipleChoiceActionType>(
-                        selection: $selectedAction,
-                        items: viewModel.multipleChoiceButtons,
-                        windowUUID: windowUUID,
-                        themeManager: themeManager
-                    )
-                    .onChange(of: selectedAction) { newAction in
-                        onMultipleChoiceAction(newAction, viewModel.name)
-                    }
+    @ViewBuilder
+    private func cardContent(geometry: GeometryProxy) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack {
+                titleView
+                    .padding(.top, UX.CardView.titleCompactTopPadding)
+
+                Spacer(minLength: UX.CardView.minContentSpacing)
+                OnboardingSegmentedControl<ViewModel.OnboardingMultipleChoiceActionType>(
+                    theme: theme,
+                    selection: $selectedAction,
+                    items: viewModel.multipleChoiceButtons
+                )
+                .onChange(of: selectedAction) { newAction in
+                    onMultipleChoiceAction(newAction, viewModel.name)
                 }
-                .padding(.horizontal, UX.CardView.horizontalPadding)
+                Spacer(minLength: UX.CardView.minContentSpacing)
+                if !viewModel.body.isEmpty {
+                    bodyView
+                    Spacer(minLength: UX.CardView.minContentSpacing)
+                }
+                VStack(spacing: UX.CardView.buttonsSpacing) {
+                    primaryButton
+                    // Hidden spacer button to maintain consistent layout spacing
+                    // when secondary button is not present
+                    OnboardingSecondaryButton(
+                        title: " ",
+                        action: {
+                        },
+                        theme: themeManager.getCurrentTheme(for: windowUUID),
+                        accessibilityIdentifier: "")
+                    .opacity(0.0)
+                    .disabled(true)
+                    .accessibilityHidden(true)
+                }
+                .padding(.bottom, UX.CardView.buttonsBottomPadding)
             }
-            .scrollBounceBehavior(basedOnSize: true)
-            primaryButton
-                .padding(UX.CardView.verticalPadding)
+            .padding(.horizontal, UX.CardView.cardHorizontalPadding)
+            .frame(minHeight: geometry.size.height, maxHeight: .infinity, alignment: .center)
         }
-        .frame(height: geometry.size.height * UX.CardView.cardHeightRatio)
-        .background(
-            RoundedRectangle(cornerRadius: UX.CardView.cornerRadius)
-                .fill(cardBackgroundColor)
-                .accessibilityHidden(true)
-        )
+        .scrollBounceBehavior(basedOnSize: true)
+        .cardBackground(theme: theme, cornerRadius: UX.CardView.cornerRadius)
     }
 
     var titleView: some View {
         Text(viewModel.title)
-            .font(UX.CardView.titleFont)
-            .foregroundColor(textColor)
+            .font(UX.CardView.titleFontForCurrentLocale)
+            .foregroundColor(theme.colors.textPrimary.color)
             .multilineTextAlignment(.center)
             .accessibility(identifier: "\(viewModel.a11yIdRoot)TitleLabel")
             .accessibility(addTraits: .isHeader)
             .if(sizeCategory <= .extraExtraLarge) { view in
                 view.frame(height: UX.CardView.titleAlignmentMinHeightPadding, alignment: .topLeading)
             }
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    var bodyView: some View {
+        Text(viewModel.body)
+            .font(UX.CardView.bodyFont)
+            .foregroundColor(theme.colors.textSecondary.color)
+            .multilineTextAlignment(UX.CardView.textAlignmentForCurrentLocale)
+            .lineLimit(nil)
+            .accessibility(identifier: "\(viewModel.a11yIdRoot)DescriptionLabel")
     }
 
     var primaryButton: some View {
-        Button(
-            viewModel.buttons.primary.title,
+        OnboardingPrimaryButton(
+            title: viewModel.buttons.primary.title,
             action: {
                 onBottomButtonAction(
                     viewModel.buttons.primary.action,
                     viewModel.name
                 )
-            }
+            },
+            theme: theme,
+            accessibilityIdentifier: "\(viewModel.a11yIdRoot)PrimaryButton"
         )
-        .font(UX.CardView.primaryActionFont)
-        .accessibility(identifier: "\(viewModel.a11yIdRoot)PrimaryButton")
-        .buttonStyle(PrimaryButtonStyle(theme: themeManager.getCurrentTheme(for: windowUUID)))
-    }
-
-    private func applyTheme(theme: Theme) {
-        let color = theme.colors
-        textColor = Color(color.textPrimary)
-        cardBackgroundColor = Color(color.layer2)
     }
 }

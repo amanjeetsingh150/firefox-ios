@@ -6,7 +6,7 @@ import Foundation
 import Common
 import Glean
 
-class ShareTelemetry {
+final class ShareTelemetry {
     private let gleanWrapper: GleanWrapper
     private var openURLTimerId: TimerId?
     private let logger: Logger
@@ -19,13 +19,17 @@ class ShareTelemetry {
 
     func sharedTo(
         activityType: UIActivity.ActivityType?,
-        shareType: ShareType,
-        hasShareMessage: Bool
+        shareTypeName: String,
+        hasShareMessage: Bool,
+        isEnrolledInSentFromFirefox: Bool,
+        isOptedInSentFromFirefox: Bool
     ) {
         let extra = GleanMetrics.ShareSheet.SharedToExtra(
             activityIdentifier: activityType?.rawValue ?? "unknown",
             hasShareMessage: hasShareMessage,
-            shareType: shareType.typeName
+            isEnrolledInSentFromFirefox: isEnrolledInSentFromFirefox,
+            isOptedInSentFromFirefox: isOptedInSentFromFirefox,
+            shareType: shareTypeName,
         )
         gleanWrapper.recordEvent(for: GleanMetrics.ShareSheet.sharedTo, extras: extra)
     }

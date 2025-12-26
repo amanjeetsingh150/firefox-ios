@@ -14,8 +14,11 @@ enum BrowserNavigationDestination: Equatable {
     case trackingProtectionSettings
     case tabTray(TabTrayPanelType)
     case bookmarksPanel
+    case homepageZeroSearch
     case zeroSearch
     case shortcutsLibrary
+    case storiesFeed
+    case storiesWebView
     case summarizer(config: SummarizerConfig)
 
     // Webpage views

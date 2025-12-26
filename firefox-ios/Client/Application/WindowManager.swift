@@ -72,7 +72,12 @@ protocol WindowManager {
     /// Returns the current window (if available) which hosts a specific tab.
     /// - Parameter tab: the UUID of the tab.
     /// - Returns: the UUID of the window hosting it (if available and open).
+    @MainActor
     func window(for tab: TabUUID) -> WindowUUID?
+
+    /// Convenience. Provides opportunity for safety checks or window validation.
+    @MainActor
+    func windowExists(uuid: WindowUUID) -> Bool
 }
 
 /// Captures state and coordinator references specific to one particular app window.
@@ -226,7 +231,9 @@ final class WindowManagerImplementation: WindowManager {
                                level: .fatal,
                                category: .window)
                     let uuidsToDelete = Array(onDiskUUIDs.dropFirst())
-                    Task { await tabDataStore.removeWindowData(forUUIDs: uuidsToDelete) }
+                    Task { [tabDataStore] in
+                        await tabDataStore.removeWindowData(forUUIDs: uuidsToDelete)
+                    }
                 }
             }
         } else {
@@ -282,6 +289,11 @@ final class WindowManagerImplementation: WindowManager {
         return allWindowTabManagers().first(where: { $0.tabs.contains(where: { $0.tabUUID == tab }) })?.windowUUID
     }
 
+    func windowExists(uuid: WindowUUID) -> Bool {
+        guard uuid != .unavailable else { return false }
+        return windows[uuid] != nil
+    }
+
     // MARK: - Internal Utilities
 
     private func clearReservedUUID(_ uuid: WindowUUID) {
@@ -289,6 +301,7 @@ final class WindowManagerImplementation: WindowManager {
         reservedUUIDs.remove(at: reservedUUIDIdx)
     }
 
+    @MainActor
     private func saveSimpleTabs() {
         let providers = allWindowTabManagers() as? [WindowSimpleTabsProvider] ?? []
         widgetSimpleTabsCoordinator.saveSimpleTabs(for: providers)

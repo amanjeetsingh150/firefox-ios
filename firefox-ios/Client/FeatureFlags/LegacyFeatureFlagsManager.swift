@@ -11,6 +11,11 @@ extension FeatureFlaggable {
     var featureFlags: LegacyFeatureFlagsManager {
         return LegacyFeatureFlagsManager.shared
     }
+
+    var isAnyStoriesRedesignEnabled: Bool {
+        return featureFlags.isFeatureEnabled(.homepageStoriesRedesign, checking: .buildOnly)
+               || featureFlags.isFeatureEnabled(.homepageStoriesRedesignV2, checking: .buildOnly)
+    }
 }
 
 /// An enum representing the different types of checks we need to use for features.
@@ -26,7 +31,8 @@ enum FlaggableFeatureCheckOptions {
     case userOnly
 }
 
-class LegacyFeatureFlagsManager: HasNimbusFeatureFlags {
+// FIXME: FXIOS-13986 Make truly thread safe
+class LegacyFeatureFlagsManager: HasNimbusFeatureFlags, @unchecked Sendable {
     /// This Singleton should only be accessed directly in places where the
     /// `FeatureFlaggable` is not available. Otherwise, access to the feature
     /// flags system should be done through the protocol, giving access to the

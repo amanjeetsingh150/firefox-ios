@@ -70,7 +70,7 @@ struct MainMenuTabInfo: Equatable {
     let accountData: AccountData
 }
 
-struct MainMenuState: ScreenState, Equatable, Sendable {
+struct MainMenuState: ScreenState, Sendable {
     let windowUUID: WindowUUID
     let menuElements: [MenuSection]
 
@@ -90,7 +90,7 @@ struct MainMenuState: ScreenState, Equatable, Sendable {
     private let menuConfigurator = MainMenuConfigurationUtility()
 
     init(appState: AppState, uuid: WindowUUID) {
-        guard let mainMenuState = store.state.screenState(
+        guard let mainMenuState = appState.screenState(
             MainMenuState.self,
             for: .mainMenu,
             window: uuid
@@ -160,6 +160,7 @@ struct MainMenuState: ScreenState, Equatable, Sendable {
         return handleReducer(state: state, action: action)
     }
 
+    @MainActor
     private static func handleReducer(state: MainMenuState, action: Action) -> MainMenuState {
         guard action.windowUUID == .unavailable || action.windowUUID == state.windowUUID
         else {
@@ -295,6 +296,7 @@ struct MainMenuState: ScreenState, Equatable, Sendable {
         )
     }
 
+    @MainActor
     private static func handleUpdateCurrentTabInfoAction(state: MainMenuState, action: Action) -> MainMenuState {
         guard let action = action as? MainMenuAction,
               let currentTabInfo = action.currentTabInfo
@@ -317,6 +319,7 @@ struct MainMenuState: ScreenState, Equatable, Sendable {
         )
     }
 
+    @MainActor
     private static func handleUpdateProfileImageAction(state: MainMenuState, action: Action) -> MainMenuState {
         guard let action = action as? MainMenuAction,
               let accountProfileImage = action.accountProfileImage,
@@ -341,6 +344,7 @@ struct MainMenuState: ScreenState, Equatable, Sendable {
         )
     }
 
+    @MainActor
     private static func handleShowMoreOptions(state: MainMenuState, action: Action) -> MainMenuState {
         guard let action = action as? MainMenuAction,
               let currentTabInfo = state.currentTabInfo,

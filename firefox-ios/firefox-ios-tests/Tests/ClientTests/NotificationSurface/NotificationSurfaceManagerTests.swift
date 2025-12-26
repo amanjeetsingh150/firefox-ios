@@ -5,21 +5,22 @@
 import XCTest
 @testable import Client
 
-class NotificationSurfaceManagerTests: XCTestCase {
+@MainActor
+final class NotificationSurfaceManagerTests: XCTestCase {
     private var messageManager: MockGleanPlumbMessageManagerProtocol!
     private var notificationManager: MockNotificationManager!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         DependencyHelperMock().bootstrapDependencies()
         notificationManager = MockNotificationManager()
         messageManager = MockGleanPlumbMessageManagerProtocol()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         messageManager = nil
         notificationManager = nil
+        try await super.tearDown()
     }
 
     func testShouldShowSurface_noMessage() {
@@ -36,47 +37,44 @@ class NotificationSurfaceManagerTests: XCTestCase {
         XCTAssertTrue(subject.shouldShowSurface)
     }
 
-    func testShowSurface_noMessage() {
+    func testShowSurface_noMessage() async {
         let subject = createSubject()
 
         XCTAssertFalse(subject.shouldShowSurface)
 
-        subject.showNotificationSurface()
+        await subject.showNotificationSurface()
 
         XCTAssertFalse(notificationManager.scheduleWithIntervalWasCalled)
         XCTAssertEqual(notificationManager.scheduledNotifications, 0)
     }
 
-    func testShowSurface_validMessage() {
+    func testShowSurface_validMessage() async {
         let subject = createSubject()
         let message = createMessage()
         messageManager.message = message
 
         XCTAssertTrue(subject.shouldShowSurface)
 
-        subject.showNotificationSurface()
+        await subject.showNotificationSurface()
 
         XCTAssertTrue(notificationManager.scheduleWithIntervalWasCalled)
         XCTAssertEqual(notificationManager.scheduledNotifications, 1)
     }
 
-    @MainActor
     func testDidTapNotification_noMessageId() {
         let subject = createSubject()
-        subject.didTapNotification([:])
+        subject.didTapNotification("")
 
         XCTAssertEqual(messageManager.onMessagePressedCalled, 0)
     }
 
-    @MainActor
     func testDidTapNotification_noMessageFound() {
         let subject = createSubject()
-        subject.didTapNotification([NotificationSurfaceManager.Constant.messageIdKey: "test"])
+        subject.didTapNotification("test")
 
         XCTAssertEqual(messageManager.onMessagePressedCalled, 0)
     }
 
-    @MainActor
     func testDidTapNotification_openNewTabAction() {
         let subject = createSubject()
         let message = createMessage()
@@ -84,12 +82,11 @@ class NotificationSurfaceManagerTests: XCTestCase {
 
         XCTAssertTrue(subject.shouldShowSurface)
 
-        subject.didTapNotification([NotificationSurfaceManager.Constant.messageIdKey: "test-notification"])
+        subject.didTapNotification("test-notification")
 
         XCTAssertEqual(messageManager.onMessagePressedCalled, 1)
     }
 
-    @MainActor
     func testDidTapNotification_defaultAction() {
         let subject = createSubject()
         let message = createMessage(action: "test-action")
@@ -97,7 +94,7 @@ class NotificationSurfaceManagerTests: XCTestCase {
 
         XCTAssertTrue(subject.shouldShowSurface)
 
-        subject.didTapNotification([NotificationSurfaceManager.Constant.messageIdKey: "test-notification"])
+        subject.didTapNotification("test-notification")
 
         XCTAssertEqual(messageManager.onMessagePressedCalled, 1)
     }

@@ -13,19 +13,18 @@ class CanRemoveQuickActionBookmarkTests: XCTestCase {
     private var mockBookmarksHandler: BookmarksHandlerMock!
     private var mockQuickActions: MockQuickActions!
 
-    @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockQuickActions = MockQuickActions()
         mockBookmarksHandler = BookmarksHandlerMock()
-        subject = MockCanRemoveQuickActionBookmark(bookmarksHandler: mockBookmarksHandler)
+        subject = await MockCanRemoveQuickActionBookmark(bookmarksHandler: mockBookmarksHandler)
     }
 
     override func tearDown() {
-        super.tearDown()
         mockQuickActions = nil
         mockBookmarksHandler = nil
         subject = nil
+        super.tearDown()
     }
 
     @MainActor
@@ -76,7 +75,7 @@ private class MockCanRemoveQuickActionBookmark: CanRemoveQuickActionBookmark {
 }
 
 // MARK: - MockQuickActions
-class MockQuickActions: QuickActions {
+class MockQuickActions: QuickActions, @unchecked Sendable {
     var addFromShareItemCalled = 0
     func addDynamicApplicationShortcutItemOfType(_ type: ShortcutType,
                                                  fromShareItem shareItem: ShareItem,

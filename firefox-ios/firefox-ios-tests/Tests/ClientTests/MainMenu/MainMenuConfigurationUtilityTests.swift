@@ -9,20 +9,21 @@ import SummarizeKit
 
 @testable import Client
 
+@MainActor
 final class MainMenuConfigurationUtilityTests: XCTestCase {
     var configUtility: MainMenuConfigurationUtility!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         DependencyHelperMock().bootstrapDependencies()
         configUtility = MainMenuConfigurationUtility()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
         configUtility = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testGenerateMenuElements_returnsHomepageSections_whenIsHomepageTrue() {
@@ -53,7 +54,7 @@ final class MainMenuConfigurationUtilityTests: XCTestCase {
         let siteSection = sections.first!
         let titles = siteSection.options.map { $0.title }
 
-        XCTAssertTrue(titles.contains(String.MainMenu.Submenus.Tools.PageZoomV2))
+        XCTAssertTrue(titles.contains(String.MainMenu.Submenus.Tools.PageZoom))
         XCTAssertTrue(titles.contains(String.MainMenu.Submenus.Tools.Print))
     }
 

@@ -41,16 +41,18 @@ struct TPPageStats {
     }
 }
 
-class TPStatsBlocklistChecker {
+// FIXME: FXIOS-13985 Make truly thread safe
+class TPStatsBlocklistChecker: @unchecked Sendable {
     static let shared = TPStatsBlocklistChecker()
 
     // Initialized async, is non-nil when ready to be used.
     private var blockLists: TPStatsBlocklists?
 
+    @MainActor
     func isBlocked(
         url: URL,
         mainDocumentURL: URL,
-        completionHandler: @escaping (BlocklistCategory?) -> Void
+        completionHandler: @Sendable @escaping (BlocklistCategory?) -> Void
     ) {
         guard let blockLists = blockLists,
               let host = url.host,
@@ -117,7 +119,8 @@ func wildcardContentBlockerDomainToRegex(domain: String) -> String? {
     return regex
 }
 
-class TPStatsBlocklists {
+// TODO: FXIOS-13617 TPStatsBlocklists is not actually Sendable
+class TPStatsBlocklists: @unchecked Sendable {
     class Rule {
         let regex: String
         let loadType: LoadType

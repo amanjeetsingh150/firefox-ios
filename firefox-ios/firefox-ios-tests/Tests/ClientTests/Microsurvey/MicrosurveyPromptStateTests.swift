@@ -8,16 +8,17 @@ import XCTest
 @testable import Client
 
 final class MicrosurveyPromptStateTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
+    @MainActor
     func testShowPromptAction() {
         let initialState = createSubject()
         let reducer = microsurveyReducer()
@@ -34,6 +35,7 @@ final class MicrosurveyPromptStateTests: XCTestCase {
         XCTAssertEqual(newState.showSurvey, false)
     }
 
+    @MainActor
     func testDismissPromptAction() {
         let initialState = MicrosurveyPromptState(
             windowUUID: .XCTestDefaultUUID,
@@ -52,6 +54,7 @@ final class MicrosurveyPromptStateTests: XCTestCase {
         XCTAssertEqual(newState.showSurvey, false)
     }
 
+    @MainActor
     func testShowSurveyAction() {
         let initialState = createSubject()
         let reducer = microsurveyReducer()
@@ -65,6 +68,7 @@ final class MicrosurveyPromptStateTests: XCTestCase {
         XCTAssertEqual(newState.showPrompt, true)
     }
 
+    @MainActor
     func testDefaultAction() {
         let initialState = MicrosurveyPromptState(
             windowUUID: .XCTestDefaultUUID,

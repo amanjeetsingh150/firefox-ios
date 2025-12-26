@@ -7,13 +7,13 @@ import Storage
 
 @testable import Client
 
+@MainActor
 final class ShortcutsLibraryDiffableDataSourceTests: XCTestCase {
     var collectionView: UICollectionView?
     var diffableDataSource: ShortcutsLibraryDiffableDataSource?
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-
+    override func setUp() async throws {
+        try await super.setUp()
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout())
         let collectionView = try XCTUnwrap(collectionView)
         diffableDataSource = ShortcutsLibraryDiffableDataSource(
@@ -24,11 +24,11 @@ final class ShortcutsLibraryDiffableDataSourceTests: XCTestCase {
         DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         diffableDataSource = nil
         collectionView = nil
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func test_updateSnapshot_initialSnapshotHasNoData() throws {
@@ -40,6 +40,7 @@ final class ShortcutsLibraryDiffableDataSourceTests: XCTestCase {
         XCTAssertEqual(snapshot.numberOfSections, 0)
     }
 
+    @MainActor
     func test_updateSnapshot_withValidState_returnsShortcuts() throws {
         let dataSource = try XCTUnwrap(diffableDataSource)
 
@@ -60,6 +61,7 @@ final class ShortcutsLibraryDiffableDataSourceTests: XCTestCase {
         XCTAssertEqual(snapshot.sectionIdentifiers, expectedSections)
     }
 
+    @MainActor
     func test_updateSnapshot_withValidState_returnsMaxShortcuts() throws {
         let dataSource = try XCTUnwrap(diffableDataSource)
 

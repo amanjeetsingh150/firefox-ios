@@ -11,17 +11,17 @@ class A11yOnboardingTests: BaseTestCase {
         return "\(AccessibilityIdentifiers.Onboarding.onboarding)\(currentScreen)"
     }
 
-    override func setUp() {
+    override func setUp() async throws {
         launchArguments = [LaunchArguments.ClearProfile,
                            LaunchArguments.DisableAnimations,
                            LaunchArguments.SkipSplashScreenExperiment]
         currentScreen = 0
-        super.setUp()
+        try await super.setUp()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         app.terminate()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testA11yFirstRunTour() throws {
@@ -45,24 +45,7 @@ class A11yOnboardingTests: BaseTestCase {
             ]
         )
         try app.performAccessibilityAudit()
-        A11yUtils.checkMissingLabels(
-            in: app.buttons.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Button"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.images.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Image"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.staticTexts.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "StaticText"
-        )
+        checkMissingLabels(missingLabels: &missingLabels)
 
         // Swipe to the second screen
         app.buttons["\(rootA11yId)SecondaryButton"].tap()
@@ -76,96 +59,28 @@ class A11yOnboardingTests: BaseTestCase {
             ]
         )
         try app.performAccessibilityAudit()
-        A11yUtils.checkMissingLabels(
-            in: app.buttons.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Button"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.images.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Image"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.staticTexts.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "StaticText"
-        )
+        checkMissingLabels(missingLabels: &missingLabels)
 
         // Swipe to the third screen
         app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"])
         try app.performAccessibilityAudit()
-        A11yUtils.checkMissingLabels(
-            in: app.buttons.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Button"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.images.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Image"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.staticTexts.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "StaticText"
-        )
+        checkMissingLabels(missingLabels: &missingLabels)
 
         // Swipe to the fourth screen
         app.buttons["\(rootA11yId)SecondaryButton"].tap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         try app.performAccessibilityAudit()
-        A11yUtils.checkMissingLabels(
-            in: app.buttons.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Button"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.images.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Image"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.staticTexts.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "StaticText"
-        )
+        checkMissingLabels(missingLabels: &missingLabels)
 
         // Swipe to the fifth screen
         app.buttons["\(rootA11yId)PrimaryButton"].tap()
         currentScreen += 1
         mozWaitForElementToExist(app.images["\(rootA11yId)ImageView"], timeout: TIMEOUT)
         try app.performAccessibilityAudit()
-        A11yUtils.checkMissingLabels(
-            in: app.buttons.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Button"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.images.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "Image"
-        )
-        A11yUtils.checkMissingLabels(
-            in: app.staticTexts.allElementsBoundByIndex,
-            screenName: "Onboarding \(rootA11yId) Screen",
-            missingLabels: &missingLabels,
-            elementType: "StaticText"
-        )
+        checkMissingLabels(missingLabels: &missingLabels)
 
         // Finish onboarding
         app.buttons["\(rootA11yId)PrimaryButton"].tap()
@@ -174,5 +89,26 @@ class A11yOnboardingTests: BaseTestCase {
 
         // Generate Report
         A11yUtils.generateAndAttachReport(missingLabels: missingLabels, testName: sanitizedTestName, generateCsv: false)
+    }
+
+    private func checkMissingLabels(missingLabels: inout [A11yUtils.MissingAccessibilityElement]) {
+        A11yUtils.checkMissingLabels(
+            in: app.buttons.allElementsBoundByIndex,
+            screenName: "Onboarding \(rootA11yId) Screen",
+            missingLabels: &missingLabels,
+            elementType: "Button"
+        )
+        A11yUtils.checkMissingLabels(
+            in: app.images.allElementsBoundByIndex,
+            screenName: "Onboarding \(rootA11yId) Screen",
+            missingLabels: &missingLabels,
+            elementType: "Image"
+        )
+        A11yUtils.checkMissingLabels(
+            in: app.staticTexts.allElementsBoundByIndex,
+            screenName: "Onboarding \(rootA11yId) Screen",
+            missingLabels: &missingLabels,
+            elementType: "StaticText"
+        )
     }
 }

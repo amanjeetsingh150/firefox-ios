@@ -8,7 +8,7 @@ import Common
 
 private let temporaryDocumentOperationQueue = OperationQueue()
 
-protocol TemporaryDocument {
+protocol TemporaryDocument: Sendable {
     var filename: String { get }
     var sourceURL: URL? { get }
     var isDownloading: Bool { get }
@@ -17,7 +17,7 @@ protocol TemporaryDocument {
 
     func download() async -> URL?
 
-    func download(_ completion: @escaping (URL?) -> Void)
+    func download(_ completion: @escaping @Sendable (URL?) -> Void)
 
     func cancelDownload()
 
@@ -26,12 +26,13 @@ protocol TemporaryDocument {
     func resumeDownload()
 }
 
-class WeakURLSessionDelegate: NSObject, URLSessionDownloadDelegate {
+// TODO: FXIOS-13618 Make WeakURLSessionDelegate actually sendable
+final class WeakURLSessionDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     init(delegate: URLSessionDownloadDelegate?) {
         self.delegate = delegate
     }
 
-    weak var delegate: URLSessionDownloadDelegate?
+    private weak var delegate: URLSessionDownloadDelegate?
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         delegate?.urlSession(session, downloadTask: downloadTask, didFinishDownloadingTo: location)
@@ -58,18 +59,19 @@ class WeakURLSessionDelegate: NSObject, URLSessionDownloadDelegate {
     }
 }
 
-class DefaultTemporaryDocument: NSObject,
+// TODO: FXIOS-13619 Make DefaultTemporaryDocument actually sendable
+final class DefaultTemporaryDocument: NSObject,
                                 TemporaryDocument,
                                 FeatureFlaggable,
-                                URLSessionDownloadDelegate {
+                                URLSessionDownloadDelegate, @unchecked Sendable {
     private let session: URLSession
     private let request: URLRequest
     private var currentDownloadTask: URLSessionDownloadTask?
 
     private var onDownload: ((URL?) -> Void)?
-    var onDownloadProgressUpdate: ((Double) -> Void)?
+    var onDownloadProgressUpdate: (@MainActor (Double) -> Void)?
     var onDownloadStarted: VoidReturnCallback?
-    var onDownloadError: ((Error?) -> Void)?
+    var onDownloadError: (@MainActor (Error?) -> Void)?
     var isDownloading: Bool {
         return currentDownloadTask != nil
     }
@@ -79,9 +81,6 @@ class DefaultTemporaryDocument: NSObject,
     private(set) var filename: String
     private let logger: Logger
 
-    private var isPDFRefactorEnabled: Bool {
-        return featureFlags.isFeatureEnabled(.pdfRefactor, checking: .buildOnly)
-    }
     var sourceURL: URL? {
         return request.url
     }
@@ -153,7 +152,7 @@ class DefaultTemporaryDocument: NSObject,
         return tempFileURL
     }
 
-    func download(_ completion: @escaping (URL?) -> Void) {
+    func download(_ completion: @escaping @Sendable (URL?) -> Void) {
         if let tempFile = queryTempFile() {
             ensureMainThread {
                 completion(tempFile)
@@ -216,10 +215,7 @@ class DefaultTemporaryDocument: NSObject,
 
     private func shouldRetainTempFile() -> Bool {
         // Retain the PDF so when the tab gets restored it still has the PDFs from the previous session
-        if isPDFRefactorEnabled {
-            return mimeType == MIMEType.PDF
-        }
-        return false
+        return mimeType == MIMEType.PDF
     }
 
     deinit {
@@ -232,7 +228,9 @@ class DefaultTemporaryDocument: NSObject,
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         currentDownloadTask = nil
         guard let url = storeTempDownloadFile(at: location) else {
-            onDownloadError?(nil)
+            ensureMainThread {
+                self.onDownloadError?(nil)
+            }
             return
         }
         ensureMainThread { [weak self] in

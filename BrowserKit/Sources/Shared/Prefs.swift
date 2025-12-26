@@ -13,6 +13,7 @@ public struct PrefsKeys {
     // Global sync state for rust sync manager
     public static let RustSyncManagerPersistedState = "rustSyncManagerPersistedStateKey"
     public static let LoginsHaveBeenVerified = "loginsHaveBeenVerified"
+    public static let CreditCardsHaveBeenVerified = "creditCardsHaveBeenVerified"
 
     public static let KeyLastSyncFinishTime = "lastSyncFinishTime"
     public static let KeyDefaultHomePageURL = "KeyDefaultHomePageURL"
@@ -22,6 +23,8 @@ public struct PrefsKeys {
     public static let HasPocketInstalled = "HasPocketInstalled"
     public static let IntroSeen = "IntroViewControllerSeen"
     public static let TermsOfServiceAccepted = "TermsOfServiceAccepted"
+    public static let TermsOfServiceAcceptedVersion = "TermsOfServiceAcceptedVersion"
+    public static let TermsOfServiceAcceptedDate = "TermsOfServiceAcceptedDate"
     // TermsOfUseAccepted should use same string key as before to maintain compatibility
     public static let TermsOfUseAccepted = "termsOfUseAccepted"
     public static let TermsOfUseAcceptedVersion = "TermsOfUseAcceptedVersion"
@@ -31,6 +34,7 @@ public struct PrefsKeys {
     public static let TermsOfUseImpressionCount = "TermsOfUseImpressionCount"
     public static let TermsOfUseRemindMeLaterCount = "TermsOfUseRemindMeLaterCount"
     public static let TermsOfUseDismissCount = "TermsOfUseDismissCount"
+    public static let TermsOfUseRemindersCount = "TermsOfUseRemindersCount"
     public static let TermsOfUseRemindMeLaterTapDate = "TermsOfUseRemindMeLaterTapDate"
     public static let TermsOfUseLearnMoreTapDate = "TermsOfUseLearnMoreTapDate"
     public static let TermsOfUsePrivacyNoticeTapDate = "TermsOfUsePrivacyNoticeTapDate"
@@ -46,6 +50,7 @@ public struct PrefsKeys {
     public static let KeyDidShowDefaultBrowserOnboarding = "didShowDefaultBrowserOnboarding"
     public static let ContextMenuShowLinkPreviews = "showLinkPreviews"
     public static let ShowClipboardBar = "showClipboardBar"
+    public static let ShowRelayMaskSuggestions = "showRelayMaskSuggestions"
     public static let BlockOpeningExternalApps = "blockOpeningExternalApps"
     public static let NewTabCustomUrlPrefKey = "HomePageURLPref"
     public static let GoogleTopSiteAddedKey = "googleTopSiteAddedKey"
@@ -100,8 +105,8 @@ public struct PrefsKeys {
     public struct FeatureFlags {
         public static let DebugSuffixKey = "DebugKey"
         public static let FirefoxSuggest = "FirefoxSuggest"
-        public static let InactiveTabs = "InactiveTabsUserPrefsKey"
         public static let SearchBarPosition = "SearchBarPositionUsersPrefsKey"
+        public static let SentFromFirefox = "SentFromFirefoxUserPrefsKey"
         public static let SponsoredShortcuts = "SponsoredShortcutsUserPrefsKey"
         public static let StartAtHome = "StartAtHomeUserPrefsKey"
     }
@@ -120,6 +125,8 @@ public struct PrefsKeys {
         public static let showPrivateModeFirefoxSuggestions = "ShowPrivateModeFirefoxSuggestionsKey"
         public static let showPrivateModeSearchSuggestions = "ShowPrivateModeSearchSuggestionsKey"
         public static let showSearchSuggestions = "FirefoxSuggestShowSearchSuggestions"
+        public static let showTrendingSearches = "trendingSearchesFeatureKey"
+        public static let showRecentSearches = "recentSearchesFeatureKey"
     }
 
     public struct RemoteSettings {
@@ -147,11 +154,12 @@ public struct PrefsKeys {
         case jumpBackInConfiguredKey = "JumpBackInConfigured"
         case jumpBackInSyncedTabKey = "ContextualHintJumpBackInSyncedTab"
         case jumpBackInSyncedTabConfiguredKey = "JumpBackInSyncedTabConfigured"
-        case inactiveTabsKey = "ContextualHintInactiveTabs"
         case mainMenuKey = "MainMenuHintKey"
         case mainMenuRedesignKey = "mainMenuRedesignHintKey"
         case navigationKey = "ContextualHintNavigation"
+        case relayMaskKey = "ContextualHintRelayMaskKey"
         case toolbarUpdateKey = "ContextualHintToolbarUpdate"
+        case translationKey = "ContextualHintTranslationKey"
         case summarizerToolbarEntryKey = "summarizerToolbarEntryKey"
     }
 
@@ -159,6 +167,8 @@ public struct PrefsKeys {
     public struct Settings {
         public static let closePrivateTabs = "ClosePrivateTabs"
         public static let sentFromFirefoxWhatsApp = "SentFromFirefoxWhatsApp"
+        public static let navigationToolbarMiddleButton = "settings.navigationToolbarMiddleButton"
+        public static let translationsFeature = "settings.translationFeature"
     }
 
     // Activity Stream
@@ -208,9 +218,6 @@ public struct PrefsKeys {
     // Only used in unit tests to override the user's setting for nimbus features
     public static let NimbusUserEnabledFeatureTestsOverride = "NimbusUserEnabledFeatureTestsOverride"
 
-    // Only used to force faster transition of tabs to the inactive state (10 seconds)
-    public static let FasterInactiveTabsOverride = "FasterInactiveTabsOverride"
-
     // Only used to force faster Terms of Use timeout for debugging purposes
     public static let FasterTermsOfUseTimeoutOverride = "FasterTermsOfUseTimeoutOverride"
 
@@ -244,8 +251,20 @@ public struct PrefsKeys {
     // Used to determine if cannot run the Apple Intelligence model
     public static let cannotRunAppleIntelligence = "cannotRunAppleIntelligenceKey"
 
+    // Used for enabling test data for merino stories on non-dev builds
+    public static let useMerinoTestData = "useMerinoTestData"
+
     public struct Usage {
         public static let profileId = "profileId"
+    }
+
+    public struct PrivacyNotice {
+        // Timestamp in milliseconds for when the privacy notice homepage card was last shown
+        public static let notifiedDate = "PrivacyNotice.NotifiedDate"
+
+        // Boolean value denoting whether to override the last privacy notice update timestamp with the current date
+        // For testing use only
+        public static let privacyNoticeUpdateDebugOverride = "PrivacyNoticeUpdateDebugOverride"
     }
 }
 

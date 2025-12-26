@@ -145,10 +145,22 @@
         "TopTabsTestIpad",
         "TopTabsTestIphone",
         "TrackingProtectionTests",
+        "TranslationsTests",
+        "TranslationsTests\/testTranslationFlow_withDifferentStates_translationExperimentOn()",
+        "TranslationsTests\/testTranslationSettingsDoesNotAppear_translationExperimentOff()",
+        "TranslationsTests\/testTranslationSettingsShouldShow_translationExperimentOn()",
+        "TranslationsTests\/testTranslationSettingsWithToggleOnOff_translationExperimentOn()",
         "URLValidationTests",
         "UrlBarTests",
         "WhatsNewTest",
-        "ZoomingTests"
+        "ZoomingTests",
+        "ZoomingTestsTAE",
+        "ZoomingTestsTAE\/testSwitchingZoomedTabsLandscape_tabTrayExperimentOff()",
+        "ZoomingTestsTAE\/testSwitchingZoomedTabs_tabTrayExperimentOff()",
+        "ZoomingTestsTAE\/testZoomForceCloseFirefox_tabTrayExperimentOff()",
+        "ZoomingTestsTAE\/testZoomForceCloseFirefox_tabTrayExperimentOn()",
+        "ZoomingTestsTAE\/testZoomingActions()",
+        "ZoomingTestsTAE\/testZoomingActionsLandscape_tabTrayExperimentOff()"
       ],
       "target" : {
         "containerPath" : "container:Client.xcodeproj",

@@ -5,6 +5,7 @@
 import Common
 import WebKit
 
+@MainActor
 protocol WKNavigationHandler: WKNavigationDelegate {
     var session: SessionHandler? { get set }
     var telemetryProxy: EngineTelemetryProxy? { get set }
@@ -50,7 +51,7 @@ protocol WKNavigationHandler: WKNavigationDelegate {
     )
 }
 
-class DefaultNavigationHandler: NSObject, WKNavigationHandler {
+final class DefaultNavigationHandler: NSObject, WKNavigationHandler {
     weak var session: SessionHandler?
     weak var telemetryProxy: EngineTelemetryProxy?
     weak var readerModeNavigationDelegate: ReaderModeNavigationDelegate?

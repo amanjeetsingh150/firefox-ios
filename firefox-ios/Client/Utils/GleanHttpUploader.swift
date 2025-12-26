@@ -19,7 +19,7 @@ struct GleanHttpUploader: PingUploaderProtocol {
 
     /// Build the request and create upload operation using a URLSession
     func uploadHttpRequest(request: GleanPingUploadRequest,
-                           callback: @escaping (UploadResult) -> Void) {
+                           callback: @escaping @Sendable (UploadResult) -> Void) {
         var body = Data(capacity: request.data.count)
         body.append(contentsOf: request.data)
 
@@ -53,7 +53,7 @@ struct GleanHttpUploader: PingUploaderProtocol {
             uploadTask.countOfBytesClientExpectsToReceive = 512
             uploadTask.resume()
         } else {
-            logger.log("Rejected ohttp ping since couldn't build request", level: .info, category: .telemetry)
+            logger.log("Rejected http ping since couldn't build request", level: .info, category: .telemetry)
             callback(.unrecoverableFailure(unused: 0))
         }
     }

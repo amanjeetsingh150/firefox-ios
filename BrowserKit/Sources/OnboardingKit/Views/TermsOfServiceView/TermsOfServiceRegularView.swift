@@ -6,45 +6,33 @@ import SwiftUI
 import ComponentLibrary
 import Common
 
-public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtocol>: View {
-    @State private var textColor: Color = .clear
-    @State private var secondaryTextColor: Color = .clear
-    @State private var cardBackgroundColor: Color = .clear
-
+public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtocol>: ThemeableView {
+    @State public var theme: Theme
     @StateObject private var viewModel: TosFlowViewModel<ViewModel>
-    let windowUUID: WindowUUID
-    var themeManager: ThemeManager
-    public let onEmbededLinkAction: (TosAction) -> Void
+    public let windowUUID: WindowUUID
+    public var themeManager: ThemeManager
 
     public init(
         viewModel: TosFlowViewModel<ViewModel>,
         windowUUID: WindowUUID,
-        themeManager: ThemeManager,
-        onEmbededLinkAction: @escaping (TosAction) -> Void
+        themeManager: ThemeManager
     ) {
         self._viewModel = StateObject(wrappedValue: viewModel)
         self.windowUUID = windowUUID
         self.themeManager = themeManager
-        self.onEmbededLinkAction = onEmbededLinkAction
+        self.theme = themeManager.getCurrentTheme(for: windowUUID)
     }
 
     // MARK: - Body
 
     public var body: some View {
         ZStack {
-            AnimatedGradientMetalView(windowUUID: windowUUID, themeManager: themeManager)
+            AnimatedGradientView(windowUUID: windowUUID, themeManager: themeManager)
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
-
             termsContent
-                .onAppear {
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .ThemeDidChange)) {
-                    guard let uuid = $0.windowUUID, uuid == windowUUID else { return }
-                    applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
-                }
         }
+        .listenToThemeChanges(theme: $theme, manager: themeManager, windowUUID: windowUUID)
     }
 
     // MARK: - Main Content
@@ -52,34 +40,26 @@ public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtoc
     private var termsContent: some View {
         SheetSizedCard {
             GeometryReader { geometry in
-                ScrollView(.vertical) {
-                    VStack {
-                        VStack(spacing: UX.CardView.tosSpacing) {
-                            VStack(spacing: UX.CardView.spacing) {
-                                imageView
-                                titleView
-                                bodyView
-                            }
-                            VStack(spacing: UX.CardView.spacing) {
-                                links
-                                primaryButton
-                            }
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: UX.CardView.tosSpacing) {
+                        VStack(spacing: UX.CardView.spacing) {
+                            imageView
+                            titleView
                         }
-                        .padding(.vertical, UX.CardView.verticalPadding)
-                        .frame(width: UX.CardView.primaryButtonWidthiPad)
+                        bodyView
+                        VStack(spacing: UX.CardView.spacing) {
+                            links
+                            primaryButton
+                        }
                     }
+                    .padding(.vertical, UX.CardView.verticalPadding)
+                    .frame(width: UX.CardView.primaryButtonWidthiPad)
                     .frame(width: geometry.size.width)
                     .frame(minHeight: geometry.size.height)
                 }
                 .scrollBounceBehavior(basedOnSize: true)
             }
-            .background(
-                RoundedRectangle(
-                    cornerRadius: UX.CardView.cornerRadius
-                )
-                .fill(cardBackgroundColor)
-                .accessibilityHidden(true)
-            )
+            .cardBackground(theme: theme, cornerRadius: UX.CardView.cornerRadius)
             .padding(.horizontal, UX.CardView.horizontalPadding)
             .accessibilityElement(children: .contain)
         }
@@ -88,13 +68,14 @@ public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtoc
     // MARK: - Subviews
 
     var links: some View {
-        VStack(alignment: .center, spacing: UX.Onboarding.Spacing.standard) {
+        VStack(alignment: UX.CardView.horizontalAlignmentForCurrentLocale, spacing: UX.Onboarding.Spacing.standard) {
             ForEach(Array(viewModel.configuration.embededLinkText.enumerated()), id: \.element.linkText) { index, link in
                 AttributedLinkText<TosAction>(
-                    theme: themeManager.getCurrentTheme(for: windowUUID),
+                    theme: theme,
                     fullText: link.fullText,
                     linkText: link.linkText,
                     action: link.action,
+                    textAlignment: UX.CardView.textAlignmentForCurrentLocale,
                     linkAction: viewModel.handleEmbededLinkAction(action:)
                 )
             }
@@ -114,8 +95,8 @@ public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtoc
 
     var titleView: some View {
         Text(viewModel.configuration.title)
-            .font(UX.CardView.titleFont)
-            .foregroundColor(textColor)
+            .font(UX.CardView.titleFontForCurrentLocale)
+            .foregroundColor(Color(theme.colors.textPrimary))
             .multilineTextAlignment(.center)
             .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)TitleLabel")
             .accessibilityLabel(viewModel.configuration.title)
@@ -126,30 +107,24 @@ public struct TermsOfServiceRegularView<ViewModel: OnboardingCardInfoModelProtoc
         Text(viewModel.configuration.body)
             .fixedSize(horizontal: false, vertical: true)
             .font(UX.CardView.bodyFont)
-            .foregroundColor(secondaryTextColor)
-            .multilineTextAlignment(.center)
+            .foregroundColor(Color(theme.colors.textSecondary))
+            .multilineTextAlignment(UX.CardView.textAlignmentForCurrentLocale)
+            .frame(maxWidth: .infinity, alignment: UX.CardView.frameAlignmentForCurrentLocale)
             .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)DescriptionLabel")
             .accessibilityLabel(viewModel.configuration.body)
     }
 
     var primaryButton: some View {
-        Button(
-            viewModel.configuration.buttons.primary.title,
+        OnboardingPrimaryButton(
+            title: viewModel.configuration.buttons.primary.title,
             action: {
                 viewModel.handleEmbededLinkAction(
                     action: .accept
                 )
-            }
+            },
+            theme: theme,
+            accessibilityIdentifier: "\(viewModel.configuration.a11yIdRoot)PrimaryButton"
         )
-        .font(UX.CardView.primaryActionFont)
-        .accessibility(identifier: "\(viewModel.configuration.a11yIdRoot)PrimaryButton")
-        .buttonStyle(PrimaryButtonStyle(theme: themeManager.getCurrentTheme(for: windowUUID)))
-    }
-
-    private func applyTheme(theme: Theme) {
-        let color = theme.colors
-        textColor = Color(color.textPrimary)
-        secondaryTextColor = Color(color.textSecondary)
-        cardBackgroundColor = Color(color.layer2)
+        .frame(maxWidth: UX.CardView.primaryButtonWidthiPad)
     }
 }

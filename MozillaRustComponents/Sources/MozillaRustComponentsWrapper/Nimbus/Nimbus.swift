@@ -5,7 +5,8 @@
 import Foundation
 import Glean
 
-public class Nimbus: NimbusInterface {
+// FIXME: FXIOS-13537 Make this type actually Sendable, or isolate or otherwise protect any mutable state
+public final class Nimbus: NimbusInterface, @unchecked Sendable {
     private let _userDefaults: UserDefaults?
 
     private let nimbusClient: NimbusClientProtocol
@@ -53,10 +54,11 @@ private extension Nimbus {
         }
     }
 
-    func catchAll(_ queue: OperationQueue, thunk: @escaping (Operation) throws -> Void) -> Operation {
+    func catchAll(_ queue: OperationQueue, thunk: @Sendable @escaping (Operation) throws -> Void) -> Operation {
         let op = BlockOperation()
-        op.addExecutionBlock {
-            self.catchAll {
+        op.addExecutionBlock { [weak self, weak op] in
+            guard let self, let op else { return }
+            catchAll {
                 try thunk(op)
             }
         }
@@ -232,13 +234,6 @@ extension Nimbus {
         postEnrollmentCalculation(changes)
     }
 
-    @available(*, deprecated,
-               message: "Use setExperimentParticipationOnThisThread and setRolloutParticipationOnThisThread instead")
-    func setGlobalUserParticipationOnThisThread(_ value: Bool) throws {
-        let changes = try nimbusClient.setGlobalUserParticipation(optIn: value)
-        postEnrollmentCalculation(changes)
-    }
-
     func initializeOnThisThread() throws {
         try nimbusClient.initialize()
     }
@@ -296,18 +291,6 @@ extension Nimbus: NimbusUserConfiguration {
         set {
             _ = catchAll(dbQueue) { _ in
                 try self.setRolloutParticipationOnThisThread(newValue)
-            }
-        }
-    }
-
-    @available(*, deprecated, message: "Use experimentParticipation and rolloutParticipation instead")
-    public var globalUserParticipation: Bool {
-        get {
-            catchAll { try nimbusClient.getGlobalUserParticipation() } ?? true
-        }
-        set {
-            _ = catchAll(dbQueue) { _ in
-                try self.setGlobalUserParticipationOnThisThread(newValue)
             }
         }
     }
@@ -384,7 +367,7 @@ extension Nimbus: NimbusStartup {
         applyLocalExperiments(getString: { try String(contentsOf: fileURL) })
     }
 
-    func applyLocalExperiments(getString: @escaping () throws -> String) -> Operation {
+    func applyLocalExperiments(getString: @Sendable @escaping () throws -> String) -> Operation {
         catchAll(dbQueue) { op in
             let json = try getString()
 
@@ -461,20 +444,14 @@ extension Nimbus: NimbusMessagingProtocol {
     }
 }
 
-public class NimbusDisabled: NimbusApi {
+// FIXME: FXIOS-13537 Make this type actually Sendable, or isolate or otherwise protect any mutable state
+public final class NimbusDisabled: NimbusApi, @unchecked Sendable {
+    // FIXME: FXIOS-13501 Unprotected shared mutable state is an error in Swift 6 (nonisolated(unsafe) hidden here because
+    // we use `@unchecked Sendable` on the `NimbusDisabled` class)
     public static let shared = NimbusDisabled()
 
     public var experimentParticipation: Bool = false
     public var rolloutParticipation: Bool = false
-
-    @available(*, deprecated, message: "Use experimentParticipation and rolloutParticipation instead")
-    public var globalUserParticipation: Bool {
-        get { return experimentParticipation && rolloutParticipation }
-        set {
-            experimentParticipation = newValue
-            rolloutParticipation = newValue
-        }
-    }
 }
 
 public extension NimbusDisabled {

@@ -12,18 +12,18 @@ final class MainMenuMiddlewareTests: XCTestCase, StoreTestUtility {
     var mockGleanWrapper: MockGleanWrapper!
     var mockStore: MockStoreForMiddleware<AppState>!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockGleanWrapper = MockGleanWrapper()
         DependencyHelperMock().bootstrapDependencies()
         setupStore()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
         mockGleanWrapper = nil
         resetStore()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func test_tapNavigateToDestination_findInPageAction_sendTelemetryData() throws {
@@ -152,8 +152,8 @@ final class MainMenuMiddlewareTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(savedExtras.option, "settings")
     }
 
-    func test_tapNavigateToDestination_printSheetV2Action_sendTelemetryData() throws {
-        let action = getNavigationDestinationAction(for: .printSheetV2)
+    func test_tapNavigateToDestination_printSheetAction_sendTelemetryData() throws {
+        let action = getNavigationDestinationAction(for: .printSheet)
         let subject = createSubject()
 
         subject.mainMenuProvider(AppState(), action)
@@ -194,8 +194,8 @@ final class MainMenuMiddlewareTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(savedExtras.option, "share")
     }
 
-    func test_tapNavigateToDestination_saveAsPDFV2Action_sendTelemetryData() throws {
-        let action = getNavigationDestinationAction(for: .saveAsPDFV2)
+    func test_tapNavigateToDestination_saveAsPDFAction_sendTelemetryData() throws {
+        let action = getNavigationDestinationAction(for: .saveAsPDF)
         let subject = createSubject()
 
         subject.mainMenuProvider(AppState(), action)
@@ -373,7 +373,7 @@ final class MainMenuMiddlewareTests: XCTestCase, StoreTestUtility {
         let subject = createSubject()
         let action = MainMenuAction(
             windowUUID: .XCTestDefaultUUID,
-            actionType: MainMenuActionType.didInstantiateView
+            actionType: MainMenuActionType.viewDidLoad
         )
 
         let dispatchExpectation = XCTestExpectation(description: "Update banner visibility middleware action dispatched")

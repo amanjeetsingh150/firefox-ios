@@ -14,8 +14,10 @@ import WebEngine
 
 let browsingActivityType = "org.mozilla.ios.firefox.browsing"
 
-private let searchableIndex = CSSearchableIndex.default()
+// TODO: FXIOS-14175 - SearchableIndex is not thread safe
+nonisolated(unsafe) private let searchableIndex = CSSearchableIndex.default()
 
+@MainActor
 class UserActivityHandler {
     private let logger: Logger
 
@@ -32,10 +34,11 @@ class UserActivityHandler {
         )
     }
 
-    class func clearSearchIndex(completionHandler: ((Error?) -> Void)? = nil) {
+    class func clearSearchIndex(completionHandler: (@Sendable (Error?) -> Void)? = nil) {
         searchableIndex.deleteAllSearchableItems(completionHandler: completionHandler)
     }
 
+    @MainActor
     fileprivate func setUserActivityForTab(_ tab: Tab, url: URL) {
         guard !tab.isPrivate, url.isWebPage(includeDataURIs: false),
               !InternalURL.isValid(url: url)
@@ -77,7 +80,7 @@ extension UserActivityHandler: TabEventHandler {
     }
 
     func tab(_ tab: Tab, didLoadReadability page: ReadabilityResult) {
-        Task {
+        Task { @MainActor in
             await spotlightIndex(page, for: tab)
         }
     }
@@ -90,6 +93,7 @@ extension UserActivityHandler: TabEventHandler {
 }
 
 extension UserActivityHandler {
+    @MainActor
     func spotlightIndex(_ page: ReadabilityResult, for tab: Tab) async {
         guard let url = tab.url,
               !tab.isPrivate,

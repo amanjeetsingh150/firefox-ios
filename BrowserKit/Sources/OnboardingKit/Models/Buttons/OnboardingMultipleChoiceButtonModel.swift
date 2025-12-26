@@ -5,7 +5,8 @@
 import Foundation
 import UIKit
 
-public struct OnboardingMultipleChoiceButtonModel<OnboardingMultipleChoiceActionType: Sendable>: Sendable {
+public struct OnboardingMultipleChoiceButtonModel<OnboardingMultipleChoiceActionType: Hashable & Sendable>:
+    Equatable, Sendable {
     public let title: String
     public let action: OnboardingMultipleChoiceActionType
     public var imageID: String
@@ -13,12 +14,21 @@ public struct OnboardingMultipleChoiceButtonModel<OnboardingMultipleChoiceAction
     func image(isSelected: Bool) -> UIImage? {
         let finalImageID = isSelected ? "\(imageID)Selected" : imageID
 
-        // Load from package's bundle bundle if available
+        // Load from package's bundle if available
         if let image = UIImage(named: finalImageID, in: Bundle.module, compatibleWith: nil) {
             return image
         }
         // Fallback to the main bundle
-        return UIImage(named: finalImageID, in: Bundle.main, compatibleWith: nil)
+        if let image = UIImage(named: finalImageID, in: Bundle.main, compatibleWith: nil) {
+            return image
+        }
+
+        // If selected version not found, fallback to non-selected version
+        if isSelected {
+            return image(isSelected: false)
+        }
+
+        return nil
     }
 
     public init(title: String, action: OnboardingMultipleChoiceActionType, imageID: String) {

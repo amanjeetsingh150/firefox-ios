@@ -6,12 +6,13 @@ import Foundation
 import UIKit
 
 /// Protocol representing a single engine session. In browsers usually a session corresponds to a tab.
+@MainActor
 public protocol EngineSession: NSObject {
     /// Engine session delegate
     var delegate: EngineSessionDelegate? { get set }
 
     /// Proxy object for handling telemetry events.
-    var telemetryProxy: EngineTelemetryProxy? { get set }
+    nonisolated var telemetryProxy: EngineTelemetryProxy? { get set }
 
     /// Whether the engine session is currently being rendered
     var isActive: Bool { get set }

@@ -12,12 +12,12 @@ final class AddressToolbarContainerModelTests: XCTestCase {
     private var searchEnginesManager: SearchEnginesManagerProvider!
     private let windowUUID: WindowUUID = .XCTestDefaultUUID
 
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
 
         mockProfile = MockProfile()
-        searchEnginesManager = SearchEnginesManager(
+        searchEnginesManager = await SearchEnginesManager(
             prefs: mockProfile.prefs,
             files: mockProfile.files,
             engineProvider: MockSearchEngineProvider()
@@ -31,28 +31,32 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     func testSearchWordFromURLWhenUrlIsNilThenSearchWordIsNil() {
-        let viewModel = createSubject(withState: createBasicToolbarState())
+        let viewModel = createSubject(withState: createToolbarState())
         XCTAssertNil(viewModel.searchTermFromURL(nil))
     }
 
+    @MainActor
     func testSearchWordFromURLWhenUsingGoogleSearchThenSearchWordIsCorrect() {
-        let viewModel = createSubject(withState: createBasicToolbarState())
+        let viewModel = createSubject(withState: createToolbarState())
         let searchTerm = "test"
         let url = URL(string: "http://firefox.com/find?q=\(searchTerm)")
         let result = viewModel.searchTermFromURL(url)
         XCTAssertEqual(searchTerm, result)
     }
 
+    @MainActor
     func testSearchWordFromURLWhenUsingInternalUrlThenSearchWordIsNil() {
-        let viewModel = createSubject(withState: createBasicToolbarState())
+        let viewModel = createSubject(withState: createToolbarState())
         let searchTerm = "test"
         let url = URL(string: "internal://local?q=\(searchTerm)")
         XCTAssertNil(viewModel.searchTermFromURL(url))
     }
 
+    @MainActor
     func testUsesDefaultSearchEngine_WhenNoSearchEngineSelected() {
-        let viewModel = createSubject(withState: createBasicToolbarState())
+        let viewModel = createSubject(withState: createToolbarState())
 
         guard let defaultEngine = searchEnginesManager.defaultEngine else {
             XCTFail("No default search engine")
@@ -63,6 +67,7 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertEqual(viewModel.searchEngineImage, defaultEngine.image)
     }
 
+    @MainActor
     func testUsesAlternativeSearchEngine_WhenSearchEngineSelected() {
         let searchEngineImage = UIImage()
         let selectedSearchEngine = OpenSearchEngineTests.generateOpenSearchEngine(
@@ -77,8 +82,9 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertEqual(viewModel.searchEngineImage, selectedSearchEngine.image)
     }
 
+    @MainActor
     func testConfigureSkeletonAddressBar_withNilParameters() {
-        let model = createSubject(withState: createBasicToolbarState())
+        let model = createSubject(withState: createToolbarState())
         let config = model.configureSkeletonAddressBar(with: nil, isReaderModeAvailableOrActive: nil)
 
         XCTAssertTrue(config.leadingPageActions.isEmpty)
@@ -86,8 +92,9 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertNil(config.locationViewConfiguration.url)
     }
 
+    @MainActor
     func testConfigureSkeletonAddressBar_withNilURL_andReaderModeAvailable() {
-        let model = createSubject(withState: createBasicToolbarState())
+        let model = createSubject(withState: createToolbarState())
         let config = model.configureSkeletonAddressBar(with: nil, isReaderModeAvailableOrActive: true)
 
         XCTAssertTrue(config.leadingPageActions.isEmpty)
@@ -95,8 +102,9 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertNil(config.locationViewConfiguration.url)
     }
 
+    @MainActor
     func testConfigureSkeletonAddressBar_withURL_andReaderModeAvailable() {
-        let model = createSubject(withState: createBasicToolbarState())
+        let model = createSubject(withState: createToolbarState())
         let testURL = URL(string: "https://example.com")
         let config = model.configureSkeletonAddressBar(with: testURL, isReaderModeAvailableOrActive: true)
 
@@ -105,8 +113,9 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertEqual(config.locationViewConfiguration.url, testURL)
     }
 
+    @MainActor
     func testConfigureSkeletonAddressBar_withURL_andReaderModeNotAvailable() {
-        let model = createSubject(withState: createBasicToolbarState())
+        let model = createSubject(withState: createToolbarState())
         let testURL = URL(string: "https://example.com")
         let config = model.configureSkeletonAddressBar(with: testURL, isReaderModeAvailableOrActive: false)
 
@@ -115,8 +124,62 @@ final class AddressToolbarContainerModelTests: XCTestCase {
         XCTAssertEqual(config.locationViewConfiguration.url, testURL)
     }
 
+    @MainActor
+    func testToolbarColor_withTopToolbar_andNavigationToolbar_andNoTopTabs_hasAlternativeColor() {
+        let viewModel = createSubject(withState: createToolbarState(isShowingTopTabs: false))
+        XCTAssertTrue(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withTopToolbar_andNavigationToolbar_andTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState())
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withTopToolbar_andNoNavigationToolbar_andTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(isShowingNavigationToolbar: false))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withTopToolbar_andNoNavigationToolbar_andNoTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(isShowingNavigationToolbar: false,
+                                                                    isShowingTopTabs: false))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withBottomToolbar_andNavigationToolbar_andTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(toolbarPosition: .bottom))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withBottomToolbar_andNoNavigationToolbar_andTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(toolbarPosition: .bottom,
+                                                                    isShowingNavigationToolbar: false))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withBottomToolbar_andNoNavigationToolbar_andNoTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(toolbarPosition: .bottom,
+                                                                    isShowingNavigationToolbar: false,
+                                                                    isShowingTopTabs: false))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
+    @MainActor
+    func testToolbarColor_withBottomToolbar_andNavigationToolbar_andNoTopTabs_hasNormalColor() {
+        let viewModel = createSubject(withState: createToolbarState(toolbarPosition: .bottom,
+                                                                    isShowingTopTabs: false))
+        XCTAssertFalse(viewModel.hasAlternativeLocationColor)
+    }
+
     // MARK: - Private helpers
 
+    @MainActor
     private func createSubject(withState state: ToolbarState) -> AddressToolbarContainerModel {
         return AddressToolbarContainerModel(state: state,
                                             profile: mockProfile,
@@ -141,24 +204,30 @@ final class AddressToolbarContainerModelTests: XCTestCase {
                                isLoading: false,
                                readerModeState: nil,
                                canSummarize: false,
+                               translationConfiguration: nil,
                                didStartTyping: false,
                                isEmptySearch: true,
                                alternativeSearchEngine: withSearchEngine)
     }
 
     private func createBasicNavigationBarState() -> NavigationBarState {
-        return NavigationBarState(windowUUID: windowUUID, actions: [], displayBorder: false)
+        return NavigationBarState(windowUUID: windowUUID,
+                                  actions: [],
+                                  displayBorder: false,
+                                  middleButton: .newTab)
     }
 
-    private func createBasicToolbarState() -> ToolbarState {
+    private func createToolbarState(toolbarPosition: AddressToolbarPosition = .top,
+                                    isShowingNavigationToolbar: Bool = true,
+                                    isShowingTopTabs: Bool = true) -> ToolbarState {
         return ToolbarState(windowUUID: windowUUID,
-                            toolbarPosition: .top,
+                            toolbarPosition: toolbarPosition,
                             toolbarLayout: .version1,
                             isPrivateMode: false,
                             addressToolbar: createAddressBarState(withSearchEngine: nil),
                             navigationToolbar: createBasicNavigationBarState(),
-                            isShowingNavigationToolbar: true,
-                            isShowingTopTabs: true,
+                            isShowingNavigationToolbar: isShowingNavigationToolbar,
+                            isShowingTopTabs: isShowingTopTabs,
                             canGoBack: true,
                             canGoForward: true,
                             numberOfTabs: 1,

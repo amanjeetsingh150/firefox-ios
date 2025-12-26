@@ -185,6 +185,10 @@ class ShareToolbarTests: FeatureFlaggedTestBase {
     }
 
     private func tapToolbarShareButtonAndSelectOption(option: String, url: String = url_3) {
+        if !iPad() {
+            navigator.nowAt(HomePanelsScreen)
+            navigator.goto(URLBarOpen)
+        }
         navigator.openURL(url)
         waitUntilPageLoad()
         app.buttons[AccessibilityIdentifiers.Toolbar.shareButton].waitAndTap()

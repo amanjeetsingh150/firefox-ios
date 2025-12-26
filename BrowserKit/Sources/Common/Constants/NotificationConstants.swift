@@ -17,9 +17,6 @@ extension Notification.Name {
     public static let PrivateDataClearedHistory = Notification.Name("PrivateDataClearedHistory")
     public static let PrivateDataClearedDownloadedFiles = Notification.Name("PrivateDataClearedDownloadedFiles")
 
-    // Fired when the user finishes navigating to a page and the location has changed
-    public static let OnLocationChange = Notification.Name("OnLocationChange")
-
     // MARK: Notification UserInfo Keys
 
     // Fired when the login synchronizer has finished applying remote changes
@@ -38,12 +35,6 @@ extension Notification.Name {
 
     public static let HomePanelPrefsChanged = Notification.Name("HomePanelPrefsChanged")
 
-    public static let TrackingProtectionViewControllerDidDismiss =
-    Notification.Name("TrackingProtectionViewControllerDidDismiss")
-
-    public static let TrackingProtectionViewControllerDidAppear =
-    Notification.Name("TrackingProtectionViewControllerDidAppear")
-
     public static let FileDidDownload = Notification.Name("FileDidDownload")
 
     public static let SearchBarPositionDidChange = Notification.Name("SearchBarPositionDidChange")
@@ -59,8 +50,6 @@ extension Notification.Name {
     public static let TabsTrayDidClose = Notification.Name("TabsTrayDidClose")
 
     public static let TabsTrayDidSelectHomeTab = Notification.Name("TabsTrayDidSelectHomeTab")
-
-    public static let TabsPrivacyModeChanged = Notification.Name("TabsPrivacyModeChanged")
 
     public static let OpenClearRecentHistory = Notification.Name("OpenClearRecentHistory")
 
@@ -108,6 +97,7 @@ extension Notification.Name {
     public static let TopSitesUpdated = Notification.Name("TopSitesUpdated")
     public static let PageZoomLevelUpdated = Notification.Name("PageZoomLevelUpdated")
     public static let PageZoomSettingsChanged = Notification.Name("PageZoomSettingsChanged")
+    public static let SettingsDismissed = Notification.Name("SettingsDismissed")
 
     // Search
     public static let DefaultSearchEngineUpdated = Notification.Name("DefaultSearchEngineUpdated")

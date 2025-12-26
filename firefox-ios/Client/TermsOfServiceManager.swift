@@ -40,8 +40,33 @@ struct TermsOfServiceManager: FeatureFlaggable, Sendable {
         return prefs.intForKey(PrefsKeys.TermsOfServiceAccepted) == nil
     }
 
-    func setAccepted() {
+    func setAccepted(acceptedDate: Date) {
         prefs.setInt(1, forKey: PrefsKeys.TermsOfServiceAccepted)
+        prefs.setString(String(TermsOfUseTelemetry().termsOfUseVersion), forKey: PrefsKeys.TermsOfServiceAcceptedVersion)
+        prefs.setTimestamp(acceptedDate.toTimestamp(), forKey: PrefsKeys.TermsOfServiceAcceptedDate)
+    }
+
+    func migrateLegacyToSAcceptance() {
+        // Check if user has accepted ToS, but is missing date/version preferences
+        let hasAcceptedToS = prefs.intForKey(PrefsKeys.TermsOfServiceAccepted) == 1
+        guard hasAcceptedToS else { return }
+
+        let hasVersion = prefs.stringForKey(PrefsKeys.TermsOfServiceAcceptedVersion)
+        let hasDate = prefs.timestampForKey(PrefsKeys.TermsOfServiceAcceptedDate)
+
+        guard hasDate == nil || hasVersion == nil else { return }
+
+        // Use terms of use version 4 as convention,
+        // since cannot be determined the exact version that was accepted
+        let pastVersion = 4
+        prefs.setString(String(pastVersion), forKey: PrefsKeys.TermsOfServiceAcceptedVersion)
+
+        // Use installation date as accepted date
+        let installationDate = InstallationUtils.inferredDateInstalledOn ?? Date()
+        prefs.setTimestamp(installationDate.toTimestamp(), forKey: PrefsKeys.TermsOfServiceAcceptedDate)
+
+        // Record date and version telemetry for legacy users who just got migrated
+        TermsOfServiceTelemetry().recordDateAndVersion(acceptedDate: installationDate)
     }
 
     func shouldSendTechnicalData(telemetryValue: Bool, studiesValue: Bool) {

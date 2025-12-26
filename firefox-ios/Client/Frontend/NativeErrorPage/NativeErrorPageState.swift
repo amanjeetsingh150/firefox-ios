@@ -5,7 +5,7 @@
 import Redux
 import Common
 
-struct NativeErrorPageState: ScreenState, Equatable {
+struct NativeErrorPageState: ScreenState {
     var windowUUID: WindowUUID
     var title: String
     var description: String
@@ -13,7 +13,7 @@ struct NativeErrorPageState: ScreenState, Equatable {
     var url: URL?
 
     init(appState: AppState, uuid: WindowUUID) {
-        guard let nativeErrorPageState = store.state.screenState(
+        guard let nativeErrorPageState = appState.screenState(
             NativeErrorPageState.self,
             for: .nativeErrorPage,
             window: uuid

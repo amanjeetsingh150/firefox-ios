@@ -11,26 +11,31 @@ final class CreditCardSettingsViewControllerTests: XCTestCase {
     var profile: MockProfile!
     var viewModel: CreditCardInputViewModel!
 
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile()
         viewModel = CreditCardInputViewModel(profile: profile, creditCardProvider: MockCreditCardProvider())
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
         profile = nil
         viewModel = nil
+        try await super.tearDown()
     }
 
+    @MainActor
     func testInputViewFormValuesClearedOnDismiss() {
         let subject = createSubject()
         subject.viewModel.cardInputViewModel.nameOnCard = "Ashton Mealy"
         subject.viewModel.cardInputViewModel.cardNumber = "4268811063712243"
         subject.viewModel.cardInputViewModel.expirationDate = "1288"
-        let creditCardInputView = CreditCardInputView(viewModel: viewModel, windowUUID: WindowUUID.XCTestDefaultUUID)
+        let creditCardInputView = CreditCardInputView(
+            viewModel: viewModel,
+            windowUUID: WindowUUID.XCTestDefaultUUID,
+            themeManager: MockThemeManager()
+        )
         let hostingController = UIHostingController(rootView: creditCardInputView)
         subject.present(hostingController, animated: true)
         let presentationController = UIPresentationController(
@@ -46,6 +51,7 @@ final class CreditCardSettingsViewControllerTests: XCTestCase {
         XCTAssertTrue(subject.viewModel.cardInputViewModel.expirationDate.isEmpty)
     }
 
+    @MainActor
     private func createSubject() -> CreditCardSettingsViewController {
         let creditCardSettingsViewModel = CreditCardSettingsViewModel(
             profile: profile,

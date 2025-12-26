@@ -16,10 +16,8 @@ struct AccessibilityIdentifiers {
     /// Used for toolbar/URL bar buttons since our classes are built that buttons can live in one or the other
     /// Using only those a11y identifiers for both ensures we have standard way to refer to buttons from iPad to iPhone
     struct Toolbar {
-        static let urlBarBorder = "TabToolbar.urlBarBorder"
         static let settingsMenuButton = "TabToolbar.menuButton"
         static let homeButton = "TabToolbar.homeButton"
-        static let trackingProtection = "TabLocationView.trackingProtectionButton"
         static let readerModeButton = "TabLocationView.readerModeButton"
         static let reloadButton = "TabLocationView.reloadButton"
         static let shareButton = "TabLocationView.shareButton"
@@ -31,7 +29,9 @@ struct AccessibilityIdentifiers {
         static let addNewTabButton = "TabToolbar.addNewTabButton"
         static let searchButton = "TabToolbar.searchButton"
         static let stopButton = "TabToolbar.stopButton"
-        static let bookmarksButton = "TabToolbar.libraryButton"
+        static let translateButton = "TabToolbar.translateButton"
+        static let translateLoadingButton = "TabToolbar.translateLoadingButton"
+        static let translateActiveButton = "TabToolbar.translateActiveButton"
     }
 
     struct Browser {
@@ -41,9 +41,7 @@ struct AccessibilityIdentifiers {
         }
 
         struct UrlBar {
-            static let scanQRCodeButton = "urlBar-scanQRCode"
             static let cancelButton = "urlBar-cancel"
-            static let searchTextField = "address"
         }
 
         struct KeyboardAccessory {
@@ -52,21 +50,27 @@ struct AccessibilityIdentifiers {
             static let previousButton = "KeyboardAccessory.previousButton"
             static let addressAutofillButton = "KeyboardAccessory.addressAutofillButton"
             static let creditCardAutofillButton = "KeyboardAccessory.creditCardAutofillButton"
+            static let relayMaskAutofillButton = "KeyboardAccessory.relayMaskAutofillButton"
         }
 
         struct AddressToolbar {
             static let lockIcon = "AddressToolbar.lockIcon"
             static let searchTextField = "AddressToolbar.address"
             static let searchEngine = "AddressToolbar.searchEngine"
-        }
-
-        struct ToolbarButtons {
-            static let qrCode = "Toolbar.QRCode.button"
+            static let leadingSkeleton = "AddressToolbar.leadingSkeleton"
+            static let trailingSkeleton = "AddressToolbar.trailingSkeleton"
         }
 
         struct WebView {
             static let documentLoadingLabel = "WebView.documentLoadingLabel"
         }
+
+        static let overKeyboardContainer = "Browser.overKeyboardContainer"
+        static let headerContainer = "Browser.headerContainer"
+        static let bottomContainer = "Browser.bottomContainer"
+        static let bottomContentStackView = "Browser.bottomContentStackView"
+        static let contentContainer = "Browser.contentContainer"
+        static let statusBarOverlay = "Browser.statusBarOverlay"
     }
 
     struct ContextualHints {
@@ -236,6 +240,14 @@ struct AccessibilityIdentifiers {
             static let favIconImage = "SyncedTabFavIconImage"
             static let descriptionLabel = "SyncedTabDescriptionLabel"
         }
+
+        struct StoriesFeed {
+            static let storiesFeedCell = "StoriesFeedCell"
+        }
+
+        struct StoriesWebview {
+            static let reloadButton = "StoriesWebviewReloadButton"
+        }
     }
 
     struct GeneralizedIdentifiers {
@@ -309,15 +321,6 @@ struct AccessibilityIdentifiers {
         static let tabCell = "TabDisplayView.tabCell"
         static let closeButton = "tabCloseButton"
         static let tabsTray = "Tabs Tray"
-
-        struct InactiveTabs {
-            static let headerLabel = "InactiveTabs.headerLabel"
-            static let headerButton = "InactiveTabs.headerButton"
-            static let headerView = "InactiveTabs.header"
-            static let cellLabel = "InactiveTabs.cell.label"
-            static let footerView = "InactiveTabs.footer"
-            static let deleteButton = "InactiveTabs.deleteButton"
-        }
     }
 
     struct LibraryPanels {
@@ -433,6 +436,7 @@ struct AccessibilityIdentifiers {
         struct Appearance {
             static let browserThemeSectionTitle = "BrowserThemeSectionTitle"
             static let websiteAppearanceSectionTitle = "WebsiteAppearanceSectionTitle"
+            static let navigationToolbarSectionTitle = "NavigationToolbarSectionTitle"
             static let pageZoomTitle = "PageZoomTitle"
             static let specificSiteSettings = "SpecificSiteSettings"
             static let automaticThemeView = "AutomaticThemeView"
@@ -496,7 +500,15 @@ struct AccessibilityIdentifiers {
             static let deleteMozillaEngine = "Remove Mozilla Engine"
             static let deleteButton = "Delete"
             static let showPrivateSuggestions = "PrivateMode.showPrivateSuggestions"
+            static let showTrendingSearches = "showTrendingSearch"
+            // This is based on `PrefsKeys.SearchSettings.showTrendingSearches`
+            static let showTrendingSearchesSwitch = "trendingSearchesFeatureKey"
+            static let showRecentSearches = "showRecentSearch"
+            // This is based on `PrefsKeys.SearchSettings.showRecentSearches`
+            static let showRecentSearchesSwitch = "recentSearchesFeatureKey"
             static let showSearchSuggestions = "FirefoxSuggestShowSearchSuggestions"
+            static let backButtoniOS26 = "BackButton"
+            static let backButton = "Settings"
         }
 
         struct AdvancedAccountSettings {
@@ -625,6 +637,11 @@ struct AccessibilityIdentifiers {
             static let bottomSetting = "BottomSearchBar"
         }
 
+        struct NavigationToolbar {
+            static let homeButton = "HomeButton"
+            static let newTabButton = "NewTabButton"
+        }
+
         struct SendData {
             static let sendTechnicalDataTitle = "SendTechnicalData"
             static let sendCrashReportsTitle = "SendCrashReports"
@@ -642,6 +659,10 @@ struct AccessibilityIdentifiers {
 
         struct ShowIntroduction {
             static let title = "ShowTour"
+        }
+
+        struct SentFromFirefox {
+            static let whatsApp = "SentFromFirefox.WhatsApp"
         }
 
         struct SendFeedback {
@@ -672,7 +693,6 @@ struct AccessibilityIdentifiers {
             static let title = "BrowsingSettings"
             static let tabs = "TABS"
             static let links = "LINKS"
-            static let inactiveTabsSwitch = "Inactive Tabs"
             static let blockPopUps = "blockPopups"
             static let autoPlay = "AutoplaySettings"
             static let blockImages = "NoImageModeStatus"
@@ -688,12 +708,26 @@ struct AccessibilityIdentifiers {
             static let title = "DisplayThemeOption"
         }
 
+        struct Translation {
+            static let title = "Settings.Translation.Title"
+            // This is based on `PrefsKeys.Settings.translationsFeature`
+            static let toggleSwitch = "settings.translationFeature"
+            static let navigationBar = "Settings.Translation.navigationBar"
+            static let backButtoniOS26 = "BackButton"
+            static let backButton = "Settings"
+        }
+
         struct BlockImages {
             static let title = "Block Images"
         }
 
         struct AutofillsPasswords {
             static let title = "AutofillsPasswordsSettings"
+        }
+
+        struct RelayMask {
+            static let title = "RelayMaskSettings"
+            static let manageMasksButton = "manageEmailMasks"
         }
 
         struct Passwords {
@@ -731,14 +765,10 @@ struct AccessibilityIdentifiers {
         static let brandLabel = "summaryBrandLabel"
         static let brandImage = "summaryBrandImage"
         static let summaryTableView = "summaryTextView"
-        static let errorLabel = "errorLabel"
-        static let errorButton = "errorButton"
-        static let tosTitleLabel = "tosTitleLabel"
-        static let tosDescriptionText = "tosDescriptionText"
-        static let tosCancelButton = "tosCancel"
-        static let tosCloseButton = "tosCloseButton"
+        static let errorContentView = "errorContentView"
+        static let retryErrorButton = "retryErrorButton"
+        static let closeSummaryErrorButton = "closeSummaryErrorButton"
         static let tosAllowButton = "tosAllowButton"
-        static let tosLinkButton = "tosLinkButton"
     }
 
     struct ShareTo {

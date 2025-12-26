@@ -9,16 +9,17 @@ import XCTest
 @testable import Client
 
 final class RemoteTabPanelTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
+        try await super.tearDown()
     }
 
+    @MainActor
     func testTableView_emptyStateNoRows() {
         let remotePanel = createSubject(state: generateEmptyState())
         let tableView = remotePanel.tabsDisplayViewController.tableView
@@ -27,6 +28,7 @@ final class RemoteTabPanelTests: XCTestCase {
         XCTAssertEqual(tableView.numberOfSections, 0)
     }
 
+    @MainActor
     func testTableView_oneClientTwoRows() {
         let remotePanel = createSubject(state: generateStateOneClientTwoTabs())
         let tableView = remotePanel.tabsDisplayViewController.tableView
@@ -48,15 +50,13 @@ final class RemoteTabPanelTests: XCTestCase {
                              title: "Mozilla Homepage",
                              history: [],
                              lastUsed: 0,
-                             icon: nil,
-                             inactive: false)
+                             icon: nil)
         let tab2 = RemoteTab(clientGUID: "123",
                              URL: URL(string: "https://google.com")!,
                              title: "Google Homepage",
                              history: [],
                              lastUsed: 0,
-                             icon: nil,
-                             inactive: false)
+                             icon: nil)
         let fakeTabs: [RemoteTab] = [tab1, tab2]
         let client = RemoteClient(guid: "123",
                                   name: "Client",
@@ -75,6 +75,7 @@ final class RemoteTabPanelTests: XCTestCase {
                                     devices: [])
     }
 
+    @MainActor
     private func createSubject(state: RemoteTabsPanelState,
                                file: StaticString = #filePath,
                                line: UInt = #line) -> RemoteTabsPanel {

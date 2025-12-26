@@ -8,7 +8,7 @@ final class CookiePersistenceTests: BaseTestCase {
     let cookieSiteURL = "http://localhost:\(serverPort)/test-fixture/test-cookie-store.html"
     let topSitesTitle = ["Facebook", "YouTube", "Wikipedia"]
 
-    override func setUp() {
+    override func setUp() async throws {
         // Fresh install the app
         // removeApp() does not work on iOS 15 and 16 intermittently
         if #available(iOS 17, *) {
@@ -16,7 +16,7 @@ final class CookiePersistenceTests: BaseTestCase {
         }
 
         // The app is correctly installed
-        super.setUp()
+        try await super.setUp()
     }
 
     func testCookiePersistenceBasic() {
@@ -61,18 +61,17 @@ final class CookiePersistenceTests: BaseTestCase {
         relaunchApp()
 
         // Open a new tab for cookie website and check login status
-        navigator.nowAt(NewTabScreen)
         openCookieSite()
         mozWaitForElementToExist(webview.staticTexts["LOGGED_IN"])
     }
 
     func testCookiePersistenceOpenRegularTabAfterPrivateTab() {
         // Go to private tab
-        app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].tap()
-        mozWaitForElementToExist(app.buttons["Private"])
-        app.buttons["Private"].tap()
-        let toolbar = app.toolbars["Toolbar"]
-        toolbar.buttons[AccessibilityIdentifiers.TabTray.newTabButton].tap()
+        navigator.toggleOn(userState.isPrivate, withAction: Action.ToggleExperimentPrivateMode)
+        if userState.isPrivate {
+            app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].waitAndTap()
+            navigator.nowAt(BrowserTab)
+        }
 
         // Open URL for Cookie login
         openCookieSite()
@@ -88,8 +87,12 @@ final class CookiePersistenceTests: BaseTestCase {
         // navigate to website and expect not to be login
         app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton].tap()
         mozWaitForElementToExist(app.buttons["Private"])
-        app.buttons["Tabs"].tap()
-        toolbar.buttons[AccessibilityIdentifiers.TabTray.newTabButton].tap()
+        if iPad() {
+            app.segmentedControls.buttons.firstMatch.waitAndTap()
+        } else {
+            app.buttons["Tabs"].tap()
+        }
+        app.buttons[AccessibilityIdentifiers.TabTray.newTabButton].waitAndTap()
 
         openCookieSite()
         mozWaitForElementToExist(webview.staticTexts["LOGGED_OUT"])

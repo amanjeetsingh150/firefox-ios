@@ -5,14 +5,27 @@
 import Common
 import UIKit
 
-class WKEngineView: UIView, EngineView, FullscreenDelegate {
+final class WKEngineView: UIView, EngineView, FullscreenDelegate {
     private var session: WKEngineSession?
     private var logger: Logger
     private var sessionlifeCycleManager: WKSessionLifecycleManager
 
+    // TODO: FXIOS-13670 With Swift 6 we can use default params in the init
+    @MainActor
+    public static func factory(frame: CGRect) -> WKEngineView {
+        let sessionlifeCycleManager = DefaultWKSessionLifecycleManager()
+        let logger = DefaultLogger.shared
+        return WKEngineView(
+            frame: frame,
+            sessionlifeCycleManager: sessionlifeCycleManager,
+            logger: logger
+        )
+    }
+
+    @MainActor
     init(frame: CGRect,
-         sessionlifeCycleManager: WKSessionLifecycleManager = DefaultWKSessionLifecycleManager(),
-         logger: Logger = DefaultLogger.shared) {
+         sessionlifeCycleManager: WKSessionLifecycleManager,
+         logger: Logger) {
         self.sessionlifeCycleManager = sessionlifeCycleManager
         self.logger = logger
         super.init(frame: frame)

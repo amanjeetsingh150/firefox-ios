@@ -32,6 +32,7 @@ enum ReaderModeBarButtonType {
         }
     }
 
+    @MainActor
     var image: UIImage? {
         let image = UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate)
         image?.accessibilityLabel = localizedDescription
@@ -40,6 +41,7 @@ enum ReaderModeBarButtonType {
 }
 
 protocol ReaderModeBarViewDelegate: AnyObject {
+    @MainActor
     func readerModeBar(_ readerModeBar: ReaderModeBarView, didSelectButton buttonType: ReaderModeBarButtonType)
 }
 
@@ -170,11 +172,9 @@ class ReaderModeBarView: UIView, AlphaDimmable, TopBottomInterchangeable, Search
     func applyTheme(theme: Theme) {
         let colors = theme.colors
 
-        let isToolbarRefactorEnabled = toolbarHelper.isToolbarRefactorEnabled
-        let color: UIColor = isToolbarRefactorEnabled ? colors.layerSurfaceLow : colors.layer1
         let backgroundAlpha = toolbarHelper.glassEffectAlpha
 
-        backgroundColor = color.withAlphaComponent(backgroundAlpha)
+        backgroundColor = colors.layerSurfaceLow.withAlphaComponent(backgroundAlpha)
         buttonTintColor = colors.textPrimary
         contextStrokeColor = colors.textSecondary
     }

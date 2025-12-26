@@ -4,12 +4,65 @@
 
 import SnapKit
 
-extension BrowserViewController: TabScrollHandler.Delegate {
+extension BrowserViewController: TabScrollHandler.Delegate,
+                                 ToolbarAnimator.Delegate,
+                                 ToolbarViewProtocol {
+    func updateToolbarTransition(progress: CGFloat,
+                                 towards state: TabScrollHandler.ToolbarDisplayState) {
+        updateToolbarContext()
+        toolbarAnimator?.updateToolbarTransition(progress: progress, towards: state)
+    }
+
+    func showToolbar() {
+        updateToolbarContext()
+        toolbarAnimator?.showToolbar()
+        updateToolbarTranslucency()
+    }
+
+    func hideToolbar() {
+        updateToolbarContext()
+        toolbarAnimator?.hideToolbar()
+        updateToolbarTranslucency()
+    }
+
+    func dispatchScrollAlphaChange(alpha: CGFloat) {
+        if shouldSendAlphaChangeAction {
+            store.dispatch(
+                ToolbarAction(
+                    scrollAlpha: Float(alpha),
+                    windowUUID: windowUUID,
+                    actionType: ToolbarActionType.scrollAlphaNeedsUpdate
+                )
+            )
+        }
+    }
+
+    func setupToolbarAnimator() {
+        let context = ToolbarContext(overKeyboardContainerHeight: overKeyboardContainerHeight,
+                                     bottomContainerHeight: getBottomContainerSize().height,
+                                     headerHeight: headerHeight)
+        toolbarAnimator = ToolbarAnimator(context: context)
+        toolbarAnimator?.view = self
+        toolbarAnimator?.delegate = self
+    }
+
+    // MARK: - Private
+
+    private func updateToolbarContext() {
+        guard let animator = toolbarAnimator else { return }
+        let context = ToolbarContext(
+            overKeyboardContainerHeight: overKeyboardContainerHeight,
+            bottomContainerHeight: getBottomContainerSize().height,
+            headerHeight: headerHeight
+        )
+        animator.updateToolbarContext(context)
+    }
+
     private var overKeyboardContainerHeight: CGFloat {
         return calculateOverKeyboardScrollHeight(safeAreaInsets: UIWindow.keyWindow?.safeAreaInsets)
     }
 
-    private var headerOffset: CGFloat {
+    private var headerHeight: CGFloat {
         let baseOffset = -getHeaderSize().height
         let isiPad = UIDevice.current.userInterfaceIdiom == .pad
         let isNavToolbarVisible = ToolbarHelper().shouldShowNavigationToolbar(for: view.traitCollection)
@@ -20,147 +73,13 @@ extension BrowserViewController: TabScrollHandler.Delegate {
         return baseOffset + UX.minimalHeaderOffset
     }
 
-    /// Interactive toolbar transition.
-    /// Top bar moves in [headerOffset, 0] using `originTop - clampProgress`
-    /// Bottom bar moves in [0, height]using `originBottom + clampProgress`
-    /// Values are clamped to their ranges, then layout is requested.
-    func updateToolbarTransition(progress: CGFloat, towards state: TabScrollHandler.ToolbarDisplayState) {
-        // Clamp movement to the intended direction (toward `state`)
-        let clampProgress = (state == .collapsed) ? max(0, progress) : min(0, progress)
+    // Checks if minimal address bar is enabled and tab is on reader mode bar or findInPage
+    private var shouldSendAlphaChangeAction: Bool {
+        guard let tab = tabManager.selectedTab,
+              let tabURL = tab.url else { return false }
 
-        // Top toolbar: range [headerOffset ... 0]
-        if !isBottomSearchBar {
-            let originTop: CGFloat = (state == .expanded) ? 0 : headerOffset
-            let topOffset = clamp(offset: originTop - clampProgress, min: headerOffset, max: 0)
-            headerTopConstraint?.update(offset: topOffset)
-            header.superview?.setNeedsLayout()
-        }
-
-        // Bottom toolbar: range [0 ... height]
-        let bottomContainerHeight = getBottomContainerSize().height
-        let originBottom: CGFloat = (state == .expanded) ? bottomContainerHeight : 0
-        let bottomOffset = clamp(offset: originBottom + clampProgress, min: 0, max: bottomContainerHeight)
-        bottomContainerConstraint?.update(offset: bottomOffset)
-        bottomContainer.superview?.setNeedsLayout()
+        return isMinimalAddressBarEnabled && !tab.isFindInPageMode && !tabURL.isReaderModeURL
     }
-
-    func showToolbar() {
-        if !isBottomSearchBar {
-            updateTopToolbar(topOffset: 0, alpha: 1)
-        }
-        updateBottomToolbar(bottomContainerOffset: 0,
-                            overKeyboardContainerOffset: 0,
-                            alpha: 1)
-    }
-
-    func hideToolbar() {
-        if !isBottomSearchBar {
-            updateTopToolbar(topOffset: headerOffset, alpha: 0)
-        }
-
-        updateBottomToolbar(bottomContainerOffset: getBottomContainerSize().height,
-                            overKeyboardContainerOffset: overKeyboardContainerHeight,
-                            alpha: 0)
-    }
-
-    // MARK: - Helper private functions
-
-    private func updateTopToolbar(topOffset: CGFloat, alpha: CGFloat) {
-        guard UIAccessibility.isReduceMotionEnabled else {
-         animateTopToolbar(topOffset: topOffset, alpha: alpha)
-          return
-        }
-
-        headerTopConstraint?.update(offset: topOffset)
-        header.superview?.setNeedsLayout()
-
-        header.updateAlphaForSubviews(alpha)
-
-        if isMinimalAddressBarEnabled {
-            store.dispatchLegacy(
-                ToolbarAction(
-                    scrollAlpha: Float(alpha),
-                    windowUUID: windowUUID,
-                    actionType: ToolbarActionType.scrollAlphaDidChange
-                )
-            )
-        }
-    }
-
-    private func animateTopToolbar(topOffset: CGFloat, alpha: CGFloat) {
-        let animator = UIViewPropertyAnimator(duration: UX.topToolbarDuration, curve: .easeOut) { [weak self] in
-            guard let self else { return }
-
-            headerTopConstraint?.update(offset: topOffset)
-            header.superview?.setNeedsLayout()
-
-            header.updateAlphaForSubviews(alpha)
-        }
-
-        animator.startAnimation()
-
-        if isMinimalAddressBarEnabled {
-            store.dispatchLegacy(
-                ToolbarAction(
-                    scrollAlpha: Float(alpha),
-                    windowUUID: windowUUID,
-                    actionType: ToolbarActionType.scrollAlphaDidChange
-                )
-            )
-        }
-    }
-
-    private func updateBottomToolbar(bottomContainerOffset: CGFloat,
-                                     overKeyboardContainerOffset: CGFloat,
-                                     alpha: CGFloat) {
-        guard UIAccessibility.isReduceMotionEnabled else {
-         animateBottomToolbar(bottomOffset: bottomContainerOffset,
-                              overKeyboardOffset: overKeyboardContainerOffset,
-                              alpha: alpha)
-          return
-        }
-
-        overKeyboardContainerConstraint?.update(offset: overKeyboardContainerOffset)
-        overKeyboardContainer.superview?.setNeedsLayout()
-
-        bottomContainerConstraint?.update(offset: bottomContainerOffset)
-        bottomContainer.superview?.setNeedsLayout()
-
-        if isMinimalAddressBarEnabled {
-            store.dispatchLegacy(
-                ToolbarAction(
-                    scrollAlpha: Float(alpha),
-                    windowUUID: windowUUID,
-                    actionType: ToolbarActionType.scrollAlphaDidChange
-                )
-            )
-        }
-    }
-
-    private func animateBottomToolbar(bottomOffset: CGFloat,
-                                      overKeyboardOffset: CGFloat,
-                                      alpha: CGFloat) {
-        let animator = UIViewPropertyAnimator(duration: UX.bottomToolbarDuration, curve: .easeOut) { [weak self] in
-            guard let self else { return }
-            bottomContainerConstraint?.update(offset: bottomOffset)
-            bottomContainer.superview?.setNeedsLayout()
-
-            overKeyboardContainerConstraint?.update(offset: overKeyboardOffset)
-            overKeyboardContainer.superview?.setNeedsLayout()
-        }
-
-        animator.startAnimation()
-
-        if isMinimalAddressBarEnabled {
-            store.dispatchLegacy(
-                ToolbarAction(
-                    scrollAlpha: Float(alpha),
-                    windowUUID: self.windowUUID,
-                    actionType: ToolbarActionType.scrollAlphaDidChange
-                )
-            )
-        }
-   }
 
     /// Helper method for testing overKeyboardScrollHeight behavior.
     /// - Parameters:
@@ -168,7 +87,6 @@ extension BrowserViewController: TabScrollHandler.Delegate {
     /// - Returns: The calculated scroll height.
     private func calculateOverKeyboardScrollHeight(safeAreaInsets: UIEdgeInsets?) -> CGFloat {
         let containerHeight = getOverKeyboardContainerSize().height
-
         let isReaderModeActive = tabManager.selectedTab?.url?.isReaderModeURL == true
 
         // Return full height if conditions aren't met for adjustment.
@@ -176,23 +94,16 @@ extension BrowserViewController: TabScrollHandler.Delegate {
                                   && isBottomSearchBar
                                   && zoomPageBar == nil
                                   && !isReaderModeActive
-
         guard shouldAdjustHeight else { return containerHeight }
 
         // Devices with home indicator (newer iPhones) vs physical home button (older iPhones).
         let hasHomeIndicator = safeAreaInsets?.bottom ?? .zero > 0
-
         let topInset = safeAreaInsets?.top ?? .zero
-
-        return hasHomeIndicator ? .zero : containerHeight - topInset
-    }
-
-    private func clamp(offset: CGFloat, min: CGFloat, max: CGFloat) -> CGFloat {
-        if offset >= max {
-            return max
-        } else if offset <= min {
-            return min
+        let containerHeightAdjusted: CGFloat = if #available(iOS 26.0, *) {
+            .zero
+        } else {
+            hasHomeIndicator ? .zero : containerHeight - topInset
         }
-        return offset
+        return containerHeightAdjusted
     }
 }

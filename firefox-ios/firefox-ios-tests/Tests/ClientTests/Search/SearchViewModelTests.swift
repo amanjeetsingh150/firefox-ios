@@ -8,14 +8,15 @@ import XCTest
 
 @testable import Client
 
+@MainActor
 final class SearchViewModelTests: XCTestCase {
     var profile: MockProfile!
     var mockDelegate: MockSearchDelegate!
     var searchEnginesManager: SearchEnginesManager!
     var remoteClient: RemoteClient!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile(firefoxSuggest: MockRustFirefoxSuggest())
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
@@ -42,9 +43,10 @@ final class SearchViewModelTests: XCTestCase {
         )
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         profile = nil
+        mockDelegate = nil
+        try await super.tearDown()
     }
 
     func testHasFirefoxSuggestionsWhenAllConditionsAreFalse() {
@@ -70,8 +72,9 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertFalse(subject.hasFirefoxSuggestions)
     }
 
-    func testHasFirefoxSuggestionsWhenFirefoxSuggestionsExistAndShouldShowIsTrue() {
+    func test_hasFirefoxSuggestions_whenFirefoxSuggestionsExist_andSearchTermIsNotEmpty_shouldShowIsTrue() {
         let subject = createSubject()
+        subject.searchQuery = "searchTerm"
         subject.firefoxSuggestions = [
             RustFirefoxSuggestion(title: "Test", url: URL(string: "https://google.com")!, isSponsored: true, iconImage: nil)
         ]
@@ -79,7 +82,16 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertTrue(subject.hasFirefoxSuggestions)
     }
 
-    @MainActor
+    func testHasFirefoxSuggestions_whenFirefoxSuggestionsExist_andSearchTermIsEmpty_shouldShowIsTrue() {
+        let subject = createSubject()
+        subject.searchQuery = ""
+        subject.firefoxSuggestions = [
+            RustFirefoxSuggestion(title: "Test", url: URL(string: "https://google.com")!, isSponsored: true, iconImage: nil)
+        ]
+        searchEnginesManager.shouldShowFirefoxSuggestions = true
+        XCTAssertFalse(subject.hasFirefoxSuggestions)
+    }
+
     func testFirefoxSuggestionReturnsNoSuggestions() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -100,7 +112,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(subject.firefoxSuggestions.count, 0)
     }
 
-    @MainActor
     func testFirefoxSuggestionReturnsNoSuggestionsWhenSuggestionSettingsFalse() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -117,7 +128,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testFirefoxSuggestionReturnsSponsoredAndNonSponsored() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -141,8 +151,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 1",
             history: [],
             lastUsed: UInt64(1),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let remoteTab2 = RemoteTab(
             clientGUID: "2",
@@ -150,8 +159,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 2",
             history: [],
             lastUsed: UInt64(2),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let remoteTab3 = RemoteTab(
             clientGUID: "3",
@@ -159,8 +167,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 3",
             history: [],
             lastUsed: UInt64(3),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let subject = createSubject()
         subject.remoteClientTabs = [ClientTabsSearchWrapper(client: remoteClient, tab: remoteTab1),
@@ -179,8 +186,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 1",
             history: [],
             lastUsed: UInt64(1),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let remoteTab2 = RemoteTab(
             clientGUID: "2",
@@ -188,8 +194,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 2",
             history: [],
             lastUsed: UInt64(2),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let remoteTab3 = RemoteTab(
             clientGUID: "3",
@@ -197,8 +202,7 @@ final class SearchViewModelTests: XCTestCase {
             title: "Mozilla 3",
             history: [],
             lastUsed: UInt64(3),
-            icon: nil,
-            inactive: false
+            icon: nil
         )
         let subject = createSubject()
         subject.remoteClientTabs = [ClientTabsSearchWrapper(client: remoteClient, tab: remoteTab1),
@@ -208,7 +212,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(subject.filteredRemoteClientTabs.count, 3)
     }
 
-    @MainActor
     func testSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
         searchEnginesManager.shouldShowFirefoxSuggestions = true
@@ -219,7 +222,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testNonSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
@@ -232,7 +234,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testNonSponsoredAndSponsoredSuggestionsInPrivateModeWithPrivateSuggestionsOn() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
@@ -245,7 +246,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testNonSponsoredInPrivateModeWithPrivateSuggestionsOn() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
         searchEnginesManager.shouldShowFirefoxSuggestions = true
@@ -257,7 +257,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testNonSponsoredAndSponsoredSuggestionsAreNotShownInPrivateBrowsingMode() async throws {
         let subject = createSubject(isPrivate: true, isBottomSearchBar: false)
 
@@ -268,7 +267,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 0)
     }
 
-    @MainActor
     func testLoad_forFirefoxSuggestions_doesNotTriggerReloadForSameSuggestions() async throws {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -283,6 +281,19 @@ final class SearchViewModelTests: XCTestCase {
 
         XCTAssertEqual(subject.firefoxSuggestions.count, 2)
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
+    }
+
+    func test_historySites_excludesBookmarkedSites() {
+        let subject = createSubject()
+        XCTAssertEqual(subject.delegate?.searchData.count, 0)
+        let data = ArrayCursor<Site>(data: [
+            Site.createBasicSite(url: "https://example.com?mfadid=adm", title: "Test1", isBookmarked: true),
+            Site.createBasicSite(url: "https://example.com", title: "Test2", isBookmarked: true),
+            Site.createBasicSite(url: "https://example.com?a=b&c=d", title: "Test3", isBookmarked: false)
+        ])
+
+        subject.loader(dataLoaded: data)
+        XCTAssertEqual(subject.historySites.count, 1)
     }
 
     func testLoad_forHistoryAndBookmarks_doesNotTriggerReloadForSameSuggestions() async throws {
@@ -309,7 +320,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
     }
 
-    @MainActor
     func testFirefoxSuggestionReturnsSponsored() async {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -325,7 +335,6 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(subject.firefoxSuggestions.count, 1)
     }
 
-    @MainActor
     func testFirefoxSuggestionReturnsNonSponsored() async {
         FxNimbus.shared.features.firefoxSuggestFeature.with(initializer: { _, _ in
             FirefoxSuggestFeature(availableSuggestionsTypes:
@@ -367,9 +376,174 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(quickSearchEngines.count, 6)
     }
 
+    // MARK: Trending Searches
+    func test_shouldShowHeader_forTrendingSearches_withFFOn_andSearchTerm_doesNotShowHeader() async {
+        setupNimbusTrendingSearchesTesting(isEnabled: true)
+        let subject = createSubject()
+        subject.searchQuery = "hello"
+        let trendingSearchesSectionIndex = 1
+        let shouldShowHeader = subject.shouldShowHeader(for: trendingSearchesSectionIndex)
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_withTrendingSearches_withFFOn_andSearchTermEmpty_showsHeader() {
+        setupNimbusTrendingSearchesTesting(isEnabled: true)
+        let expectation = XCTestExpectation(description: "reload table view called")
+        let mockClient = MockTrendingSearchClient(result: .success(["foo", "bar"]))
+        mockDelegate.didReloadTableViewCalled = {
+            expectation.fulfill()
+        }
+        let subject = createSubject(mockTrendingClient: mockClient)
+        subject.loadTrendingSearches()
+
+        wait(for: [expectation], timeout: 1)
+
+        let trendingSearchesSectionIndex = 1
+        let shouldShowHeader = subject.shouldShowHeader(for: trendingSearchesSectionIndex)
+
+        XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
+        XCTAssertEqual(subject.trendingSearches, ["foo", "bar"])
+        XCTAssertTrue(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_withNoTrendingSearches_withFFOn_andSearchTermEmpty_doesNotShowHeader() async {
+        setupNimbusTrendingSearchesTesting(isEnabled: true)
+        let subject = createSubject()
+        subject.searchQuery = ""
+        let trendingSearchesSectionIndex = 1
+        let shouldShowHeader = subject.shouldShowHeader(for: trendingSearchesSectionIndex)
+        XCTAssertEqual(subject.trendingSearches, [])
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_forTrendingSearches_withoutFeatureFlagOn_doesNotShowHeader() {
+        setupNimbusTrendingSearchesTesting(isEnabled: false)
+        let subject = createSubject()
+        let trendingSearchesSectionIndex = 1
+        let shouldShowHeader = subject.shouldShowHeader(for: trendingSearchesSectionIndex)
+        XCTAssertEqual(subject.trendingSearches, [])
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_retrieveTrendingSearches_withSuccess_hasExpectedList() {
+        setupNimbusTrendingSearchesTesting(isEnabled: true)
+        let expectation = XCTestExpectation(description: "reload table view called")
+        let mockClient = MockTrendingSearchClient(result: .success(["foo", "bar"]))
+        mockDelegate.didReloadTableViewCalled = {
+            expectation.fulfill()
+        }
+        let subject = createSubject(mockTrendingClient: mockClient)
+
+        subject.loadTrendingSearches()
+
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(mockDelegate.didReloadTableViewCount, 1)
+        XCTAssertEqual(subject.trendingSearches, ["foo", "bar"])
+    }
+
+    func test_retrieveTrendingSearches_withError_hasEmptyList() {
+        setupNimbusTrendingSearchesTesting(isEnabled: true)
+        enum TestError: Error { case example }
+        let mockClient = MockTrendingSearchClient(result: .failure(TestError.example))
+        let subject = createSubject(mockTrendingClient: mockClient)
+        subject.loadTrendingSearches()
+        XCTAssertEqual(subject.trendingSearches, [])
+    }
+
+    func test_retrieveTrendingSearches_withoutFFEnabled_hasEmptyList() {
+        setupNimbusTrendingSearchesTesting(isEnabled: false)
+        let mockClient = MockTrendingSearchClient(result: .success(["foo", "bar"]))
+        let subject = createSubject(mockTrendingClient: mockClient)
+        subject.loadTrendingSearches()
+        XCTAssertEqual(subject.trendingSearches, [])
+    }
+
+    // MARK: - Recent Searches
+    func test_shouldShowHeader_forRecentSearches_withFFOn_andSearchTerm_doesNotShowHeader() async {
+        setupNimbusRecentSearchesTesting(isEnabled: true)
+        let subject = createSubject()
+        subject.searchQuery = "hello"
+        let recentSearchesSectionIndex = 0
+        let shouldShowHeader = subject.shouldShowHeader(for: recentSearchesSectionIndex)
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_withRecentSearches_withFFOn_andSearchTermEmpty_showsHeader() async {
+        setupNimbusRecentSearchesTesting(isEnabled: true)
+        let mockRecentSearchProvider = MockRecentSearchProvider()
+        let subject = createSubject(mockRecentSearchProvider: mockRecentSearchProvider)
+        subject.retrieveRecentSearches()
+        subject.searchQuery = ""
+        let recentSearchesSectionIndex = 0
+        let expectation = XCTestExpectation(description: "Recent Searches have been fetched")
+
+        let shouldShowHeader = subject.shouldShowHeader(for: recentSearchesSectionIndex)
+
+        mockRecentSearchProvider.loadRecentSearches { result in
+            XCTAssertEqual(result, ["search term 1", "search term 2"])
+            expectation.fulfill()
+        }
+
+        await fulfillment(of: [expectation], timeout: 1.0)
+        XCTAssertTrue(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_withNoRecentSearches_withFFOn_andSearchTermEmpty_doesNotShowHeader() async {
+        setupNimbusRecentSearchesTesting(isEnabled: true)
+        let subject = createSubject()
+        subject.searchQuery = ""
+        let recentSearchesSectionIndex = 0
+        let shouldShowHeader = subject.shouldShowHeader(for: recentSearchesSectionIndex)
+        XCTAssertEqual(subject.recentSearches, [])
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_shouldShowHeader_forRecentSearches_withoutFeatureFlagOn_doesNotShowHeader() async {
+        setupNimbusRecentSearchesTesting(isEnabled: false)
+        let subject = createSubject()
+        let recentSearchesSectionIndex = 0
+        let shouldShowHeader = subject.shouldShowHeader(for: recentSearchesSectionIndex)
+        XCTAssertEqual(subject.recentSearches, [])
+        XCTAssertFalse(shouldShowHeader)
+    }
+
+    func test_retrieveRecentSearches_withSuccess_hasExpectedList() {
+        setupNimbusRecentSearchesTesting(isEnabled: true)
+        let mockRecentSearchProvider = MockRecentSearchProvider()
+        let subject = createSubject(mockRecentSearchProvider: mockRecentSearchProvider)
+
+        let expectation = XCTestExpectation(description: "Recent Searches have been fetched")
+
+        subject.retrieveRecentSearches()
+
+        mockRecentSearchProvider.loadRecentSearches { result in
+            XCTAssertEqual(result, ["search term 1", "search term 2"])
+            expectation.fulfill()
+        }
+
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func test_retrieveRecentSearches_withoutFFEnabled_hasEmptyList() {
+        setupNimbusRecentSearchesTesting(isEnabled: false)
+        let mockRecentSearchProvider = MockRecentSearchProvider()
+        let subject = createSubject(mockRecentSearchProvider: mockRecentSearchProvider)
+        subject.retrieveRecentSearches()
+        XCTAssertEqual(subject.recentSearches, [])
+    }
+
+    func test_clearRecentSearches_withFFEnabled_clearsSuccessfully() {
+        let mockRecentSearchProvider = MockRecentSearchProvider()
+        let subject = createSubject(mockRecentSearchProvider: mockRecentSearchProvider)
+        subject.clearRecentSearches()
+        XCTAssertEqual(mockRecentSearchProvider.clearRecentSearchCalledCount, 1)
+    }
+
     private func createSubject(
         isPrivate: Bool = false,
         isBottomSearchBar: Bool = false,
+        mockTrendingClient: TrendingSearchClientProvider = MockTrendingSearchClient(),
+        mockRecentSearchProvider: RecentSearchProvider = MockRecentSearchProvider(),
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> SearchViewModel {
@@ -378,22 +552,42 @@ final class SearchViewModelTests: XCTestCase {
             isBottomSearchBar: isBottomSearchBar,
             profile: profile,
             model: searchEnginesManager,
-            tabManager: MockTabManager()
+            tabManager: MockTabManager(),
+            trendingSearchClient: mockTrendingClient,
+            recentSearchProvider: mockRecentSearchProvider
         )
         subject.delegate = mockDelegate
         return subject
     }
+
+    private func setupNimbusTrendingSearchesTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.trendingSearchesFeature.with { _, _ in
+            return TrendingSearchesFeature(
+                enabled: isEnabled
+            )
+        }
+    }
+
+    private func setupNimbusRecentSearchesTesting(isEnabled: Bool) {
+        FxNimbus.shared.features.recentSearchesFeature.with { _, _ in
+            return RecentSearchesFeature(
+                enabled: isEnabled
+            )
+        }
+    }
 }
 
-class MockSearchDelegate: SearchViewDelegate {
+final class MockSearchDelegate: SearchViewDelegate {
     var searchData = Cursor<Site>()
     var didReloadTableViewCount = 0
     var didReloadSearchEngines = 0
+    var didReloadTableViewCalled: (() -> Void)?
 
     func reloadSearchEngines() {
         didReloadSearchEngines += 1
     }
     func reloadTableView() {
+        didReloadTableViewCalled?()
         didReloadTableViewCount += 1
     }
 }

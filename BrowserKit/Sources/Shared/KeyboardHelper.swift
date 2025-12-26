@@ -33,7 +33,7 @@ public struct KeyboardState: Sendable {
         if let curveValue = keyboardAnimationCurveValue {
             NSNumber(value: curveValue as Int).getValue(&curve)
         }
-        self.animationCurve = curve
+        animationCurve = curve
     }
 
     /// Return the height of the keyboard that overlaps with the specified view. This is more
@@ -219,7 +219,7 @@ open class KeyboardHelper: NSObject, Notifiable {
 }
 
 // MARK: - WeakKeyboardDelegate
-private class WeakKeyboardDelegate {
+private final class WeakKeyboardDelegate {
     weak var delegate: KeyboardHelperDelegate?
 
     init(_ delegate: KeyboardHelperDelegate) {

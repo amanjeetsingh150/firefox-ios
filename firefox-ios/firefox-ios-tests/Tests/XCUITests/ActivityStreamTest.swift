@@ -16,12 +16,19 @@ let allDefaultTopSites = ["Facebook", "YouTube", "Amazon", "Wikipedia", "X"]
 let tabsTray = AccessibilityIdentifiers.TabTray.tabsTray
 
 class ActivityStreamTest: FeatureFlaggedTestBase {
+    private var topSites: TopSitesScreen!
+    private var contextMenu: ContextMenuScreen!
+    private var tabTray: TabTrayScreen!
+    private var browser: BrowserScreen!
+    private var toolbar: ToolbarScreen!
+
     typealias TopSites = AccessibilityIdentifiers.FirefoxHomepage.TopSites
     let TopSiteCellgroup = XCUIApplication().links[TopSites.itemCell]
     let testWithDB = ["testTopSites2Add", "testTopSitesRemoveAllExceptDefaultClearPrivateData"]
     // Using the DDDBBs created for these tests containing enough entries for the tests that used them listed above
     let pagesVisited = "browserActivityStreamPages-places.db"
-    override func setUp() {
+
+    override func setUp() async throws {
         // Test name looks like: "[Class testFunc]", parse out the function name
         let parts = name.replacingOccurrences(of: "]", with: "").split(separator: " ")
         let key = String(parts[1])
@@ -35,11 +42,17 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
         }
         launchArguments.append(LaunchArguments.SkipAddingGoogleTopSite)
         launchArguments.append(LaunchArguments.SkipSponsoredShortcuts)
-        super.setUp()
+        try await super.setUp()
+        topSites = TopSitesScreen(app: app)
+        contextMenu = ContextMenuScreen(app: app)
+        tabTray = TabTrayScreen(app: app)
+        browser = BrowserScreen(app: app)
+        toolbar = ToolbarScreen(app: app)
     }
-    override func tearDown() {
+
+    override func tearDown() async throws {
         XCUIDevice.shared.orientation = .portrait
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2273342
@@ -62,6 +75,20 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
                 app.collectionViews.links.staticTexts["Facebook"]
             ]
         )
+    }
+
+    // https://mozilla.testrail.io/index.php?/cases/view/2273342
+    // Smoketest TAE
+    func testDefaultSites_TAE() throws {
+        app.launch()
+
+        XCTExpectFailure("The app was not launched", strict: false) {
+            topSites.assertVisible()
+        }
+
+        topSites.assertVisible()
+        topSites.assertTopSitesCount(5)
+        topSites.assertDefaultTopSites()
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2272218
@@ -90,69 +117,16 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
         if iPad() {
             navigator.goto(NewTabScreen)
         } else {
-            navigator.goto(HomePanelsScreen)
+            navigator.nowAt(ClearPrivateDataSettings)
+            navigator.goto(BrowserTab)
         }
         checkNumberOfExpectedTopSites(numberOfExpectedTopSites: 5)
         mozWaitForElementToNotExist(app.cells.staticTexts[newTopSite["bookmarkLabel"]!])
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2272220
-    func testTopSitesRemoveAllExceptPinnedClearPrivateData_tabTrayExperimentOff() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
+    func testTopSitesRemoveAllExceptPinnedClearPrivateData() {
         app.launch()
-
-        waitForExistence(TopSiteCellgroup)
-        if iPad() {
-            app.textFields.element(boundBy: 0).waitAndTap()
-            app.typeText("mozilla.org\n")
-        } else {
-            navigator.openURL("mozilla.org")
-        }
-        waitUntilPageLoad()
-        // navigator.performAction(Action.AcceptRemovingAllTabs)
-        navigator.goto(TabTray)
-        app.cells.buttons[StandardImageIdentifiers.Large.cross].firstMatch.waitAndTap()
-        navigator.nowAt(HomePanelsScreen)
-        navigator.goto(TabTray)
-        navigator.performAction(Action.OpenNewTabFromTabTray)
-        let topSitesCells = app.collectionViews.links["TopSitesCell"]
-        if #available(iOS 16, *) {
-            waitForExistence(topSitesCells.staticTexts[newTopSite["bookmarkLabel"]!], timeout: TIMEOUT_LONG)
-        } else {
-            waitForExistence(topSitesCells.staticTexts["Mozilla — Internet for people, not profit"], timeout: TIMEOUT_LONG)
-        }
-        checkNumberOfExpectedTopSites(numberOfExpectedTopSites: 6)
-        if #available(iOS 16, *) {
-            topSitesCells.staticTexts[newTopSite["bookmarkLabel"]!].press(forDuration: 1)
-        } else {
-            topSitesCells.staticTexts["Mozilla — Internet for people, not profit"].press(forDuration: 1)
-        }
-        selectOptionFromContextMenu(option: "Pin")
-        if #available(iOS 16, *) {
-            waitForExistence(topSitesCells.staticTexts[newTopSite["bookmarkLabel"]!], timeout: TIMEOUT_LONG)
-        } else {
-            waitForExistence(topSitesCells.staticTexts["Mozilla — Internet for people, not profit"], timeout: TIMEOUT_LONG)
-        }
-        waitForExistence(app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton])
-        navigator.performAction(Action.CloseURLBarOpen)
-        navigator.nowAt(NewTabScreen)
-        navigator.goto(SettingsScreen)
-        navigator.goto(ClearPrivateDataSettings)
-        navigator.performAction(Action.AcceptClearPrivateData)
-        navigator.goto(HomePanelsScreen)
-        if #available(iOS 16, *) {
-            waitForExistence(topSitesCells.staticTexts[newTopSite["bookmarkLabel"]!], timeout: TIMEOUT_LONG)
-        } else {
-            waitForExistence(topSitesCells.staticTexts["Mozilla — Internet for people, not profit"], timeout: TIMEOUT_LONG)
-        }
-        checkNumberOfExpectedTopSites(numberOfExpectedTopSites: 6)
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2272220
-    func testTopSitesRemoveAllExceptPinnedClearPrivateData_tabTrayExperimentOn() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
-        app.launch()
-
         waitForExistence(TopSiteCellgroup)
         if iPad() {
             app.textFields.element(boundBy: 0).waitAndTap()
@@ -171,6 +145,9 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
         navigator.nowAt(HomePanelsScreen)
         navigator.goto(TabTray)
         navigator.performAction(Action.OpenNewTabFromTabTray)
+        if iPad() {
+            app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].waitAndTap()
+        }
         let topSitesCells = app.collectionViews.links["TopSitesCell"]
         if #available(iOS 16, *) {
             waitForExistence(topSitesCells.staticTexts[newTopSite["bookmarkLabel"]!], timeout: TIMEOUT_LONG)
@@ -237,36 +214,7 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2273338
     // Smoketest
-    func testTopSitesOpenInNewPrivateTab_tabTrayExperimentOff_swipingTabsExperimentOff() throws {
-        addLaunchArgument(jsonFileName: "swipingTabsOff", featureName: "toolbar-refactor-feature")
-        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
-        app.launch()
-        XCTExpectFailure("The app was not launched", strict: false) {
-            waitForExistence(TopSiteCellgroup, timeout: TIMEOUT_LONG)
-        }
-        waitForExistence(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
-        // Long tap on Wikipedia top site
-        waitForExistence(app.collectionViews.links.staticTexts["Wikipedia"])
-        app.collectionViews.links.staticTexts["Wikipedia"].press(forDuration: 1)
-        app.tables["Context Menu"].cells.buttons["Open in a Private Tab"].waitAndTap()
-        mozWaitForElementToExist(TopSiteCellgroup)
-        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-        navigator.goto(TabTray)
-        waitForExistence(app.cells.staticTexts.element(boundBy: 0))
-        navigator.nowAt(TabTray)
-        app.otherElements[tabsTray].collectionViews.cells["Wikipedia"].waitAndTap()
-        // The website is open
-        mozWaitForElementToNotExist(TopSiteCellgroup)
-        waitForValueContains(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
-                             value: "wikipedia.org")
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2273338
-    // Smoketest
-    func testTopSitesOpenInNewPrivateTab_tabTrayToolbarOnHomepageOff() throws {
-        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "toolbar-refactor-feature")
-        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
-        addLaunchArgument(jsonFileName: "homepageSearchBarOff", featureName: "homepage-redesign-feature")
+    func testTopSitesOpenInNewPrivateTab_HomepageOff() throws {
         addLaunchArgument(jsonFileName: "storiesRedesignOff", featureName: "homepage-redesign-feature")
         app.launch()
         XCTExpectFailure("The app was not launched", strict: false) {
@@ -292,11 +240,50 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
                              value: "wikipedia.org")
     }
 
-    // Smoketest
-    func testTopSitesOpenInNewPrivateTabDefaultTopSite_tabTrayExperimentOn() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
+    // https://mozilla.testrail.io/index.php?/cases/view/2273338
+    // Smoketest TAE
+    func testTopSitesOpenInNewPrivateTab_HomepageOff_TAE() throws {
+        addLaunchArgument(jsonFileName: "storiesRedesignOff", featureName: "homepage-redesign-feature")
         app.launch()
 
+        // Assert that the Top Sites are visible upon launch
+        XCTExpectFailure("The app was not launched", strict: false) {
+            topSites.assertVisible()
+        }
+
+        // Wait for the toolbar to exist, which includes the settings menu button
+        toolbar.assertSettingsButtonExists()
+
+        // Long press on the Wikipedia top site using the screen object
+        topSites.longPressOnSite(named: "Wikipedia")
+
+        // Open the private tab using the context menu screen object
+        contextMenu.openInPrivateTab()
+
+        // Assert the homepage is visible again after the context menu action
+        topSites.assertVisible()
+
+        // Toggle private mode and navigate to the Tab Tray
+        navigator.toggleOn(userState.isPrivate, withAction: Action.ToggleExperimentPrivateMode)
+        navigator.goto(TabTray)
+
+        // Assert that the first cell in the Tab Tray is visible and that the navigator is now at the Tab Tray
+        tabTray.assertFirstCellVisible()
+        navigator.nowAt(TabTray)
+
+        // Use the new method from the TopSitesScreen object to check the hittable status
+        topSites.assertNotHittable()
+
+        // Tap on the Wikipedia cell in the Tab Tray and ensure the website is open
+        tabTray.tapOnCell(named: "Wikipedia")
+
+        // Use the new BrowserScreen to validate the URL in the address bar
+        browser.assertAddressBarContains(value: "wikipedia.org")
+    }
+
+    // Smoketest
+    func testTopSitesOpenInNewPrivateTabDefaultTopSite() {
+        app.launch()
         XCTExpectFailure("The app was not launched", strict: false) {
             waitForExistence(TopSiteCellgroup, timeout: TIMEOUT_LONG)
         }
@@ -320,35 +307,35 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
         XCTAssertEqual(numTabsOpen, 1, "New tab not open")
     }
 
-    // Smoketest
-    func testTopSitesOpenInNewPrivateTabDefaultTopSite_tabTrayExperimentOff() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
-        app.launch()
-
+    // SmokeTest TAE
+    func testTopSitesOpenInNewPrivateTabDefaultTopSite_TAE() {
         XCTExpectFailure("The app was not launched", strict: false) {
-            waitForExistence(TopSiteCellgroup, timeout: TIMEOUT_LONG)
+            topSites.assertVisible()
         }
-        waitForExistence(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton])
+
+        toolbar.assertSettingsButtonExists()
         navigator.nowAt(NewTabScreen)
-        // Open one of the sites from Topsites and wait until page is loaded
-        // Long tap on apple top site, second cell
-        mozWaitForElementToExist(app.collectionViews["FxCollectionView"].links[defaultTopSite["bookmarkLabel"]!])
-        app.collectionViews["FxCollectionView"].links[defaultTopSite["bookmarkLabel"]!].press(forDuration: 1)
-        selectOptionFromContextMenu(option: "Open in a Private Tab")
-        // Check that two tabs are open and one of them is the default top site one
+
+        // Long tap on the default Top Site
+        let siteName = defaultTopSite["bookmarkLabel"]!
+        topSites.longPressOnSite(named: siteName)
+
+        contextMenu.openInPrivateTab()
+
         navigator.nowAt(HomePanelsScreen)
-        waitForTabsButton()
-        navigator.toggleOn(userState.isPrivate, withAction: Action.TogglePrivateMode)
-        waitForExistence(app.cells.staticTexts[defaultTopSite["bookmarkLabel"]!])
-        var numTabsOpen = app.collectionViews.element(boundBy: 1).cells.count
+        BaseTestCase().waitForTabsButton()
+
+        navigator.toggleOn(userState.isPrivate, withAction: Action.ToggleExperimentPrivateMode)
+
+        tabTray.assertCellExists(named: siteName)
+
         if iPad() {
             navigator.goto(TabTray)
-            numTabsOpen = app.otherElements[tabsTray].collectionViews.cells.count
-            waitForExistence(app.otherElements[tabsTray].collectionViews.cells.firstMatch)
-        } else {
-            waitForExistence(app.collectionViews.element(boundBy: 1).cells.firstMatch)
         }
-        XCTAssertEqual(numTabsOpen, 1, "New tab not open")
+
+        tabTray.assertFirstCellVisible()
+
+        tabTray.assertTabCount(1)
     }
 
     private func checkNumberOfExpectedTopSites(numberOfExpectedTopSites: Int) {
@@ -427,10 +414,12 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
         navigator.nowAt(Shortcuts)
         navigator.goto(HomeSettings)
         navigator.nowAt(HomeSettings)
-        navigator.goto(NewTabScreen)
+        navigator.goto(HomePanelsScreen)
+        navigator.goto(URLBarOpen)
         addWebsiteToShortcut(website: url_3)
         addWebsiteToShortcut(website: path(forTestPage: url_2["url"]!))
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].waitAndTap()
+        let cancelButton = app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton]
+        cancelButton.tapWithRetry()
 
         // Verify shortcuts are displayed on the homepage
         let itemCell = app.links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
@@ -457,6 +446,7 @@ class ActivityStreamTest: FeatureFlaggedTestBase {
     private func addWebsiteToShortcut(website: String) {
         navigator.openURL(website)
         waitUntilPageLoad()
+        navigator.nowAt(BrowserTab)
         navigator.goto(BrowserTabMenu)
         // navigator.goto(SaveBrowserTabMenu)
         navigator.performAction(Action.PinToTopSitesPAM)

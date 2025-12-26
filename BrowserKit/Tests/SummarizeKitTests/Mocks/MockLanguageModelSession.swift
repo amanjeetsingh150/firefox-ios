@@ -17,10 +17,15 @@ struct MockLanguageModelResponseProtocol: LanguageModelResponseProtocol {
     var transcriptEntries: ArraySlice<Transcript.Entry>
 }
 
+@available(iOS 26, *)
+struct MockLanguageModelResponseSnapshot: LanguageModelResponseSnapshotProtocol {
+    let content: String
+}
+
 /// Mock implementation of a language model session for testing the session and responses.
 /// This allows injecting controlled outputs or errors without calling the real inference backend.
 @available(iOS 26, *)
-final class MockLanguageModelSession: LanguageModelSessionProtocol {
+final class MockLanguageModelSession: LanguageModelSessionProtocol, @unchecked Sendable {
     var respondWith: [String] = [""]
     var respondWithError: Error?
 
@@ -37,11 +42,13 @@ final class MockLanguageModelSession: LanguageModelSessionProtocol {
         to prompt: Prompt,
         options: GenerationOptions
     ) -> any LanguageModelResponseStreamProtocol {
-        AsyncThrowingStream<String, Error> { continuation in
+        AsyncThrowingStream<MockLanguageModelResponseSnapshot, Error> { continuation in
             if let error = respondWithError {
                 continuation.finish(throwing: error)
             } else {
-                for chunk in respondWith { continuation.yield(chunk) }
+                for chunk in respondWith {
+                    continuation.yield(MockLanguageModelResponseSnapshot(content: chunk))
+                }
                 continuation.finish()
             }
         }

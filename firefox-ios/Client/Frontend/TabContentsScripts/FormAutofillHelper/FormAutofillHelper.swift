@@ -162,6 +162,7 @@ class FormAutofillHelper: TabContentScript {
 
     // MARK: - Injection
 
+    @MainActor
     static func injectAddressInfo(logger: Logger,
                                   address: UnencryptedAddressFields,
                                   tab: Tab,
@@ -194,6 +195,7 @@ class FormAutofillHelper: TabContentScript {
         }
     }
 
+    @MainActor
     static func injectCardInfo(logger: Logger,
                                card: UnencryptedCreditCardFields,
                                tab: Tab,
@@ -278,6 +280,7 @@ class FormAutofillHelper: TabContentScript {
 
     // MARK: - Focus Management
 
+    @MainActor
     static func focusNextInputField(tabWebView: WKWebView, logger: Logger) {
         let fxWindowValExtras = "window.__firefox__.FormAutofillExtras"
         let fillCreditCardInfoCallback = "\(fxWindowValExtras).focusNextInputField()"
@@ -289,6 +292,7 @@ class FormAutofillHelper: TabContentScript {
         }
     }
 
+    @MainActor
     static func focusPreviousInputField(tabWebView: WKWebView, logger: Logger) {
         let fxWindowValExtras = "window.__firefox__.FormAutofillExtras"
         let fillCreditCardInfoCallback = "\(fxWindowValExtras).focusPreviousInputField()"
@@ -304,6 +308,7 @@ class FormAutofillHelper: TabContentScript {
     // currently focused element on a web page. When an element is focused,
     // it typically has a visual indication such as a highlighted border or change in appearance.
     // The reason we do it is because after pressing done the focus still remains in WKWebView
+    @MainActor
     static func blurActiveElement(tabWebView: WKWebView, logger: Logger) {
         let fillCreditCardInfoCallback = "document.activeElement.blur()"
         tabWebView.evaluateJavascriptInDefaultContentWorld(fillCreditCardInfoCallback) { _, error in

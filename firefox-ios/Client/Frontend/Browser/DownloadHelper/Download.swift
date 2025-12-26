@@ -7,8 +7,11 @@ import Shared
 import WebKit
 
 protocol DownloadDelegate: AnyObject {
+    @MainActor
     func download(_ download: Download, didCompleteWithError error: Error?)
+    @MainActor
     func download(_ download: Download, didDownloadBytes bytesDownloaded: Int64)
+    @MainActor
     func download(_ download: Download, didFinishDownloadingTo location: URL)
 }
 
@@ -38,6 +41,8 @@ class Download: NSObject {
 
     func cancel() {}
     func pause() {}
+
+    @MainActor
     func resume() {}
 
     fileprivate func uniqueDownloadPathForFilename(_ filename: String) throws -> URL {
@@ -75,9 +80,16 @@ class Download: NSObject {
         }
         return true
     }
+
+    // Used to avoid name spoofing using Unicode RTL char to change file extension
+    public static func stripUnicode(fromFilename string: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet.punctuationCharacters)
+        return string.components(separatedBy: allowed.inverted).joined()
+     }
 }
 
-class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate {
+// FIXME: FXIOS-14051 Class is not thread safe and Sendable
+class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate, @unchecked Sendable {
     let preflightResponse: URLResponse
     let request: URLRequest
 
@@ -90,12 +102,6 @@ class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate
     fileprivate(set) var cookieStore: WKHTTPCookieStore
 
     private var resumeData: Data?
-
-    // Used to avoid name spoofing using Unicode RTL char to change file extension
-    public static func stripUnicode(fromFilename string: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet.punctuationCharacters)
-        return string.components(separatedBy: allowed.inverted).joined()
-     }
 
     init?(originWindow: WindowUUID,
           cookieStore: WKHTTPCookieStore,
@@ -119,7 +125,7 @@ class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate
         super.init(originWindow: originWindow)
 
         if let filename = preflightResponse.suggestedFilename {
-            self.filename = HTTPDownload.stripUnicode(fromFilename: filename)
+            self.filename = Download.stripUnicode(fromFilename: filename)
         }
 
         if let mimeType = preflightResponse.mimeType {
@@ -169,7 +175,8 @@ class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate
         }
     }
 
-    // MARK: - URLSessionTaskDelegate, URLSessionDownloadDelegate
+    // MARK: - URLSessionTaskDelegate
+
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         // Don't bubble up cancellation as an error if the
         // error is `.cancelled` and we have resume data.
@@ -178,9 +185,14 @@ class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate
             resumeData != nil {
             return
         }
-        delegate?.download(self, didCompleteWithError: error)
+        ensureMainThread {
+            self.delegate?.download(self, didCompleteWithError: error)
+        }
     }
 
+    // MARK: - URLSessionDownloadDelegate
+
+    // Receiving progress updates.
     func urlSession(
         _ session: URLSession,
         downloadTask: URLSessionDownloadTask,
@@ -191,17 +203,24 @@ class HTTPDownload: Download, URLSessionTaskDelegate, URLSessionDownloadDelegate
         bytesDownloaded = totalBytesWritten
         totalBytesExpected = totalBytesExpectedToWrite
 
-        delegate?.download(self, didDownloadBytes: bytesWritten)
+        ensureMainThread {
+            self.delegate?.download(self, didDownloadBytes: bytesWritten)
+        }
     }
 
+    // Handling download life cycle changes.
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         do {
             let destination = try uniqueDownloadPathForFilename(filename)
             try FileManager.default.moveItem(at: location, to: destination)
             isComplete = true
-            delegate?.download(self, didFinishDownloadingTo: destination)
+            ensureMainThread {
+                self.delegate?.download(self, didFinishDownloadingTo: destination)
+            }
         } catch let error {
-            delegate?.download(self, didCompleteWithError: error)
+            ensureMainThread {
+                self.delegate?.download(self, didCompleteWithError: error)
+            }
         }
     }
 }
@@ -214,7 +233,7 @@ class BlobDownload: Download {
 
         super.init(originWindow: originWindow)
 
-        self.filename = filename
+        self.filename = Download.stripUnicode(fromFilename: filename)
         self.mimeType = mimeType
 
         self.totalBytesExpected = size

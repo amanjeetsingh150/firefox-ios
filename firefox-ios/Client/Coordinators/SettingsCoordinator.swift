@@ -160,8 +160,7 @@ final class SettingsCoordinator: BaseCoordinator,
 
         case .theme:
             if themeManager.isNewAppearanceMenuOn {
-                let appearanceView = AppearanceSettingsView(windowUUID: windowUUID,
-                                                            delegate: self)
+                let appearanceView = AppearanceSettingsView(windowUUID: windowUUID, delegate: self)
                 return UIHostingController(rootView: appearanceView)
             } else {
                 return ThemeSettingsController(windowUUID: windowUUID)
@@ -197,13 +196,22 @@ final class SettingsCoordinator: BaseCoordinator,
         case .toolbar:
             let viewModel = SearchBarSettingsViewModel(prefs: profile.prefs)
             return LegacyFeatureFlagsManager.shared.isFeatureEnabled(.addressBarMenu, checking: .buildOnly)
-               ? UIHostingController(rootView: AddressBarSettingsView(windowUUID: windowUUID, viewModel: viewModel))
+            ? UIHostingController(
+                rootView: AddressBarSettingsView(
+                    windowUUID: windowUUID,
+                    viewModel: viewModel,
+                    prefs: profile.prefs
+                )
+            )
                : SearchBarSettingsViewController(viewModel: viewModel, windowUUID: windowUUID)
 
         case .topSites:
             let viewController = TopSitesSettingsViewController(windowUUID: windowUUID)
             viewController.profile = profile
             return viewController
+
+        case .relayMask:
+            return RelayMaskSettingsViewController(profile: profile, windowUUID: windowUUID)
 
         case .creditCard, .password:
             return nil // Needs authentication, decision handled by VC
@@ -319,6 +327,10 @@ final class SettingsCoordinator: BaseCoordinator,
         findAndHandle(route: .settings(section: .creditCard))
     }
 
+    func pressedRelayMask() {
+        findAndHandle(route: .settings(section: .relayMask))
+    }
+
     func pressedClearPrivateData() {
         let viewController = ClearPrivateDataTableViewController(profile: profile, tabManager: tabManager)
         router.push(viewController)
@@ -399,7 +411,8 @@ final class SettingsCoordinator: BaseCoordinator,
             let viewController = UIHostingController(
                 rootView: AddressBarSettingsView(
                 windowUUID: windowUUID,
-                viewModel: viewModel))
+                viewModel: viewModel,
+                prefs: profile.prefs))
             viewController.title = .Settings.AddressBar.AddressBarMenuTitle
             router.push(viewController)
         } else {
@@ -412,11 +425,10 @@ final class SettingsCoordinator: BaseCoordinator,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .themeSettings)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
 
         if themeManager.isNewAppearanceMenuOn {
-            let appearanceView = AppearanceSettingsView(windowUUID: windowUUID,
-                                                        delegate: self)
+            let appearanceView = AppearanceSettingsView(windowUUID: windowUUID, delegate: self)
             let viewController = UIHostingController(rootView: appearanceView)
             viewController.title = .SettingsAppearanceTitle
             router.push(viewController)
@@ -437,6 +449,11 @@ final class SettingsCoordinator: BaseCoordinator,
             prefs: profile.prefs,
             windowUUID: windowUUID
         )
+        router.push(viewController)
+    }
+
+    func pressedTranslation() {
+        let viewController = TranslationSettingsViewController(prefs: profile.prefs, windowUUID: windowUUID)
         router.push(viewController)
     }
 

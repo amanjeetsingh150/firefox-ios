@@ -46,7 +46,7 @@ enum RemoteTabsPanelEmptyStateReason {
 }
 
 /// State for RemoteTabsPanel. WIP.
-struct RemoteTabsPanelState: ScreenState, Equatable, Sendable {
+struct RemoteTabsPanelState: ScreenState, Sendable {
     let refreshState: RemoteTabsPanelRefreshState
     let allowsRefresh: Bool
     let clientAndTabs: [ClientAndTabs]
@@ -55,9 +55,11 @@ struct RemoteTabsPanelState: ScreenState, Equatable, Sendable {
     let devices: [Device]
 
     init(appState: AppState, uuid: WindowUUID) {
-        guard let panelState = store.state.screenState(RemoteTabsPanelState.self,
-                                                       for: .remoteTabsPanel,
-                                                       window: uuid) else {
+        guard let panelState = appState.screenState(
+            RemoteTabsPanelState.self,
+            for: .remoteTabsPanel,
+            window: uuid
+        ) else {
             self.init(windowUUID: uuid)
             return
         }

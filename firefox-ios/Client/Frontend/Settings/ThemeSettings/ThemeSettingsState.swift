@@ -5,7 +5,7 @@
 import Common
 import Redux
 
-struct ThemeSettingsState: ScreenState, Equatable {
+struct ThemeSettingsState: ScreenState {
     var useSystemAppearance: Bool
     var isAutomaticBrightnessEnabled: Bool
     var manualThemeSelected: ThemeType
@@ -14,7 +14,7 @@ struct ThemeSettingsState: ScreenState, Equatable {
     var windowUUID: WindowUUID
 
     init(appState: AppState, uuid: WindowUUID) {
-        guard let themeState = store.state.screenState(
+        guard let themeState = appState.screenState(
             ThemeSettingsState.self,
             for: .themeSettings,
             window: uuid

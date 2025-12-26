@@ -12,16 +12,17 @@ import struct MozillaAppServices.Device
 @testable import Client
 
 final class RemoteTabPanelStateTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
+        try await super.tearDown()
     }
 
+    @MainActor
     func testTabsRefreshSkippedIfNotAllowed() {
         let initialState = RemoteTabsPanelState(windowUUID: .XCTestDefaultUUID)
         XCTAssertEqual(initialState.refreshState,
@@ -39,6 +40,7 @@ final class RemoteTabPanelStateTests: XCTestCase {
                        RemoteTabsPanelRefreshState.idle)
     }
 
+    @MainActor
     func testTabsRefreshSuccessStateChange() {
         let initialState = createSubject()
         let reducer = remoteTabsPanelReducer()
@@ -67,6 +69,7 @@ final class RemoteTabPanelStateTests: XCTestCase {
         XCTAssertEqual(newState.devices[0].id, deviceId)
     }
 
+    @MainActor
     func testTabsRefreshBeginStateChange() {
         let initialState = createSubject()
         let reducer = remoteTabsPanelReducer()
@@ -78,6 +81,7 @@ final class RemoteTabPanelStateTests: XCTestCase {
         XCTAssertEqual(newState.refreshState, RemoteTabsPanelRefreshState.refreshing)
     }
 
+    @MainActor
     func testTabsRefreshFailedStateChange() {
         let initialState = createSubject()
         let reducer = remoteTabsPanelReducer()
@@ -91,6 +95,7 @@ final class RemoteTabPanelStateTests: XCTestCase {
         XCTAssertNotNil(newState.showingEmptyState)
     }
 
+    @MainActor
     func testRemoteDevicesChanged() {
         let initialState = createSubject()
         let reducer = remoteTabsPanelReducer()
@@ -130,15 +135,13 @@ final class RemoteTabPanelStateTests: XCTestCase {
                              title: "Mozilla Homepage",
                              history: [],
                              lastUsed: 0,
-                             icon: nil,
-                             inactive: false)
+                             icon: nil)
         let tab2 = RemoteTab(clientGUID: "123",
                              URL: URL(string: "https://google.com")!,
                              title: "Google Homepage",
                              history: [],
                              lastUsed: 0,
-                             icon: nil,
-                             inactive: false)
+                             icon: nil)
         let fakeTabs: [RemoteTab] = [tab1, tab2]
         let client = RemoteClient(guid: "123",
                                   name: "Client",

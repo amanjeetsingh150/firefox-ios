@@ -21,8 +21,7 @@ class MainMenuViewController: UIViewController,
         static let hintViewCornerRadius: CGFloat = 20
         static let hintViewHeight: CGFloat = 140
         static let hintViewMargin: CGFloat = 20
-        static let backgroundAlpha: CGFloat = 0.80
-        static let menuHeightTolerance: CGFloat = 30
+        static let menuHeightTolerance: CGFloat = 20
         static let topMarginCFR: CGFloat = 100
     }
     typealias SubscriberStateType = MainMenuState
@@ -44,6 +43,7 @@ class MainMenuViewController: UIViewController,
     private let profile: Profile
     private var menuState: MainMenuState
     private let logger: Logger
+    private let mainMenuHelper: MainMenuInterface
 
     var viewProvider: ContextualHintViewProvider?
 
@@ -87,14 +87,16 @@ class MainMenuViewController: UIViewController,
         profile: Profile,
         notificationCenter: NotificationProtocol = NotificationCenter.default,
         themeManager: ThemeManager = AppContainer.shared.resolve(),
-        logger: Logger = DefaultLogger.shared
+        logger: Logger = DefaultLogger.shared,
+        mainMenuHelper: MainMenuInterface = MainMenuHelper()
     ) {
         self.windowUUID = windowUUID
         self.profile = profile
         self.notificationCenter = notificationCenter
         self.themeManager = themeManager
         self.logger = logger
-        menuState = MainMenuState(windowUUID: windowUUID)
+        self.mainMenuHelper = mainMenuHelper
+        self.menuState = MainMenuState(windowUUID: windowUUID)
         self.lastOrientation = UIDevice.current.orientation
         super.init(nibName: nil, bundle: nil)
 
@@ -103,7 +105,8 @@ class MainMenuViewController: UIViewController,
         startObservingNotifications(
             withNotificationCenter: notificationCenter,
             forObserver: self,
-            observing: [UIContentSizeCategory.didChangeNotification]
+            observing: [UIContentSizeCategory.didChangeNotification,
+                        UIAccessibility.reduceTransparencyStatusDidChangeNotification]
         )
     }
 
@@ -119,22 +122,6 @@ class MainMenuViewController: UIViewController,
 
         subscribeToRedux()
 
-        // TODO: FXIOS-13353 We are dispatching multiple actions when we should be dispatching only one.
-        // Actions should not need to know about the consequences.
-        store.dispatchLegacy(
-            MainMenuAction(
-                windowUUID: windowUUID,
-                actionType: MainMenuActionType.didInstantiateView
-            )
-        )
-
-        store.dispatchLegacy(
-            MainMenuAction(
-                windowUUID: self.windowUUID,
-                actionType: MainMenuActionType.updateMenuAppearance
-            )
-        )
-
         setupView()
         setupMenuOrientation()
 
@@ -143,9 +130,9 @@ class MainMenuViewController: UIViewController,
         listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
 
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
-                windowUUID: self.windowUUID,
+                windowUUID: windowUUID,
                 actionType: MainMenuActionType.viewDidLoad
             )
         )
@@ -208,14 +195,51 @@ class MainMenuViewController: UIViewController,
     }
 
     deinit {
-        unsubscribeFromRedux()
+        // TODO: FXIOS-13097 This is a work around until we can leverage isolated deinits
+        guard Thread.isMainThread else {
+            logger.log(
+                "MainMenuViewController was not deallocated on the main thread. Redux was not cleaned up.",
+                level: .fatal,
+                category: .lifecycle
+            )
+            assertionFailure("The view controller was not deallocated on the main thread. Redux was not cleaned up.")
+            return
+        }
+
+        MainActor.assumeIsolated {
+            unsubscribeFromRedux()
+        }
+    }
+
+    private func updateBlur() {
+        let shouldShowBlur = !mainMenuHelper.isReduceTransparencyEnabled
+
+        if shouldShowBlur {
+#if canImport(FoundationModels)
+            if #unavailable(iOS 26.0) {
+                view.addBlurEffectWithClearBackgroundAndClipping(using: .regular)
+            }
+#else
+            view.addBlurEffectWithClearBackgroundAndClipping(using: .regular)
+#endif
+        } else {
+            view.removeVisualEffectView()
+        }
+
+        applyTheme()
     }
 
     // MARK: Notifications
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
         case UIContentSizeCategory.didChangeNotification:
-            adjustLayout()
+            ensureMainThread {
+                self.adjustLayout()
+            }
+        case UIAccessibility.reduceTransparencyStatusDidChangeNotification:
+            ensureMainThread {
+                self.updateBlur()
+            }
         default: break
         }
     }
@@ -224,7 +248,7 @@ class MainMenuViewController: UIViewController,
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         adjustLayout()
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: self.windowUUID,
                 actionType: MainMenuActionType.updateMenuAppearance
@@ -244,7 +268,7 @@ class MainMenuViewController: UIViewController,
                 self?.adjustLayout()
             }
         }, completion: nil)
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: windowUUID,
                 actionType: MainMenuActionType.viewWillTransition
@@ -274,12 +298,14 @@ class MainMenuViewController: UIViewController,
             menuContent.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
 
-        menuContent.setupDetails(title: String(format: .MainMenu.HeaderBanner.Title, AppName.shortName.rawValue),
-                                 subtitle: .MainMenu.HeaderBanner.Subtitle,
-                                 image: UIImage(named: ImageIdentifiers.foxDefaultBrowser),
-                                 isBannerFlagEnabled: isMenuDefaultBrowserBanner,
-                                 isBrowserDefault: isBrowserDefault,
-                                 bannerShown: bannerShown)
+        menuContent.setupDetails(
+            title: String(format: .MainMenu.HeaderBanner.Title, AppName.shortName.rawValue),
+            subtitle: .MainMenu.HeaderBanner.Subtitle,
+            image: UIImage(named: ImageIdentifiers.foxDefaultBrowser),
+            isBannerFlagEnabled: isMenuDefaultBrowserBanner,
+            isBrowserDefault: isBrowserDefault,
+            bannerShown: bannerShown
+        )
     }
 
     private func setupMenuOrientation() {
@@ -337,7 +363,7 @@ class MainMenuViewController: UIViewController,
 
     // MARK: - Redux
     func subscribeToRedux() {
-        store.dispatchLegacy(
+        store.dispatch(
             ScreenAction(
                 windowUUID: windowUUID,
                 actionType: ScreenActionType.showScreen,
@@ -352,8 +378,8 @@ class MainMenuViewController: UIViewController,
         })
     }
 
-    nonisolated func unsubscribeFromRedux() {
-        store.dispatchLegacy(
+    func unsubscribeFromRedux() {
+        store.dispatch(
             ScreenAction(
                 windowUUID: windowUUID,
                 actionType: ScreenActionType.closeScreen,
@@ -366,6 +392,7 @@ class MainMenuViewController: UIViewController,
         menuState = state
 
         isBrowserDefault = menuState.isBrowserDefault
+        menuContent.updateDefaultBrowserStatus(to: isBrowserDefault)
         isPhoneLandscape = menuState.isPhoneLandscape
 
         if let siteProtectionsData = menuState.siteProtectionsData {
@@ -393,7 +420,7 @@ class MainMenuViewController: UIViewController,
     }
 
     private func dispatchCloseMenuAction() {
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: self.windowUUID,
                 actionType: MainMenuActionType.tapCloseMenu,
@@ -402,19 +429,8 @@ class MainMenuViewController: UIViewController,
         )
     }
 
-    private func dispatchSyncSignInAction() {
-        store.dispatchLegacy(
-            MainMenuAction(
-                windowUUID: self.windowUUID,
-                actionType: MainMenuActionType.tapNavigateToDestination,
-                navigationDestination: MenuNavigationDestination(.syncSignIn),
-                currentTabInfo: menuState.currentTabInfo
-            )
-        )
-    }
-
     private func dispatchSiteProtectionAction() {
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: self.windowUUID,
                 actionType: MainMenuActionType.tapNavigateToDestination,
@@ -425,7 +441,7 @@ class MainMenuViewController: UIViewController,
     }
 
     private func dispatchDefaultBrowserAction() {
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: self.windowUUID,
                 actionType: MainMenuActionType.tapNavigateToDestination,
@@ -438,7 +454,7 @@ class MainMenuViewController: UIViewController,
     // MARK: - UX related
     func applyTheme() {
         let theme = themeManager.getCurrentTheme(for: windowUUID)
-        view.backgroundColor = theme.colors.layerSurfaceLow.withAlphaComponent(UX.backgroundAlpha)
+        view.backgroundColor = theme.colors.layerSurfaceLow.withAlphaComponent(mainMenuHelper.backgroundAlpha())
         menuContent.applyTheme(theme: theme)
     }
 
@@ -561,7 +577,7 @@ class MainMenuViewController: UIViewController,
 
     // MARK: - UIAdaptivePresentationControllerDelegate
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        store.dispatchLegacy(
+        store.dispatch(
             MainMenuAction(
                 windowUUID: self.windowUUID,
                 actionType: MainMenuActionType.menuDismissed,

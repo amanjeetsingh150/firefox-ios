@@ -147,7 +147,7 @@ class IntroViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.showScreen,
                                   screen: .onboardingViewController)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
         let uuid = windowUUID
         store.subscribe(self, transform: {
             $0.select({ appState in
@@ -161,7 +161,7 @@ class IntroViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .onboardingViewController)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
     }
 
     func newState(state: OnboardingViewControllerState) {
@@ -199,7 +199,9 @@ class IntroViewController: UIViewController,
     func handleNotifications(_ notification: Notification) {
         switch notification.name {
         case UIApplication.didEnterBackgroundNotification:
-            appDidEnterBackgroundNotification()
+            ensureMainThread {
+                self.appDidEnterBackgroundNotification()
+            }
         default:
             break
         }
@@ -246,7 +248,7 @@ extension IntroViewController: UIPageViewControllerDataSource, UIPageViewControl
         _ pageViewController: UIPageViewController,
         viewControllerBefore viewController: UIViewController
     ) -> UIViewController? {
-        guard let onboardingVC = viewController as? OnboardingCardViewController,
+        guard let onboardingVC = viewController as? OnboardingCardViewController<OnboardingKitCardInfoModel>,
               let index = getCardIndex(viewController: onboardingVC)
         else { return nil }
 
@@ -263,7 +265,7 @@ extension IntroViewController: UIPageViewControllerDataSource, UIPageViewControl
         _ pageViewController: UIPageViewController,
         viewControllerAfter viewController: UIViewController
     ) -> UIViewController? {
-        guard let onboardingVC = viewController as? OnboardingCardViewController,
+        guard let onboardingVC = viewController as? OnboardingCardViewController<OnboardingKitCardInfoModel>,
               let index = getCardIndex(viewController: onboardingVC)
         else { return nil }
 
@@ -326,6 +328,7 @@ extension IntroViewController: OnboardingCardDelegate {
             introViewModel.chosenOptions.insert(.setAsDefaultBrowser)
             introViewModel.updateOnboardingUserActivationEvent()
             registerForNotification()
+            viewModel.telemetryUtility.sendGoToSettingsButtonTappedTelemetry()
             DefaultApplicationHelper().openSettings()
         case .openInstructionsPopup:
             /// Setting default browser card action opens an instruction pop up instead of
@@ -342,6 +345,7 @@ extension IntroViewController: OnboardingCardDelegate {
                 from: cardName,
                 selector: #selector(dismissPrivacyPolicyViewController))
         case .openIosFxSettings:
+            viewModel.telemetryUtility.sendGoToSettingsButtonTappedTelemetry()
             DefaultApplicationHelper().openSettings()
             advance(numberOfPages: 1, from: cardName) {
                 self.showNextPageCompletionForLastCard()
@@ -361,13 +365,13 @@ extension IntroViewController: OnboardingCardDelegate {
             let action = ThemeSettingsViewAction(manualThemeType: .dark,
                                                  windowUUID: windowUUID,
                                                  actionType: ThemeSettingsViewActionType.switchManualTheme)
-            store.dispatchLegacy(action)
+            store.dispatch(action)
         case .themeLight:
             turnSystemTheme(on: false)
             let action = ThemeSettingsViewAction(manualThemeType: .light,
                                                  windowUUID: windowUUID,
                                                  actionType: ThemeSettingsViewActionType.switchManualTheme)
-            store.dispatchLegacy(action)
+            store.dispatch(action)
         case .themeSystemDefault:
             turnSystemTheme(on: true)
         case .toolbarBottom:
@@ -389,7 +393,7 @@ extension IntroViewController: OnboardingCardDelegate {
         let action = ThemeSettingsViewAction(useSystemAppearance: state,
                                              windowUUID: windowUUID,
                                              actionType: ThemeSettingsViewActionType.toggleUseSystemAppearance)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
     }
 
     func sendCardViewTelemetry(from cardName: String) {

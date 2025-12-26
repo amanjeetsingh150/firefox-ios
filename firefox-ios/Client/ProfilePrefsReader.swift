@@ -44,4 +44,27 @@ struct ProfilePrefsReader {
         let key = ProfilePrefsReader.prefix + PrefsKeys.Notifications.TipsAndFeaturesNotifications
         return userDefaults.bool(forKey: key)
     }
+
+    /// Returns `true` if the user has accepted the Terms of Use(from onboarding or bottom sheet).
+    ///
+    /// This checks both the `TermsOfUseAccepted` boolean preference and the
+    /// `TermsOfServiceAccepted` integer preference.
+    /// If either indicates acceptance, returns `true`. Otherwise returns `false`.
+    func hasAcceptedTermsOfUse() -> Bool {
+        let touKey = ProfilePrefsReader.prefix + PrefsKeys.TermsOfUseAccepted
+        let tosKey = ProfilePrefsReader.prefix + PrefsKeys.TermsOfServiceAccepted
+
+        let hasAcceptedToU = userDefaults.bool(forKey: touKey)
+        let hasAcceptedToS = userDefaults.object(forKey: tosKey) as? Int == 1
+
+        return hasAcceptedToU || hasAcceptedToS
+    }
+
+    /// Delegates calculation to ToUExperiencePointsCalculator
+    /// Parameter region: The user's region code
+    /// Returns: The calculated  points (0, 1, or 2) based on user settings
+    func getTouExperiencePoints(region: String?) -> Int32 {
+        let calculator = ToUExperiencePointsCalculator(userDefaults: userDefaults, region: region)
+        return calculator.calculatePoints()
+    }
 }

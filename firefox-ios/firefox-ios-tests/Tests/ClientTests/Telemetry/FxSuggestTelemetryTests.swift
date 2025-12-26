@@ -11,22 +11,19 @@ import XCTest
 final class FxSuggestTelemetryTests: XCTestCase {
     private var gleanWrapper: MockGleanWrapper!
 
-    override func setUp() {
-        super.setUp()
+    @MainActor
+    override func setUp() async throws {
+        try await super.setUp()
+
+        Self.setupTelemetry(with: MockProfile())
         TelemetryContextualIdentifier.clearUserDefaults()
         gleanWrapper = MockGleanWrapper()
-
-        // Due to changes allow certain custom pings to implement their own opt-out
-        // independent of Glean, custom pings may need to be registered manually in
-        // tests in order to put them in a state in which they can collect data.
-        Glean.shared.registerPings(GleanMetrics.Pings.shared)
-        Glean.shared.resetGlean(clearStores: true)
     }
 
     override func tearDown() {
+        Self.tearDownTelemetry()
         TelemetryContextualIdentifier.clearUserDefaults()
         gleanWrapper = nil
-        Glean.shared.resetGlean(clearStores: true)
         super.tearDown()
     }
 
@@ -236,7 +233,7 @@ final class FxSuggestTelemetryTests: XCTestCase {
 
     // MARK: Helper methods
 
-    func createSubject(locale: Locale = Locale(identifier: "en-US"),
+    func createSubject(locale: LocaleProvider = MockLocaleProvider(),
                        gleanWrapper: GleanWrapper = DefaultGleanWrapper()) -> FxSuggestTelemetry {
         gleanWrapper.enableTestingMode()
         return FxSuggestTelemetry(locale: locale, gleanWrapper: gleanWrapper)

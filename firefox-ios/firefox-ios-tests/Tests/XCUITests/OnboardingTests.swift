@@ -10,22 +10,31 @@ class OnboardingTests: BaseTestCase {
     var rootA11yId: String {
         return "\(AccessibilityIdentifiers.Onboarding.onboarding)\(currentScreen)"
     }
+    var onboardingScreen: OnboardingScreen!
+    var firefoxHomePageScreen: FirefoxHomePageScreen!
 
-    override func setUp() {
+    override func setUp() async throws {
         launchArguments = [LaunchArguments.ClearProfile,
                            LaunchArguments.DisableAnimations,
                            LaunchArguments.SkipSplashScreenExperiment,
                            LaunchArguments.SkipTermsOfUse]
         currentScreen = 0
-        super.setUp()
+        try await super.setUp()
+        onboardingScreen = OnboardingScreen(app: app)
+        firefoxHomePageScreen = FirefoxHomePageScreen(app: app)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         if #available(iOS 17.0, *) {
-            switchThemeToDarkOrLight(theme: "Light")
+            if self.name.contains("testSelectBottomPlacement") && iPad() {
+                // Toolbar option not available for iPad, so the theme is not changed there.
+                return
+            } else {
+                switchThemeToDarkOrLight(theme: "Light")
+            }
         }
         app.terminate()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // Smoketest
@@ -35,6 +44,8 @@ class OnboardingTests: BaseTestCase {
 
         // Complete the First run from first screen to the latest one
         // Check that the first's tour screen is shown as well as all the elements in there
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
         waitForElementsToExist(
             [
                 app.images["\(rootA11yId)ImageView"],
@@ -99,8 +110,45 @@ class OnboardingTests: BaseTestCase {
         mozWaitForElementToExist(topSites)
     }
 
+    // Smoketest TAE
+    // https://mozilla.testrail.io/index.php?/cases/view/2575178
+    func testFirstRunTour_TAE() throws {
+        guard #available(iOS 17.0, *), !skipPlatform else { return }
+
+        // Complete the First run from first screen to the latest one
+        // Check that the first's tour screen is shown as well as all the elements in there
+        onboardingScreen.agreeAndContinue()
+        onboardingScreen.waitForCurrentScreenElements()
+
+        // Swipe to the second screen
+        onboardingScreen.goToNextScreen()
+        onboardingScreen.waitForCurrentScreenElements()
+
+        // Swipe to the third screen
+        onboardingScreen.goToNextScreen()
+        onboardingScreen.assertCurrentScreenElements()
+
+        // Swipe to the fourth screen
+        onboardingScreen.goToNextScreen()
+        onboardingScreen.assertCurrentScreenElements(secondaryExists: false)
+
+        // Swipe to the fifth screen (only iPhone)
+        if !iPad() {
+            onboardingScreen.goToNextScreenViaPrimary()
+            onboardingScreen.assertCurrentScreenElements(secondaryExists: false)
+        }
+
+        // Finish onboarding
+        onboardingScreen.finishOnboarding()
+        // Dismiss new changes pop up if exists
+        firefoxHomePageScreen.assertTopSitesItemCellExist()
+    }
+
     // https://mozilla.testrail.io/index.php?/cases/view/2793818
     func testFirstRunTourDarkMode() {
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         app.buttons["CloseButton"].waitAndTap()
         // Dismiss new changes pop up if exists
         app.buttons["Close"].tapIfExists()
@@ -109,6 +157,9 @@ class OnboardingTests: BaseTestCase {
         app.launch()
         // Check that the first's tour screen is shown as well as all the elements in there
         navigator.nowAt(FirstRun)
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         waitForElementsToExist(
             [
                 app.images["\(rootA11yId)ImageView"],
@@ -176,6 +227,9 @@ class OnboardingTests: BaseTestCase {
     // Smoketest
     // https://mozilla.testrail.io/index.php?/cases/view/2306814
     func testOnboardingSignIn() {
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
         // Swipe to the second screen
         app.buttons["\(rootA11yId)SecondaryButton"].waitAndTap()
@@ -197,9 +251,32 @@ class OnboardingTests: BaseTestCase {
         app.buttons["CloseButton"].waitAndTap()
     }
 
+    // Smoketest TAE
+    // https://mozilla.testrail.io/index.php?/cases/view/2306814
+    func testOnboardingSignIn_TAE() {
+        let onboardingScreen = OnboardingScreen(app: app)
+
+        onboardingScreen.agreeAndContinue()
+        onboardingScreen.swipeToNextScreen()
+
+        onboardingScreen.assertTextsOnCurrentScreen(
+            expectedTitle: "Stay encrypted when you hop between devices",
+            expectedDescription: "Firefox encrypts your passwords, bookmarks, and more when you’re synced.",
+            expectedPrimary: "Sign In",
+            expectedSecondary: "Skip"
+        )
+
+        onboardingScreen.tapSignIn()
+        onboardingScreen.assertSignInScreen()
+        onboardingScreen.exitSignInFlow()
+    }
+
     // Smoketest
     // https://mozilla.testrail.io/index.php?/cases/view/2306816
     func testCloseTour() {
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].waitAndTap()
         // Dismiss new changes pop up if exists
         app.buttons["Close"].tapIfExists()
@@ -207,47 +284,20 @@ class OnboardingTests: BaseTestCase {
         mozWaitForElementToExist(topSites)
     }
 
-    // https://mozilla.testrail.io/index.php?/cases/view/2306815
-    func testWhatsNewPage() throws {
-        throw XCTSkip("Skipping. The option whats new page is not available on the new menu")
-        /*
-        app.buttons["\(AccessibilityIdentifiers.Onboarding.closeButton)"].waitAndTap()
-        // Dismiss new changes pop up if exists
-        app.buttons["Close"].tapIfExists()
-        navigator.goto(BrowserTabMenu)
-        navigator.performAction(Action.OpenWhatsNewPage)
-        waitUntilPageLoad()
-        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].waitAndTap()
-
-        // Extract version number from url
-        let url = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].value
-        let textUrl = String(describing: url)
-        let start = textUrl.index(textUrl.startIndex, offsetBy: 51)
-        let end = textUrl.index(textUrl.startIndex, offsetBy: 56)
-        let range = start..<end
-        let mySubstring = textUrl[range]
-        let releaseVersion = String(mySubstring)
-
-        mozWaitForElementToExist(app.staticTexts[releaseVersion])
-        mozWaitForValueContains(
-            app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField],
-            value: "https://www.mozilla.org/en-US/firefox/ios/" + releaseVersion + "/releasenotes/"
-        )
-        app.buttons[AccessibilityIdentifiers.Browser.UrlBar.cancelButton].waitAndTap()
-        waitForElementsToExist(
-            [
-                app.staticTexts["Release Notes"],
-                app.staticTexts["Firefox for iOS Release"],
-                app.staticTexts["\(releaseVersion)"],
-                app.staticTexts["Get the most recent version"]
-            ]
-        )
-         */
+    // Smoketest TAE
+    // https://mozilla.testrail.io/index.php?/cases/view/2306816
+    func testCloseTour_TAE() {
+        onboardingScreen.agreeAndContinue()
+        onboardingScreen.closeTourIfNeeded()
+        firefoxHomePageScreen.assertTopSitesItemCellExist()
     }
 
     // TOOLBAR THEME
     // https://mozilla.testrail.io/index.php?/cases/view/2575175
     func testSelectTopPlacement() {
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         let toolbar = app.textFields["url"]
 
         // Wait for the initial title label to appear
@@ -296,9 +346,12 @@ class OnboardingTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2575176
     func testSelectBottomPlacement() throws {
-        guard !iPad() else {
-            throw XCTSkip("Toolbar option not available for iPad")
+        if iPad() {
+            let shouldSkipTest = true
+            try XCTSkipIf(shouldSkipTest, "Toolbar option not available for iPad")
         }
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
         let toolbar = app.textFields["url"]
 
         // Wait for the initial title label to appear
@@ -342,6 +395,9 @@ class OnboardingTests: BaseTestCase {
 
     // https://mozilla.testrail.io/index.php?/cases/view/2575177
     func testCloseOptionToolbarCard() {
+        waitForElementsToExist([app.buttons["TermsOfService.AgreeAndContinueButton"]])
+        app.buttons["TermsOfService.AgreeAndContinueButton"].tap()
+
         // Wait for the initial title label to appear
         mozWaitForElementToExist(app.staticTexts["\(rootA11yId)TitleLabel"])
 

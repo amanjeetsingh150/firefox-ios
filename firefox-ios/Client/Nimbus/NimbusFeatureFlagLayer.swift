@@ -4,10 +4,12 @@
 
 import Foundation
 
-final class NimbusFeatureFlagLayer {
+final class NimbusFeatureFlagLayer: Sendable {
     // MARK: - Public methods
-    public func checkNimbusConfigFor(_ featureID: NimbusFeatureFlagID,
-                                     from nimbus: FxNimbus = FxNimbus.shared
+    // swiftlint:disable:next function_body_length
+    public func checkNimbusConfigFor(
+        _ featureID: NimbusFeatureFlagID,
+        from nimbus: FxNimbus = FxNimbus.shared
     ) -> Bool {
         // For better code readability, please keep in alphabetical order by NimbusFeatureFlagID
         switch featureID {
@@ -16,6 +18,9 @@ final class NimbusFeatureFlagLayer {
 
         case .appearanceMenu:
             return checkAppearanceMenuFeature(from: nimbus)
+
+        case .appIconSelection:
+            return checkAppIconSelectionSetting(from: nimbus)
 
         case .addressBarMenu:
             return checkAddressBarMenuFeature(from: nimbus)
@@ -32,6 +37,9 @@ final class NimbusFeatureFlagLayer {
         case .downloadLiveActivities:
             return checkDownloadLiveActivitiesFeature(from: nimbus)
 
+        case .firefoxJpGuideDefaultSite:
+            return checkFirefoxJpGuideDefaultSiteFeature(from: nimbus)
+
         case .firefoxSuggestFeature:
             return checkFirefoxSuggestFeature(from: nimbus)
 
@@ -40,9 +48,6 @@ final class NimbusFeatureFlagLayer {
 
         case .hntSponsoredShortcuts:
             return checkHNTSponsoredShortcutsFeature(from: nimbus)
-
-        case .hntTopSitesVisualRefresh:
-            return checkHntTopSitesVisualRefreshFeature(from: nimbus)
 
         case .homepageRedesign:
             return checkHomepageRedesignFeature(from: nimbus)
@@ -56,14 +61,17 @@ final class NimbusFeatureFlagLayer {
         case .homepageStoriesRedesign:
             return checkHomepageStoriesRedesignFeature(from: nimbus)
 
+        case .homepageStoriesRedesignV2:
+            return checkHomepageStoriesRedesignV2Feature(from: nimbus)
+
+        case .homepageScrim:
+            return checkHomepageScrimFeature(from: nimbus)
+
         case .homepageDiscoverMoreButton, .homepageDiscoverMoreExperience:
             return checkHomepageDiscoverMoreFeature(for: featureID, from: nimbus)
 
-        case .homepageRebuild:
-            return checkHomepageFeature(from: nimbus)
-
-        case .inactiveTabs:
-            return checkTabTrayFeature(for: featureID, from: nimbus)
+        case .shouldUseJapanConfiguration:
+            return checkShouldUseJapanConfigurationFeature(from: nimbus)
 
         case .menuDefaultBrowserBanner:
             return checkMenuDefaultBrowserBanner(from: nimbus)
@@ -86,14 +94,20 @@ final class NimbusFeatureFlagLayer {
         case .noInternetConnectionErrorPage:
             return checkNICErrorPageFeature(from: nimbus)
 
-        case .pdfRefactor:
-            return checkPdfRefactorFeature(from: nimbus)
+        case .otherErrorPages:
+            return checkOtherErrorPagesFeature(from: nimbus)
+
+        case .recentSearches:
+            return checkRecentSearchesFeature(from: nimbus)
 
         case .reportSiteIssue:
             return checkGeneralFeature(for: featureID, from: nimbus)
 
-        case .searchEngineConsolidation:
-            return checkSearchEngineConsolidationFeature(from: nimbus)
+        case .sentFromFirefox:
+            return checkSentFromFirefoxFeature(from: nimbus)
+
+        case .sentFromFirefoxTreatmentA:
+            return checkSentFromFirefoxFeatureTreatmentA(from: nimbus)
 
         case .splashScreen:
             return checkSplashScreenFeature(for: featureID, from: nimbus)
@@ -113,6 +127,9 @@ final class NimbusFeatureFlagLayer {
         case .hostedSummarizer:
             return checkHostedSummarizerFeature(from: nimbus)
 
+        case .relayIntegration:
+            return checkRelayIntegration(from: nimbus)
+
         case .hostedSummarizerToolbarEntrypoint:
            return checkHostedSummarizerToolbarEntrypoint(from: nimbus)
 
@@ -121,9 +138,6 @@ final class NimbusFeatureFlagLayer {
 
         case .toolbarRefactor:
             return checkToolbarRefactorFeature(from: nimbus)
-
-        case .unifiedAds:
-            return checkUnifiedAdsFeature(from: nimbus)
 
         case .unifiedSearch:
             return checkUnifiedSearchFeature(from: nimbus)
@@ -146,8 +160,14 @@ final class NimbusFeatureFlagLayer {
         case .toolbarTranslucency:
             return checkToolbarTranslucencyFeature(from: nimbus)
 
+        case .toolbarTranslucencyRefactor:
+            return checkToolbarTranslucencyRefactorFeature(from: nimbus)
+
         case .toolbarMinimalAddressBar:
             return checkToolbarMinimalAddressBarFeature(from: nimbus)
+
+        case .toolbarMiddleButtonCustomization:
+            return checkToolbarMiddleButtonCustomizationFeature(from: nimbus)
 
         case .toolbarNavigationHint:
             return checkToolbarNavigationHintFeature(from: nimbus)
@@ -164,8 +184,11 @@ final class NimbusFeatureFlagLayer {
         case .trackingProtectionRefactor:
             return checkTrackingProtectionRefactor(from: nimbus)
 
-        case .revertUnsafeContinuationsRefactor:
-            return checkRevertUnsafeContinuationsRefactor(from: nimbus)
+        case .translation:
+            return checkTranslationFeature(from: nimbus)
+
+        case .trendingSearches:
+            return checkTrendingSearches(from: nimbus)
 
         case .updatedPasswordManager:
             return checkUpdatedPasswordManagerFeature(from: nimbus)
@@ -187,6 +210,16 @@ final class NimbusFeatureFlagLayer {
         }
     }
 
+    private func checkSentFromFirefoxFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.sentFromFirefoxFeature.value()
+        return config.enabled
+    }
+
+    private func checkSentFromFirefoxFeatureTreatmentA(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.sentFromFirefoxFeature.value()
+        return config.isTreatmentA
+    }
+
     private func checkAwesomeBarFeature(for featureID: NimbusFeatureFlagID,
                                         from nimbus: FxNimbus
     ) -> Bool {
@@ -200,10 +233,6 @@ final class NimbusFeatureFlagLayer {
 
     private func checkHNTSponsoredShortcutsFeature(from nimbus: FxNimbus) -> Bool {
         return nimbus.features.hntSponsoredShortcutsFeature.value().enabled
-    }
-
-    private func checkHntTopSitesVisualRefreshFeature(from nimbus: FxNimbus) -> Bool {
-        return nimbus.features.hntTopSitesVisualRefreshFeature.value().enabled
     }
 
     private func checkHomepageRedesignFeature(from nimbus: FxNimbus) -> Bool {
@@ -222,6 +251,14 @@ final class NimbusFeatureFlagLayer {
         return nimbus.features.homepageRedesignFeature.value().storiesRedesign
     }
 
+    private func checkHomepageStoriesRedesignV2Feature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.homepageRedesignFeature.value().storiesRedesignV2
+    }
+
+    private func checkHomepageScrimFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.homepageRedesignFeature.value().scrim
+    }
+
     private func checkHomepageDiscoverMoreFeature(
         for featureID: NimbusFeatureFlagID,
         from nimbus: FxNimbus
@@ -236,11 +273,6 @@ final class NimbusFeatureFlagLayer {
         default:
             return false
         }
-    }
-
-    private func checkHomepageFeature(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.homepageRebuildFeature.value()
-        return config.enabled
     }
 
     private func checkTabTrayTranslucencyFeature(from nimbus: FxNimbus) -> Bool {
@@ -259,11 +291,6 @@ final class NimbusFeatureFlagLayer {
 
     private func checkToolbarRefactorFeature(from nimbus: FxNimbus) -> Bool {
         let config = nimbus.features.toolbarRefactorFeature.value()
-        return config.enabled
-    }
-
-    private func checkUnifiedAdsFeature(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.unifiedAds.value()
         return config.enabled
     }
 
@@ -287,14 +314,28 @@ final class NimbusFeatureFlagLayer {
         return config.translucency
     }
 
+    private func checkToolbarTranslucencyRefactorFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.toolbarRefactorFeature.value()
+        return config.translucencyRefactor
+    }
+
     private func checkToolbarMinimalAddressBarFeature(from nimbus: FxNimbus) -> Bool {
         let config = nimbus.features.toolbarRefactorFeature.value()
         return config.minimalAddressBar
     }
 
+    private func checkToolbarMiddleButtonCustomizationFeature(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.toolbarRefactorFeature.value()
+        return config.middleButtonCustomization
+    }
+
     private func checkToolbarNavigationHintFeature(from nimbus: FxNimbus) -> Bool {
         let config = nimbus.features.toolbarRefactorFeature.value()
         return config.navigationHint
+    }
+
+    private func checkRelayIntegration(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.relayIntegrationFeature.value().enabled
     }
 
     private func checkToolbarUpdateHintFeature(from nimbus: FxNimbus) -> Bool {
@@ -316,6 +357,14 @@ final class NimbusFeatureFlagLayer {
         return config.enabled
     }
 
+    private func checkTranslationFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.translationsFeature.value().enabled
+    }
+
+    private func checkTrendingSearches(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.trendingSearchesFeature.value().enabled
+    }
+
     private func checkFeltPrivacyFeature(
         for featureID: NimbusFeatureFlagID,
         from nimbus: FxNimbus
@@ -327,11 +376,6 @@ final class NimbusFeatureFlagLayer {
         case .feltPrivacyFeltDeletion: return config.feltDeletionEnabled && config.simplifiedUiEnabled
         default: return false
         }
-    }
-
-    private func checkSearchEngineConsolidationFeature(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.searchEngineConsolidationFeature.value()
-        return config.enabled
     }
 
     private func checkSplashScreenFeature(
@@ -352,24 +396,8 @@ final class NimbusFeatureFlagLayer {
         }
     }
 
-    private func checkTabTrayFeature(for featureID: NimbusFeatureFlagID,
-                                     from nimbus: FxNimbus
-    ) -> Bool {
-        let config = nimbus.features.tabTrayFeature.value()
-        var nimbusID: TabTraySection
-
-        switch featureID {
-        case .inactiveTabs: nimbusID = TabTraySection.inactiveTabs
-        default: return false
-        }
-
-        guard let status = config.sectionsEnabled[nimbusID] else { return false }
-
-        return status
-    }
-
-    private func checkPdfRefactorFeature(from nimbus: FxNimbus) -> Bool {
-        return nimbus.features.pdfRefactorFeature.value().enabled
+    private func checkRecentSearchesFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.recentSearchesFeature.value().enabled
     }
 
     private func checkAddressAutofillEditing(from nimbus: FxNimbus) -> Bool {
@@ -381,6 +409,11 @@ final class NimbusFeatureFlagLayer {
     private func checkAppearanceMenuFeature(from nimbus: FxNimbus) -> Bool {
         let config = nimbus.features.appearanceMenuFeature.value()
         return config.status
+    }
+
+    private func checkAppIconSelectionSetting(from nimbus: FxNimbus) -> Bool {
+        let config = nimbus.features.appIconSelectionFeature.value()
+        return config.funIconsEnabled
     }
 
     private func checkAddressBarMenuFeature(from nimbus: FxNimbus) -> Bool {
@@ -399,6 +432,10 @@ final class NimbusFeatureFlagLayer {
 
     private func checkDownloadLiveActivitiesFeature(from nimbus: FxNimbus) -> Bool {
         return nimbus.features.downloadLiveActivitiesFeature.value().enabled
+    }
+
+    private func checkFirefoxJpGuideDefaultSiteFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.firefoxJpGuideDefaultSite.value().enabled
     }
 
     private func checkFirefoxSuggestFeature(from nimbus: FxNimbus) -> Bool {
@@ -435,9 +472,8 @@ final class NimbusFeatureFlagLayer {
         return nimbus.features.nativeErrorPageFeature.value().noInternetConnectionError
     }
 
-    private func checkRevertUnsafeContinuationsRefactor(from nimbus: FxNimbus) -> Bool {
-        let config = nimbus.features.revertUnsafeContinuationsRefactor.value()
-        return config.enabled
+    private func checkOtherErrorPagesFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.nativeErrorPageFeature.value().otherErrorPages
     }
 
     // MARK: - Summarizer Feature
@@ -480,5 +516,9 @@ final class NimbusFeatureFlagLayer {
 
     private func checkWebEngineIntegrationRefactor(from nimbus: FxNimbus) -> Bool {
         return nimbus.features.webEngineIntegrationRefactor.value().enabled
+    }
+
+    private func checkShouldUseJapanConfigurationFeature(from nimbus: FxNimbus) -> Bool {
+        return nimbus.features.onboardingFrameworkFeature.value().shouldUseJapanConfiguration
     }
 }

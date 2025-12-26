@@ -32,7 +32,10 @@ struct ToolbarAction: Action {
     let isLoading: Bool?
     let isNewTabFeatureEnabled: Bool?
     let canShowDataClearanceAction: Bool?
+    let shouldShowKeyboard: Bool?
     let shouldAnimate: Bool?
+    let middleButton: NavigationBarMiddleButtonType?
+    let translationConfiguration: TranslationConfiguration?
 
     init(toolbarPosition: SearchBarPosition? = nil,
          toolbarLayout: ToolbarLayoutStyle? = nil,
@@ -57,7 +60,10 @@ struct ToolbarAction: Action {
          isLoading: Bool? = nil,
          isNewTabFeatureEnabled: Bool? = nil,
          canShowDataClearanceAction: Bool? = nil,
+         shouldShowKeyboard: Bool? = nil,
          shouldAnimate: Bool? = nil,
+         middleButton: NavigationBarMiddleButtonType? = nil,
+         translationConfiguration: TranslationConfiguration? = nil,
          windowUUID: WindowUUID,
          actionType: ActionType) {
         self.windowUUID = windowUUID
@@ -84,8 +90,11 @@ struct ToolbarAction: Action {
         self.isLoading = isLoading
         self.isNewTabFeatureEnabled = isNewTabFeatureEnabled
         self.canShowDataClearanceAction = canShowDataClearanceAction
+        self.shouldShowKeyboard = shouldShowKeyboard
         self.shouldAnimate = shouldAnimate
         self.canSummarize = canSummarize
+        self.middleButton = middleButton
+        self.translationConfiguration = translationConfiguration
     }
 }
 
@@ -93,7 +102,7 @@ enum ToolbarActionType: ActionType {
     case didLoadToolbars
     case numberOfTabsChanged
     case urlDidChange
-    case scrollAlphaDidChange
+    case scrollAlphaNeedsUpdate
     case didSetTextInLocationView
     case borderPositionChanged
     case toolbarPositionChanged
@@ -102,7 +111,7 @@ enum ToolbarActionType: ActionType {
     case didStartEditingUrl
     case cancelEditOnHomepage
     case cancelEdit
-    case hideKeyboard
+    case keyboardStateDidChange
     case animationStateChanged
     case readerModeStateChanged
     case backForwardButtonStateChanged
@@ -114,9 +123,19 @@ enum ToolbarActionType: ActionType {
     case clearSearch
     case didDeleteSearchTerm
     case didEnterSearchTerm
+    // User submitted a search term to load the search request
+    case didSubmitSearchTerm
     case didSetSearchTerm
     case didStartTyping
     case translucencyDidChange
+    case navigationMiddleButtonDidChange
+    // Translations related actions that are needed to associate with the toolbar
+    // due to how our leadingPageActions are tied to ToolbarActions
+    case didStartTranslatingPage
+    case translationCompleted
+    case receivedTranslationLanguage
+    case didReceiveErrorTranslating
+    case didTranslationSettingsChange
 }
 
 struct ToolbarMiddlewareAction: Action {

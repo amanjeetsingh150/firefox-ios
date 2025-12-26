@@ -5,19 +5,21 @@
 import XCTest
 @testable import Client
 
-class RouteBuilderTests: XCTestCase {
+@MainActor
+final class RouteBuilderTests: XCTestCase {
     let testURL = URL(string: "https://example.com")
     let handoffUserActivity = NSUserActivity(activityType: browsingActivityType)
     let universalLinkUserActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
     let randomActivity = NSUserActivity(activityType: "random")
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: MockProfile())
         handoffUserActivity.webpageURL = testURL
         universalLinkUserActivity.webpageURL = testURL
         randomActivity.webpageURL = testURL
     }
+
     func test_makeRoute_HandlesAnyActivityType() {
         let routeBuilder = createSubject(mainQueue: MockDispatchQueue())
 
@@ -33,9 +35,29 @@ class RouteBuilderTests: XCTestCase {
             userActivity: randomActivity
         )
 
-        XCTAssertEqual(route, .search(url: testURL, isPrivate: false))
-        XCTAssertEqual(universalLinkRoute, .search(url: testURL, isPrivate: false))
-        XCTAssertEqual(randomRoute, .search(url: testURL, isPrivate: false))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, testURL)
+            XCTAssertFalse(isPrivate)
+        default:
+            break
+        }
+
+        switch universalLinkRoute {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, testURL)
+            XCTAssertFalse(isPrivate)
+        default:
+            break
+        }
+
+        switch randomRoute {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, testURL)
+            XCTAssertFalse(isPrivate)
+        default:
+            break
+        }
     }
 
     func test_makeRoute_ResetsShouldOpenNewTabAfterDelay() {

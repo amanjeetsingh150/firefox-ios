@@ -7,7 +7,9 @@ import Redux
 import UIKit
 
 protocol TabTrayThemeable {
+    @MainActor
     func retrieveTheme() -> Theme
+    @MainActor
     func applyTheme(_ theme: Theme)
 }
 
@@ -31,10 +33,6 @@ final class TabDisplayPanelViewController: UIViewController,
     private var isTabTrayUIExperimentsEnabled: Bool {
         return featureFlags.isFeatureEnabled(.tabTrayUIExperiments, checking: .buildOnly)
         && UIDevice.current.userInterfaceIdiom != .pad
-    }
-
-    private var isToolbarRefactorEnabled: Bool {
-        return featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly)
     }
 
     private lazy var layout: TabTrayLayoutType = {
@@ -91,6 +89,18 @@ final class TabDisplayPanelViewController: UIViewController,
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        // TODO: FXIOS-13097 This is a work around until we can leverage isolated deinits
+        guard Thread.isMainThread else {
+            assertionFailure("TabDisplayPanelViewController was not deallocated on the main thread. Redux was not removed")
+            return
+        }
+
+        MainActor.assumeIsolated {
+            unsubscribeFromRedux()
+        }
+    }
+
     // MARK: - Lifecycle methods
 
     override func viewDidLoad() {
@@ -98,10 +108,6 @@ final class TabDisplayPanelViewController: UIViewController,
         view.accessibilityLabel = .TabsTray.TabTrayViewAccessibilityLabel
         setupView()
         subscribeToRedux()
-
-        if !tabDisplayView.shouldHideInactiveTabs {
-            InactiveTabsTelemetry().sectionShown()
-        }
 
         listenForThemeChanges(withNotificationCenter: notificationCenter)
         applyTheme()
@@ -111,9 +117,9 @@ final class TabDisplayPanelViewController: UIViewController,
         super.viewWillAppear(animated)
 
         if !viewHasAppeared {
-            store.dispatchLegacy(TabPanelViewAction(panelType: panelType,
-                                                    windowUUID: windowUUID,
-                                                    actionType: TabPanelViewActionType.tabPanelWillAppear))
+            store.dispatch(TabPanelViewAction(panelType: panelType,
+                                              windowUUID: windowUUID,
+                                              actionType: TabPanelViewActionType.tabPanelWillAppear))
             viewHasAppeared = true
         }
         updateInsets()
@@ -308,12 +314,12 @@ final class TabDisplayPanelViewController: UIViewController,
         let screenAction = ScreenAction(windowUUID: windowUUID,
                                         actionType: ScreenActionType.showScreen,
                                         screen: .tabsPanel)
-        store.dispatchLegacy(screenAction)
+        store.dispatch(screenAction)
 
         let didLoadAction = TabPanelViewAction(panelType: panelType,
                                                windowUUID: windowUUID,
                                                actionType: TabPanelViewActionType.tabPanelDidLoad)
-        store.dispatchLegacy(didLoadAction)
+        store.dispatch(didLoadAction)
 
         let uuid = windowUUID
         store.subscribe(self, transform: {
@@ -327,7 +333,7 @@ final class TabDisplayPanelViewController: UIViewController,
         let action = ScreenAction(windowUUID: windowUUID,
                                   actionType: ScreenActionType.closeScreen,
                                   screen: .tabsPanel)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
     }
 
     func newState(state: TabsPanelState) {
@@ -353,6 +359,6 @@ final class TabDisplayPanelViewController: UIViewController,
                                         urlRequest: urlRequest,
                                         windowUUID: windowUUID,
                                         actionType: TabPanelViewActionType.learnMorePrivateMode)
-        store.dispatchLegacy(action)
+        store.dispatch(action)
     }
 }

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
+import ToolbarKit
 
 struct ToolbarActionConfiguration: Equatable, FeatureFlaggable {
     enum ActionType {
@@ -21,6 +22,7 @@ struct ToolbarActionConfiguration: Equatable, FeatureFlaggable {
         case locationView
         case readerMode
         case summarizer
+        case translate
         case dataClearance
         case cancelEdit
     }
@@ -30,11 +32,14 @@ struct ToolbarActionConfiguration: Equatable, FeatureFlaggable {
     var iconName: String?
     var badgeImageName: String?
     var maskImageName: String?
+    var templateModeForImage = true
+    var loadingConfig: LoadingConfig?
     var numberOfTabs: Int?
     var isFlippedForRTL = false
     var isEnabled: Bool
     var isSelected = false
     var hasCustomColor = false
+    var hasHighlightedColor = true
     var largeContentTitle: String?
     var contextualHintType: String?
     var a11yLabel: String

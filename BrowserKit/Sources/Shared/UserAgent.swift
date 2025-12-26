@@ -14,8 +14,7 @@ open class UserAgent {
     public static let platform = "AppleWebKit/605.1.15"
     public static let platformDetails = "(KHTML, like Gecko)"
 
-    // FIXME: FXIOS-13197 UserDefaults is not thread safe
-    nonisolated(unsafe) private static let defaults = UserDefaults(suiteName: AppInfo.sharedContainerIdentifier)!
+    private static let defaults = UserDefaults(suiteName: AppInfo.sharedContainerIdentifier)!
 
     private static func clientUserAgent(prefix: String) -> String {
         let versionStr: String
@@ -48,9 +47,7 @@ open class UserAgent {
     }
 
     public static func desktopUserAgent() -> String {
-        // swiftlint:disable line_length
-        return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15"
-        // swiftlint:enable line_length
+        return UserAgentBuilder.defaultDesktopUserAgent().userAgent()
     }
 
     public static func mobileUserAgent() -> String {
@@ -102,8 +99,12 @@ struct CustomUserAgentConstant {
     private static let safariMobileUA = UserAgentBuilder.defaultMobileUserAgent().clone(extensions: "Version/18.6 \(UserAgent.uaBitMobile) \(UserAgent.uaBitSafari)")
 
     static let customMobileUAForDomain = [
+        // TODO: FXIOS-14371 [webcompat] rokuchannel blocking FXIOS "this browser isn't supported" (webcompat #126427)
+        "roku.com": safariMobileUA,
         // TODO: FXIOS-13391 [webcompat] "connection error" only on FxiOS/* UA (bug 1983983)
         "tver.jp": safariMobileUA,
+        // TODO: FXIOS-14398 [webcompat] ServiceNow rejects Mobile Safari version "null" (bug 1978984)
+        "lta.go.jp": safariMobileUA,
         // TODO: FXIOS-13096 [webcompat] UA version parsed as "Safari 0" (webcompat #170304)
         "epic.com": safariMobileUA,
         "athenahealth.com": safariMobileUA,
@@ -111,7 +112,9 @@ struct CustomUserAgentConstant {
     ]
 
     static let customDesktopUAForDomain = [
+        // TODO: FXIOS-8027, FXIOS-11230, FXIOS-13891 PayPal buttons open blank tabs
         "paypal.com": defaultMobileUA,
+        // FXIOS-10251: Do not appear as desktop/Safari for firefox.com/pair
         "firefox.com": defaultMobileUA
     ]
 }
@@ -169,10 +172,10 @@ public struct UserAgentBuilder {
     public static func defaultMobileUserAgent() -> UserAgentBuilder {
         return UserAgentBuilder(
             product: UserAgent.product,
-            systemInfo: "(\(UIDeviceDetails.model); CPU iPhone OS \(UIDeviceDetails.systemVersion.replacingOccurrences(of: ".", with: "_")) like Mac OS X)",
+            systemInfo: "(\(UIDeviceDetails.model); CPU iPhone OS 18_7 like Mac OS X)",
             platform: UserAgent.platform,
             platformDetails: UserAgent.platformDetails,
-            extensions: "FxiOS/\(AppInfo.appVersion)  \(UserAgent.uaBitMobile) \(UserAgent.uaBitSafari)")
+            extensions: "FxiOS/\(AppInfo.appVersion) \(UserAgent.uaBitMobile) \(UserAgent.uaBitSafari)")
     }
 
     public static func defaultDesktopUserAgent() -> UserAgentBuilder {

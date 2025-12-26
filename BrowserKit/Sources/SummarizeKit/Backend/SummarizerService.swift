@@ -5,9 +5,27 @@
 import Foundation
 import WebKit
 
-/// A service that handles checking if a web page can be summarized and
+public protocol SummarizerService {
+    /// Generates a complete summary string from the given web view's page content.
+    /// - Throws: `SummarizerError` if the content is unsuitable or summarization fails.
+    /// - Returns: A fully summarized string for displaying.
+    @MainActor
+    func summarize(from webView: WKWebView) async throws -> String
+
+    /// Streams a summary response from the web view's page content in chunks.
+    /// Useful for providing progressive feedback while the model is still generating.
+    /// - Returns: An `AsyncThrowingStream` emitting summary chunks as they arrive.
+    /// - Note: Due to a Swift limitation (https://github.com/swiftlang/swift/issues/64165),
+    ///   the stream must use a generic `Error` type. But all errors thrown from this method are `SummarizerError`.
+    @MainActor
+    func summarizeStreamed(from webView: WKWebView) -> AsyncThrowingStream<String, Error>
+
+    func closeCurrentStreamedSession()
+}
+
+/// A default service that handles checking if a web page can be summarized and
 /// delegates summarization to the provided summarizer backend.
-public final class SummarizerService {
+public final class DefaultSummarizerService: SummarizerService {
     private let summarizer: SummarizerProtocol
     private let checker: SummarizationCheckerProtocol
     /// The maximum number of words allowed before rejecting summarization.
@@ -22,18 +40,17 @@ public final class SummarizerService {
 
     public init(
         summarizer: SummarizerProtocol,
+        lifecycleDelegate: SummarizerServiceLifecycle?,
         checker: SummarizationCheckerProtocol = SummarizationChecker(),
         maxWords: Int
     ) {
         self.summarizer = summarizer
+        self.summarizerLifecycle = lifecycleDelegate
         self.checker = checker
         self.maxWords = maxWords
     }
 
-    /// Generates a complete summary string from the given web view's page content.
-    /// - Throws: `SummarizerError` if the content is unsuitable or summarization fails.
-    /// - Returns: A fully summarized string for displaying.
-    func summarize(from webView: WKWebView) async throws -> String {
+    public func summarize(from webView: WKWebView) async throws -> String {
         do {
             let text = try await extractSummarizableText(from: webView)
             summarizerLifecycle?.summarizerServiceDidStart(text)
@@ -50,15 +67,10 @@ public final class SummarizerService {
         }
     }
 
-    /// Streams a summary response from the web view's page content in chunks.
-    /// Useful for providing progressive feedback while the model is still generating.
-    /// - Returns: An `AsyncThrowingStream` emitting summary chunks as they arrive.
-    /// - Note: Due to a Swift limitation (https://github.com/swiftlang/swift/issues/64165),
-    ///   the stream must use a generic `Error` type. But all errors thrown from this method are `SummarizerError`.
-    func summarizeStreamed(from webView: WKWebView) -> AsyncThrowingStream<String, Error> {
+    public func summarizeStreamed(from webView: WKWebView) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             streamContinuation = continuation
-            Task {
+            Task { @MainActor in
                 do {
                     let text = try await self.extractSummarizableText(from: webView)
                     summarizerLifecycle?.summarizerServiceDidStart(text)
@@ -83,8 +95,8 @@ public final class SummarizerService {
         }
     }
 
-    func closeStream() {
-        streamContinuation?.finish()
+    public func closeCurrentStreamedSession() {
+        streamContinuation?.finish(throwing: CancellationError())
         streamContinuation = nil
     }
 
@@ -92,6 +104,7 @@ public final class SummarizerService {
     ///  `.check()` by design is async since we need to wait for the document to load before we start summarizing.
     /// - Throws: `SummarizerError` if the content is not suitable or parsing fails.
     /// - Returns: Cleaned text ready for summarization.
+    @MainActor
     private func extractSummarizableText(from webView: WKWebView) async throws -> String {
         let result = await checker.check(on: webView, maxWords: maxWords)
         guard result.canSummarize else { throw SummarizerError(reason: result.reason) }

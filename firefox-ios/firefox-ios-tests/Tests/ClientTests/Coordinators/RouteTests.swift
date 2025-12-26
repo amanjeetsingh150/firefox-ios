@@ -7,20 +7,30 @@ import XCTest
 
 @MainActor
 class RouteTests: XCTestCase {
+    override func setUp() async throws {
+        try await super.setUp()
+        DependencyHelperMock().bootstrapDependencies()
+    }
+
+    override func tearDown() async throws {
+        DependencyHelperMock().reset()
+        try await super.tearDown()
+    }
+
     func testSearchRouteWithUrl() {
         let subject = createSubject()
         let url = URL(string: "http://google.com?a=1&b=2&c=foo%20bar")!
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(
-            route,
-            .search(
-                url: URL(string: "http://google.com?a=1&b=2&c=foo%20bar")!,
-                isPrivate: false,
-                options: [.focusLocationField]
-            )
-        )
+        switch route {
+        case .search(let url, let isPrivate, let options):
+            XCTAssertEqual(url, URL(string: "http://google.com?a=1&b=2&c=foo%20bar")!)
+            XCTAssertFalse(isPrivate)
+            XCTAssertEqual(options, [.focusLocationField])
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testSearchRouteWithJS_shouldReturnFalse() {
@@ -38,7 +48,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .search(url: URL(string: "http://google.com?a=1&b=2&c=foo%20bar"), isPrivate: false))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, URL(string: "http://google.com?a=1&b=2&c=foo%20bar")!)
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testSearchRouteWithPrivateFlag() {
@@ -47,7 +63,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .search(url: nil, isPrivate: true))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertNil(url)
+            XCTAssertTrue(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testSettingsRouteWithClearPrivateData() {
@@ -56,7 +78,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .clearPrivateData))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .clearPrivateData)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithNewTab() {
@@ -65,7 +92,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .newTab))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .newTab)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithNewTabTrailingSlash() {
@@ -74,7 +106,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .newTab))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .newTab)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithHomePage() {
@@ -83,7 +120,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .homePage))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .homePage)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithMailto() {
@@ -92,7 +134,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .mailto))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .mailto)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithSearch() {
@@ -101,7 +148,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .search))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .search)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testSettingsRouteWithFxa() {
@@ -110,7 +162,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .settings(section: .fxa))
+        switch route {
+        case .settings(let section):
+            XCTAssertEqual(section, .fxa)
+        default:
+            XCTFail("The route should be a settings route")
+        }
     }
 
     func testHomepanelRouteWithBookmarks() {
@@ -119,7 +176,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .homepanel(section: .bookmarks))
+        switch route {
+        case .homepanel(let section):
+            XCTAssertEqual(section, .bookmarks)
+        default:
+            XCTFail("The route should be a homepanel route")
+        }
     }
 
     func testHomepanelRouteWithTopSites() {
@@ -128,7 +190,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .homepanel(section: .topSites))
+        switch route {
+        case .homepanel(let section):
+            XCTAssertEqual(section, .topSites)
+        default:
+            XCTFail("The route should be a homepanel route")
+        }
     }
 
     func testHomepanelRouteWithHistory() {
@@ -137,7 +204,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .homepanel(section: .history))
+        switch route {
+        case .homepanel(let section):
+            XCTAssertEqual(section, .history)
+        default:
+            XCTFail("The route should be a homepanel route")
+        }
     }
 
     func testHomepanelRouteWithReadingList() {
@@ -146,7 +218,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .homepanel(section: .readingList))
+        switch route {
+        case .homepanel(let section):
+            XCTAssertEqual(section, .readingList)
+        default:
+            XCTFail("The route should be a homepanel route")
+        }
     }
 
     func testDefaultBrowserRouteWithTutorial() {
@@ -155,7 +232,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .defaultBrowser(section: .tutorial))
+        switch route {
+        case .defaultBrowser(let section):
+            XCTAssertEqual(section, .tutorial)
+        default:
+            XCTFail("The route should be a default browser route")
+        }
     }
 
     func testDefaultBrowserRouteWithSystemSettings() {
@@ -164,7 +246,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .defaultBrowser(section: .systemSettings))
+        switch route {
+        case .defaultBrowser(let section):
+            XCTAssertEqual(section, .systemSettings)
+        default:
+            XCTFail("The route should be a default browser route")
+        }
     }
 
     func testInvalidRouteWithBadPath() {
@@ -183,8 +270,16 @@ class RouteTests: XCTestCase {
         let route = subject.makeRoute(url: url)
 
         let expectedQuery = ["signin": "coolcodes", "user": "foo", "email": "bar"]
-        XCTAssertEqual(route, .fxaSignIn(params: FxALaunchParams(entrypoint: .fxaDeepLinkNavigation,
-                                                                 query: expectedQuery)))
+
+        let expectedParams = FxALaunchParams(entrypoint: .fxaDeepLinkNavigation,
+                                             query: expectedQuery)
+
+        switch route {
+        case .fxaSignIn(let params):
+            XCTAssertEqual(params, expectedParams)
+        default:
+            XCTFail("The route should be a fxa sign in route")
+        }
     }
 
     func test_makeRoute_forFXASignIn_withJS_doesntOpenRoute() {
@@ -257,7 +352,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .search(url: URL(string: "https://google.com"), isPrivate: false))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, URL(string: "https://google.com")!)
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forMediumTopSitesWidget_withJS_doesntOpenRoute() {
@@ -275,10 +376,14 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(
-            route,
-            .search(url: URL(string: "https://google.com"), isPrivate: true, options: [.focusLocationField])
-        )
+        switch route {
+        case .search(let url, let isPrivate, let options):
+            XCTAssertEqual(url, URL(string: "https://google.com")!)
+            XCTAssertTrue(isPrivate)
+            XCTAssertEqual(options, [.focusLocationField])
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forSmallQuickLinkWidget_withJS_doesntOpenRoute() {
@@ -296,10 +401,14 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(
-            route,
-            .search(url: URL(string: "https://google.com"), isPrivate: false, options: [.focusLocationField])
-        )
+        switch route {
+        case .search(let url, let isPrivate, let options):
+            XCTAssertEqual(url, URL(string: "https://google.com")!)
+            XCTAssertFalse(isPrivate)
+            XCTAssertEqual(options, [.focusLocationField])
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forMediumQuickLinkWidget_withJS_doesntOpenRoute() {
@@ -318,7 +427,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .searchQuery(query: "test search text", isPrivate: false))
+        switch route {
+        case .searchQuery(let query, let isPrivate):
+            XCTAssertEqual(query, "test search text")
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forSmallQuickLinkOpenCopedWidget_withJS_doesntOpenRoute() {
@@ -338,7 +453,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .search(url: URL(string: "https://google.com"), isPrivate: false))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertEqual(url, URL(string: "https://google.com")!)
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forSmallQuickLinkWithURLWidgetOpenCopied_withJS_doesntOpenRoute() {
@@ -356,8 +477,12 @@ class RouteTests: XCTestCase {
         let url = URL(string: "firefox://widget-small-quicklink-close-private-tabs")!
 
         let route = subject.makeRoute(url: url)
-
-        XCTAssertEqual(route, .action(action: .closePrivateTabs))
+        switch route {
+        case .action(let action):
+            XCTAssertEqual(action, .closePrivateTabs)
+        default:
+            XCTFail("The route should be an action route")
+        }
     }
 
     func test_makeRoute_forMediumQuickLinkCloseWidget_withJS_doesntOpenRoute() {
@@ -366,7 +491,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .action(action: .closePrivateTabs))
+        switch route {
+        case .action(let action):
+            XCTAssertEqual(action, .closePrivateTabs)
+        default:
+            XCTFail("The route should be an action route")
+        }
     }
 
     func testWidgetMediumQuicklinkClosePrivateTabs() {
@@ -375,7 +505,12 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .action(action: .closePrivateTabs))
+        switch route {
+        case .action(let action):
+            XCTAssertEqual(action, .closePrivateTabs)
+        default:
+            XCTFail("The route should be an action route")
+        }
     }
 
     func testUnsupportedScheme() {
@@ -411,7 +546,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .search(url: nil, isPrivate: false))
+        switch route {
+        case .search(let url, let isPrivate, _):
+            XCTAssertNil(url)
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testInvalidFxaSignIn() {
@@ -429,7 +570,13 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: url)
 
-        XCTAssertEqual(route, .searchQuery(query: "google", isPrivate: false))
+        switch route {
+        case .searchQuery(let query, let isPrivate):
+            XCTAssertEqual(query, "google")
+            XCTAssertFalse(isPrivate)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forOpenText_withJS_doesntOpenRoute() {
@@ -448,36 +595,102 @@ class RouteTests: XCTestCase {
 
         let route = subject.makeRoute(url: shareURL)
 
-        XCTAssertEqual(route, .sharesheet(shareType: .site(url: testURL), shareMessage: nil))
+        switch route {
+        case .sharesheet(let shareType, let shareMessage):
+            switch shareType {
+            case .site(let url):
+                XCTAssertEqual(url, testURL)
+            default:
+                XCTFail("The share type should be a site share type")
+            }
+            XCTAssertNil(shareMessage)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testShareSheetRouteUrlTitle() {
         let testURL = URL(string: "https://www.google.com")!
         let testTitle = "TEST TITLE"
-        let shareURL = URL(string: "firefox://share-sheet?url=\(testURL.absoluteString)&title=\(testTitle)")!
+        let shareURL: URL?
+
+        // URL(string:) changed between iOS 17 and if the string includes a space
+        // it returns nil. We updated to using URLComponents, since under the hood
+        // URL(string:) was updated in iOS17+ to use same RFC 3986 parsing as URLComponents.
+        if #available(iOS 17, *) {
+            shareURL = URL(string: "firefox://share-sheet?url=\(testURL.absoluteString)&title=\(testTitle)")
+        } else {
+            var components = URLComponents()
+            components.scheme = "firefox"
+            components.host = "share-sheet"
+            components.queryItems = [
+                URLQueryItem(name: "url", value: testURL.absoluteString),
+                URLQueryItem(name: "title", value: testTitle)
+            ]
+            shareURL = components.url
+        }
 
         let subject = createSubject()
 
-        let route = subject.makeRoute(url: shareURL)
+        let route = subject.makeRoute(url: shareURL!)
 
-        let expectedShareType = ShareType.site(url: testURL)
         let expectedShareMessage = ShareMessage(message: testTitle, subtitle: nil)
-        XCTAssertEqual(route, .sharesheet(shareType: expectedShareType, shareMessage: expectedShareMessage))
+
+        switch route {
+        case .sharesheet(let shareType, let shareMessage):
+            switch shareType {
+            case .site(let url):
+                XCTAssertEqual(url, testURL)
+            default:
+                XCTFail("The share type should be a site share type")
+            }
+            XCTAssertEqual(shareMessage, expectedShareMessage)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func testShareSheetRouteUrlTitleAndSubtitle() {
         let testURL = URL(string: "https://www.google.com")!
         let testTitle = "TEST TITLE"
         let testSubtitle = "TEST SUBTITLE"
-        let shareURL = URL(string: "firefox://share-sheet?url=\(testURL.absoluteString)&title=\(testTitle)&subtitle=\(testSubtitle)")!
+        let shareURL: URL?
+
+        // URL(string:) changed between iOS 17 and if the string includes a space
+        // it returns nil. We updated to using URLComponents, since under the hood
+        // URL(string:) was updated in iOS17+ to use same RFC 3986 parsing as URLComponents.
+        if #available(iOS 17, *) {
+            shareURL = URL(string: "firefox://share-sheet?url=\(testURL.absoluteString)&title=\(testTitle)&subtitle=\(testSubtitle)")
+        } else {
+            var components = URLComponents()
+            components.scheme = "firefox"
+            components.host = "share-sheet"
+            components.queryItems = [
+                URLQueryItem(name: "url", value: testURL.absoluteString),
+                URLQueryItem(name: "title", value: testTitle),
+                URLQueryItem(name: "subtitle", value: testSubtitle)
+            ]
+            shareURL = components.url
+        }
 
         let subject = createSubject()
 
-        let route = subject.makeRoute(url: shareURL)
+        let route = subject.makeRoute(url: shareURL!)
 
-        let expectedShareType = ShareType.site(url: testURL)
         let expectedShareMessage = ShareMessage(message: testTitle, subtitle: testSubtitle)
-        XCTAssertEqual(route, .sharesheet(shareType: expectedShareType, shareMessage: expectedShareMessage))
+
+        switch route {
+        case .sharesheet(let shareType, let shareMessage):
+            switch shareType {
+            case .site(let url):
+                XCTAssertEqual(url, testURL)
+            default:
+                XCTFail("The share type should be a site share type")
+            }
+            XCTAssertEqual(shareMessage, expectedShareMessage)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     func test_makeRoute_forShareSheet_withJS_doesntOpenRoute() {
@@ -496,8 +709,12 @@ class RouteTests: XCTestCase {
         let url = URL(string: "firefox://deep-link?url=/action/show-intro-onboarding")!
 
         let route = subject.makeRoute(url: url)
-
-        XCTAssertEqual(route, .action(action: .showIntroOnboarding))
+        switch route {
+        case .action(let action):
+            XCTAssertEqual(action, .showIntroOnboarding)
+        default:
+            XCTFail("The route should be a search route")
+        }
     }
 
     // MARK: - Helper

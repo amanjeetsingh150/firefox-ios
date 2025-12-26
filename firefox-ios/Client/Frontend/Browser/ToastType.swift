@@ -4,18 +4,18 @@
 
 import Foundation
 import Common
+import Redux
 
 enum ToastType: Equatable {
     case addBookmark(urlString: String)
     case addToReadingList
     case clearCookies
     case closedSingleTab
-    case closedSingleInactiveTab
     case closedAllTabs(count: Int)
-    case closedAllInactiveTabs(count: Int)
     case openNewTab
     case removeFromReadingList
     case removeShortcut
+    case retryTranslatingPage
 
     var title: String {
         switch self {
@@ -25,10 +25,9 @@ enum ToastType: Equatable {
             return .LegacyAppMenu.AddToReadingListConfirmMessage
         case .clearCookies:
             return .Menu.EnhancedTrackingProtection.clearDataToastMessage
-        case .closedSingleTab, .closedSingleInactiveTab:
+        case .closedSingleTab:
             return .TabsTray.CloseTabsToast.SingleTabTitle
-        case let .closedAllInactiveTabs(tabsCount),
-            let .closedAllTabs(count: tabsCount):
+        case let .closedAllTabs(count: tabsCount):
             return String.localizedStringWithFormat(
                 .TabsTray.CloseTabsToast.Title,
                 tabsCount)
@@ -38,6 +37,8 @@ enum ToastType: Equatable {
             return .LegacyAppMenu.RemoveFromReadingListConfirmMessage
         case .removeShortcut:
             return .LegacyAppMenu.RemovePinFromShortcutsConfirmMessage
+        case .retryTranslatingPage:
+            return .Translations.Sheet.Error.GeneralTitle
         }
     }
 
@@ -45,18 +46,21 @@ enum ToastType: Equatable {
         switch self {
         case .openNewTab:
             return .ContextMenuButtonToastNewTabOpenedButtonText
+        case .retryTranslatingPage:
+            return .Translations.Banner.RetryButton
         default:
             return .TabsTray.CloseTabsToast.Action
         }
     }
 
-    func reduxAction(for uuid: WindowUUID) -> TabPanelViewAction? {
-        var actionType: TabPanelViewActionType
+    func reduxAction(for uuid: WindowUUID) -> Action? {
         switch self {
-        case .closedSingleTab: actionType = TabPanelViewActionType.undoClose
-        case .closedSingleInactiveTab: actionType = TabPanelViewActionType.undoCloseInactiveTab
-        case .closedAllTabs: actionType = TabPanelViewActionType.undoCloseAllTabs
-        case .closedAllInactiveTabs: actionType = TabPanelViewActionType.undoCloseAllInactiveTabs
+        case .closedSingleTab:
+            return tabPanelAction(for: TabPanelViewActionType.undoClose, uuid: uuid)
+        case .closedAllTabs:
+            return tabPanelAction(for: TabPanelViewActionType.undoCloseAllTabs, uuid: uuid)
+        case .retryTranslatingPage:
+            return TranslationsAction(windowUUID: uuid, actionType: TranslationsActionType.didTapRetryFailedTranslation)
         case .clearCookies,
                 .addBookmark,
                 .addToReadingList,
@@ -65,7 +69,9 @@ enum ToastType: Equatable {
                 .removeShortcut:
             return nil
         }
+    }
 
+    private func tabPanelAction(for actionType: TabPanelViewActionType, uuid: WindowUUID) -> TabPanelViewAction {
         // None of the above handled toast actions require a specific panelType
         return TabPanelViewAction(panelType: nil,
                                   windowUUID: uuid,

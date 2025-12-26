@@ -8,7 +8,8 @@ import Shared
 
 @testable import Client
 
-class EditFolderViewModelTests: XCTestCase {
+@MainActor
+final class EditFolderViewModelTests: XCTestCase {
     let folder = MockFxBookmarkNode(type: .folder,
                                     guid: "1235",
                                     position: 1,
@@ -29,20 +30,20 @@ class EditFolderViewModelTests: XCTestCase {
     var profile: MockProfile!
     var parentFolderSelector: MockParentFolderSelector!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         folderFetcher = MockFolderHierarchyFetcher()
         bookmarksSaver = MockBookmarksSaver()
         profile = MockProfile()
         parentFolderSelector = MockParentFolderSelector()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         folderFetcher = nil
         bookmarksSaver = nil
         profile = nil
         parentFolderSelector = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testInit() {

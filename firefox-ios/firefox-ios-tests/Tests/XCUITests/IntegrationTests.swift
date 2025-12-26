@@ -13,35 +13,35 @@ private let historyItemSavedOnDesktop = "https://www.example.com/"
 private let loginEntry = "https://accounts.google.com"
 private let tabOpenInDesktop = "https://example.com/"
 
-class IntegrationTests: FeatureFlaggedTestBase {
+class IntegrationTests: BaseTestCase {
     let testWithDB = ["testFxASyncHistory"]
     let testFxAChinaServer = ["testFxASyncPageUsingChinaFxA"]
 
     // This DB contains 1 entry example.com
     let historyDB = "exampleURLHistoryBookmark-places.db"
 
-    override func setUp() {
-     // Test name looks like: "[Class testFunc]", parse out the function name
-     let parts = name.replacingOccurrences(of: "]", with: "").split(separator: " ")
-     let key = String(parts[1])
-     if testWithDB.contains(key) {
-     // for the current test name, add the db fixture used
-     launchArguments = [LaunchArguments.SkipIntro,
-                        LaunchArguments.StageServer,
-                        LaunchArguments.SkipWhatsNew,
-                        LaunchArguments.SkipETPCoverSheet,
-                        LaunchArguments.LoadDatabasePrefix + historyDB,
-                        LaunchArguments.SkipContextualHints]
-     } else if testFxAChinaServer.contains(key) {
-        launchArguments = [LaunchArguments.SkipIntro,
-                           LaunchArguments.FxAChinaServer,
-                           LaunchArguments.SkipWhatsNew,
-                           LaunchArguments.SkipETPCoverSheet,
-                           LaunchArguments.SkipContextualHints]
-     }
-    launchArguments.append(LaunchArguments.DisableAnimations)
-     super.setUp()
-     }
+    override func setUp() async throws {
+        // Test name looks like: "[Class testFunc]", parse out the function name
+        let parts = name.replacingOccurrences(of: "]", with: "").split(separator: " ")
+        let key = String(parts[1])
+        if testWithDB.contains(key) {
+            // for the current test name, add the db fixture used
+            launchArguments = [LaunchArguments.SkipIntro,
+                               LaunchArguments.StageServer,
+                               LaunchArguments.SkipWhatsNew,
+                               LaunchArguments.SkipETPCoverSheet,
+                               LaunchArguments.LoadDatabasePrefix + historyDB,
+                               LaunchArguments.SkipContextualHints]
+        } else if testFxAChinaServer.contains(key) {
+            launchArguments = [LaunchArguments.SkipIntro,
+                               LaunchArguments.FxAChinaServer,
+                               LaunchArguments.SkipWhatsNew,
+                               LaunchArguments.SkipETPCoverSheet,
+                               LaunchArguments.SkipContextualHints]
+        }
+        launchArguments.append(LaunchArguments.DisableAnimations)
+        try await super.setUp()
+    }
 
     func allowNotifications() {
         addUIInterruptionMonitor(withDescription: "notifications") { (alert) -> Bool in
@@ -93,7 +93,6 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncHistory() {
-        app.launch()
         // History is generated using the DB so go directly to Sign in
         // Sign into Mozilla Account
         navigator.goto(BrowserTabMenu)
@@ -104,7 +103,6 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncPageUsingChinaFxA() {
-        app.launch()
         // History is generated using the DB so go directly to Sign in
         // Sign into Mozilla Account
         navigator.goto(BrowserTabMenu)
@@ -118,14 +116,15 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncBookmark() {
-        app.launch()
+        waitForTabsButton()
+        navigator.nowAt(HomePanelsScreen)
         // Bookmark is added by the DB
         // Sign into Mozilla Account
         navigator.openURL(testingURL)
         mozWaitForElementToExist(app.buttons[AccessibilityIdentifiers.Browser.AddressToolbar.lockIcon])
+        navigator.nowAt(BrowserTab)
         navigator.goto(BrowserTabMenu)
         navigator.performAction(Action.Bookmark)
-        navigator.nowAt(BrowserTab)
         signInFxAccounts()
 
         // Wait for initial sync to complete
@@ -133,7 +132,6 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncBookmarkDesktop() {
-        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -144,11 +142,10 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncTabs() {
-        app.launch()
         signInFxAccounts()
 
         // We only sync tabs if the user is signed in
-        navigator.nowAt(BrowserTab)
+        navigator.nowAt(HomePanelsScreen)
         waitForTabsButton()
         navigator.openURL(testingURL)
         waitUntilPageLoad()
@@ -161,7 +158,7 @@ class IntegrationTests: FeatureFlaggedTestBase {
         mozWaitForElementToExist(app.cells["DeviceNameSetting"].textFields["DeviceNameSettingTextField"])
         XCTAssertEqual(
             app.cells["DeviceNameSetting"].textFields["DeviceNameSettingTextField"].value! as? String,
-            "Fennec (administrator) on iOS"
+            "Fennec (admin) on iOS"
         )
 
         // Sync again just to make sure to sync after new name is shown
@@ -172,7 +169,8 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncLogins() {
-        app.launch()
+        waitForTabsButton()
+        navigator.nowAt(HomePanelsScreen)
         navigator.openURL("gmail.com")
         waitUntilPageLoad()
 
@@ -193,7 +191,6 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncHistoryDesktop() {
-        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -206,7 +203,6 @@ class IntegrationTests: FeatureFlaggedTestBase {
     }
 
     func testFxASyncPasswordDesktop() {
-        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -228,9 +224,7 @@ class IntegrationTests: FeatureFlaggedTestBase {
         XCTAssertTrue(app.tables.cells.staticTexts[loginEntry].exists, "The login saved on desktop is not synced")
     }
 
-    func testFxASyncTabsDesktop_tabTrayExperimentOn() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOn", featureName: "tab-tray-ui-experiments")
-        app.launch()
+    func testFxASyncTabsDesktop() {
         // Sign into Mozilla Account
         signInFxAccounts()
 
@@ -249,29 +243,7 @@ class IntegrationTests: FeatureFlaggedTestBase {
         XCTAssertTrue(app.tables.staticTexts[tabOpenInDesktop].exists, "The tab is not synced")
     }
 
-    func testFxASyncTabsDesktop_tabTrayExperimentOff() {
-        addLaunchArgument(jsonFileName: "defaultEnabledOff", featureName: "tab-tray-ui-experiments")
-        app.launch()
-        // Sign into Mozilla Account
-        signInFxAccounts()
-
-        // Wait for initial sync to complete
-        waitForInitialSyncComplete()
-
-        // Check synced Tabs
-        app.buttons["Done"].waitAndTap()
-        navigator.nowAt(HomePanelsScreen)
-        navigator.goto(TabTray)
-        navigator.performAction(Action.ToggleSyncMode)
-
-        // Need to swipe to get the data on the screen on focus
-        app.swipeDown()
-        mozWaitForElementToExist(app.tables.otherElements["profile1"])
-        XCTAssertTrue(app.tables.staticTexts[tabOpenInDesktop].exists, "The tab is not synced")
-    }
-
     func testFxADisconnectConnect() {
-        app.launch()
         // Sign into Mozilla Account
         signInFxAccounts()
 

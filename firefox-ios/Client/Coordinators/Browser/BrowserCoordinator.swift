@@ -38,7 +38,6 @@ class BrowserCoordinator: BaseCoordinator,
 
     var browserViewController: BrowserViewController
     var webviewController: WebviewViewController?
-    var legacyHomepageViewController: LegacyHomepageViewController?
     var homepageViewController: HomepageViewController?
     private weak var privateHomepageViewController: PrivateHomepageViewController?
 
@@ -92,7 +91,11 @@ class BrowserCoordinator: BaseCoordinator,
         if let launchType = launchType, launchType.canLaunch(fromType: .BrowserCoordinator, isIphone: isIphone) {
             startLaunch(with: launchType)
         } else {
-            showTermsOfUse()
+            // Defer ToU presentation to next run loop after deep link processing
+            // This prevents ToU from being dismissed when deep link navigation starts
+            DispatchQueue.main.async { [weak self] in
+                self?.showTermsOfUse()
+            }
         }
     }
 
@@ -127,30 +130,6 @@ class BrowserCoordinator: BaseCoordinator,
 
     // MARK: - BrowserDelegate
 
-    func showLegacyHomepage(
-        inline: Bool,
-        toastContainer: UIView,
-        homepanelDelegate: HomePanelDelegate,
-        libraryPanelDelegate: LibraryPanelDelegate,
-        statusBarScrollDelegate: StatusBarScrollDelegate,
-        overlayManager: OverlayModeManager
-    ) {
-        let legacyHomepageViewController = getHomepage(
-            inline: inline,
-            toastContainer: toastContainer,
-            homepanelDelegate: homepanelDelegate,
-            libraryPanelDelegate: libraryPanelDelegate,
-            statusBarScrollDelegate: statusBarScrollDelegate,
-            overlayManager: overlayManager
-        )
-
-        guard browserViewController.embedContent(legacyHomepageViewController) else { return }
-        self.legacyHomepageViewController = legacyHomepageViewController
-        legacyHomepageViewController.scrollToTop()
-        // We currently don't support full page screenshot of the homepage
-        screenshotService.screenshotableView = nil
-    }
-
     func showHomepage(
         overlayManager: OverlayModeManager,
         isZeroSearch: Bool,
@@ -164,6 +143,7 @@ class BrowserCoordinator: BaseCoordinator,
             toastContainer: toastContainer
         )
         homepageController.termsOfUseDelegate = self
+        homepageController.view.accessibilityElementsHidden = false
         dispatchActionForEmbeddingHomepage(with: isZeroSearch)
         guard browserViewController.embedContent(homepageController) else {
             logger.log("Unable to embed new homepage", level: .debug, category: .coordinator)
@@ -171,6 +151,8 @@ class BrowserCoordinator: BaseCoordinator,
         }
         self.homepageViewController = homepageController
         homepageController.scrollToTop()
+        // [FXIOS-13651] Fix for WKWebView memory leak. (See comments on related PR.)
+        webviewController?.update(webView: nil)
     }
 
     func homepageScreenshotTool() -> (any Screenshotable)? {
@@ -182,18 +164,17 @@ class BrowserCoordinator: BaseCoordinator,
             if tabManager.selectedTab?.isPrivate == true {
                 return privateHomepageViewController
             }
-            return homepageViewController ?? legacyHomepageViewController
+            return homepageViewController
         }
     }
 
     func setHomepageVisibility(isVisible: Bool) {
-        let homepage = homepageViewController ?? legacyHomepageViewController
-        guard let homepage else { return }
+        guard let homepage = homepageViewController else { return }
         homepage.view.isHidden = !isVisible
     }
 
     private func dispatchActionForEmbeddingHomepage(with isZeroSearch: Bool) {
-        store.dispatchLegacy(
+        store.dispatch(
             HomepageAction(
                 isZeroSearch: isZeroSearch,
                 windowUUID: windowUUID,
@@ -207,6 +188,7 @@ class BrowserCoordinator: BaseCoordinator,
             windowUUID: windowUUID,
             overlayManager: overlayManager
         )
+        homepageViewController?.view.accessibilityElementsHidden = true
         privateHomepageController.parentCoordinator = self
         self.privateHomepageViewController = privateHomepageController
         guard browserViewController.embedContent(privateHomepageController) else {
@@ -287,6 +269,8 @@ class BrowserCoordinator: BaseCoordinator,
             router.popViewController(animated: false)
         }
 
+        homepageViewController?.view.accessibilityElementsHidden = true
+        UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
         screenshotService.screenshotableView = webviewController
     }
 
@@ -304,41 +288,10 @@ class BrowserCoordinator: BaseCoordinator,
         }
     }
 
-    private func getHomepage(inline: Bool,
-                             toastContainer: UIView,
-                             homepanelDelegate: HomePanelDelegate,
-                             libraryPanelDelegate: LibraryPanelDelegate,
-                             statusBarScrollDelegate: StatusBarScrollDelegate,
-                             overlayManager: OverlayModeManager) -> LegacyHomepageViewController {
-        if let legacyHomepageViewController = legacyHomepageViewController {
-            legacyHomepageViewController.configure(isZeroSearch: inline)
-            return legacyHomepageViewController
-        } else {
-            let legacyHomepageViewController = LegacyHomepageViewController(
-                profile: profile,
-                isZeroSearch: inline,
-                toastContainer: toastContainer,
-                tabManager: tabManager,
-                overlayManager: overlayManager)
-            legacyHomepageViewController.homePanelDelegate = homepanelDelegate
-            legacyHomepageViewController.libraryPanelDelegate = libraryPanelDelegate
-            legacyHomepageViewController.statusBarScrollDelegate = statusBarScrollDelegate
-            legacyHomepageViewController.browserNavigationHandler = self
-            legacyHomepageViewController.termsOfUseDelegate = self
-
-            return legacyHomepageViewController
-        }
-    }
-
     // MARK: - ETPCoordinatorSSLStatusDelegate
 
     var showHasOnlySecureContentInTrackingPanel: Bool {
-        if browserViewController.isToolbarRefactorEnabled {
-            return browserViewController.tabManager.selectedTab?.currentWebView()?.hasOnlySecureContent ?? false
-        }
-
-        guard let bar = browserViewController.legacyUrlBar else { return false }
-        return bar.locationView.hasSecureContent
+        return browserViewController.tabManager.selectedTab?.currentWebView()?.hasOnlySecureContent ?? false
     }
 
     // MARK: - Route handling
@@ -501,7 +454,7 @@ class BrowserCoordinator: BaseCoordinator,
             return // route is handled with existing child coordinator
         }
         windowManager.postWindowEvent(event: .settingsOpened, windowUUID: windowUUID)
-        let navigationController = ThemedNavigationController(windowUUID: windowUUID)
+        let navigationController = SettingsNavigationController(windowUUID: windowUUID)
         let isPad = UIDevice.current.userInterfaceIdiom == .pad
         let modalPresentationStyle: UIModalPresentationStyle = isPad ? .fullScreen: .formSheet
         navigationController.modalPresentationStyle = modalPresentationStyle
@@ -683,9 +636,13 @@ class BrowserCoordinator: BaseCoordinator,
 
     func presentSavePDFController() {
         guard let selectedTab = browserViewController.tabManager.selectedTab else { return }
+
         if selectedTab.mimeType == MIMEType.PDF {
             showShareSheetForCurrentlySelectedTab()
         } else {
+            // Online PDFs viewed in a tab can be shared via this URL to other Firefox synced devices with Send to Device.
+            let remoteURL = selectedTab.webView?.url
+
             selectedTab.webView?.createPDF { [weak self] result in
                 guard let self else { return }
                 switch result {
@@ -697,7 +654,7 @@ class BrowserCoordinator: BaseCoordinator,
                     do {
                         try data.write(to: outputURL)
                         startShareSheetCoordinator(
-                            shareType: .file(url: outputURL),
+                            shareType: .file(url: outputURL, remoteURL: remoteURL),
                             shareMessage: nil,
                             sourceView: self.browserViewController.addressToolbarContainer,
                             sourceRect: nil,
@@ -780,7 +737,13 @@ class BrowserCoordinator: BaseCoordinator,
             navigationController.sheetPresentationController?.detents = [.medium(), .large()]
             navigationController.sheetPresentationController?.prefersGrabberVisible = true
             if isEditing {
-                store.dispatchLegacy(ToolbarAction(windowUUID: windowUUID, actionType: ToolbarActionType.hideKeyboard))
+                store.dispatch(
+                    ToolbarAction(
+                        shouldShowKeyboard: false,
+                        windowUUID: windowUUID,
+                        actionType: ToolbarActionType.keyboardStateDidChange
+                    )
+                )
             }
         }
 
@@ -805,6 +768,7 @@ class BrowserCoordinator: BaseCoordinator,
             selectNewTab: selectNewTab
         )
     }
+
     func showShareSheet(
         shareType: ShareType,
         shareMessage: ShareMessage?,
@@ -867,7 +831,7 @@ class BrowserCoordinator: BaseCoordinator,
     /// There are many ways to share many types of content from various areas of the app. Code paths that go through this
     /// method include:
     /// * Sharing content from a long press on Home screen tiles (e.g. long press Jump Back In context menu)
-    /// * From the old Menu > Share and the new Menu > Tools > Share
+    /// * From the old Menu > Share and the new Menu > More > Share
     /// * From the new toolbar share button beside the address bar
     /// * From long pressing a link in the WKWebView and sharing from the context menu (via ActionProviderBuilder > addShare)
     /// * Via the sharesheet deeplink path in `RouteBuilder` (e.g. tapping home cards that initiate sharing content)
@@ -897,8 +861,13 @@ class BrowserCoordinator: BaseCoordinator,
             // FXIOS-10824 It's strange if the user has to wait a long time to download files that are literally already
             // being shown in the webview.
             var overrideShareType = shareType
-            if case ShareType.tab = shareType {
-                overrideShareType = await tryDownloadingTabFileToShare(shareType: shareType)
+            if case let ShareType.tab(url, tab) = shareType {
+                // For tabs displaying content other than HTML MIME types, we can download the temporary document (i.e. a PDF
+                // file) and share that instead.
+                overrideShareType = await tryDownloadingTabFileToShare(
+                    withTabURL: url,
+                    forShareTab: tab
+                )
             }
 
             await MainActor.run { [weak self, overrideShareType] in
@@ -1037,7 +1006,7 @@ class BrowserCoordinator: BaseCoordinator,
         navigationController.onViewDismissed = { [weak self] in
             guard let self else { return }
             self.didDismissTabTray(from: tabTrayCoordinator)
-            store.dispatchLegacy(
+            store.dispatch(
                 TabTrayAction(
                     windowUUID: self.windowUUID,
                     actionType: TabTrayActionType.modalSwipedToClose
@@ -1114,7 +1083,7 @@ class BrowserCoordinator: BaseCoordinator,
             browserScreenshot = UIImage(cgImage: croppedImage, scale: UIScreen.main.scale, orientation: .up)
         }
 
-        guard !childCoordinators.contains(where: { $0 is SummarizeController }) else { return }
+        guard !childCoordinators.contains(where: { $0 is SummarizeCoordinator }) else { return }
         let coordinator = SummarizeCoordinator(
             browserSnapshot: browserScreenshot,
             browserSnapshotTopOffset: contentContainer.frame.origin.y,
@@ -1135,6 +1104,22 @@ class BrowserCoordinator: BaseCoordinator,
     func showShortcutsLibrary() {
         let shortcutsLibraryViewController = ShortcutsLibraryViewController(windowUUID: windowUUID)
         router.push(shortcutsLibraryViewController)
+    }
+
+    func showStoriesFeed() {
+        let storiesFeedViewController = StoriesFeedViewController(windowUUID: windowUUID)
+        router.push(storiesFeedViewController)
+    }
+
+    func showStoriesWebView(url: URL?) {
+        guard let url else { return }
+        let webviewViewController = StoriesWebviewViewController(profile: profile, windowUUID: windowUUID)
+        webviewViewController.configure(url: url)
+        router.push(webviewViewController)
+    }
+
+    func popToBVC() {
+        _ = router.popToViewController(browserViewController, reason: .deeplink)
     }
 
     // MARK: Microsurvey
@@ -1185,7 +1170,20 @@ class BrowserCoordinator: BaseCoordinator,
     // MARK: - Terms of Use
 
     func showTermsOfUse(context: TriggerContext = .appLaunch) {
-        let presenter = (homepageViewController ?? legacyHomepageViewController) ?? browserViewController
+        /// For .appLaunch and .appBecameActive, we show ToU
+        /// on top of standard homepage or any website
+        /// For case .homepageOpened, ToU should be displayed only on
+        /// standard  homepage or blank page
+        /// (not on custom URL homepage/new tab, not on regular websites)
+        if let selectedTab = tabManager.selectedTab, context == .homepageOpened {
+            guard selectedTab.isFxHomeTab || selectedTab.url == nil else { return }
+        }
+
+        guard !childCoordinators.contains(where: { $0 is TermsOfUseCoordinator }) else {
+            return // route is handled with existing child coordinator
+        }
+
+        let presenter = homepageViewController ?? browserViewController
 
         let router = DefaultRouter(navigationController: presenter.navigationController ?? UINavigationController())
 
@@ -1211,7 +1209,7 @@ class BrowserCoordinator: BaseCoordinator,
             actionType: PasswordGeneratorActionType.showPasswordGenerator,
             currentFrame: frame
         )
-        store.dispatchLegacy(action)
+        store.dispatch(action)
 
         let bottomSheetVM = BottomSheetViewModel(
             shouldDismissForTapOutside: true,
@@ -1270,9 +1268,6 @@ class BrowserCoordinator: BaseCoordinator,
             // Clean up views and ensure BVC for the window is freed
             browserViewController.view.endEditing(true)
             browserViewController.dismissUrlBar()
-            legacyHomepageViewController?.view.removeFromSuperview()
-            legacyHomepageViewController?.removeFromParent()
-            legacyHomepageViewController = nil
             browserViewController.contentContainer.subviews.forEach { $0.removeFromSuperview() }
             browserViewController.removeFromParent()
         case .libraryOpened:
@@ -1309,21 +1304,26 @@ class BrowserCoordinator: BaseCoordinator,
 
     // MARK: - Private helpers
 
-    nonisolated private func tryDownloadingTabFileToShare(shareType: ShareType) async -> ShareType {
-        // We can only try to download files for `.tab` type shares that have a TemporaryDocument
-        guard case let ShareType.tab(_, tab) = shareType,
-              let temporaryDocument = tab.temporaryDocument,
-              !temporaryDocument.isDownloading else {
-            return shareType
-        }
-
-        guard let fileURL = await temporaryDocument.download() else {
+    /// Tabs displaying content other than a HTML MIME type can be downloaded and treated as files when shared. This method
+    /// attempts to download any such files. If there is no file to download, returns just a regular `ShareType.tab`.
+    /// - Parameters:
+    ///   - tabURL: The URL for the tab pointing to a website.
+    ///   - tab: The current tab displaying the tabURL.
+    /// - Returns: Returns a `ShareType.file` containing a `file://` URL that points to a downloaded file on the device. If
+    ///            no file was downloaded, then just returns a regular `ShareType.tab` with the passed in `tabURL` and `tab`.
+    private func tryDownloadingTabFileToShare(
+        withTabURL tabURL: URL,
+        forShareTab tab: ShareTab
+    ) async -> ShareType {
+        guard let temporaryDocument = tab.temporaryDocument,
+              !temporaryDocument.isDownloading,
+              let fileURL = await temporaryDocument.download() else {
             // If no file was downloaded, simply share the tab as usual with a web URL
-            return shareType
+            return .tab(url: tabURL, tab: tab)
         }
 
         // If we successfully got a temp file URL, share it like a downloaded file
-        return .file(url: fileURL)
+        return .file(url: fileURL, remoteURL: tabURL)
     }
 
     /// Utility. Performs the supplied action if a coordinator of the indicated type

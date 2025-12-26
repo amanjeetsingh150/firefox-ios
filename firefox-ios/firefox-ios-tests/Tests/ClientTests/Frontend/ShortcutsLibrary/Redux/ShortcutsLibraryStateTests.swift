@@ -9,14 +9,14 @@ import XCTest
 @testable import Client
 
 final class ShortcutsLibraryStateTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func tests_initialState_returnsExpectedState() {
@@ -27,6 +27,7 @@ final class ShortcutsLibraryStateTests: XCTestCase {
         XCTAssertFalse(initialState.shouldRecordImpressionTelemetry)
     }
 
+    @MainActor
     func test_initializeAction_returnsExpectedState() throws {
         let initialState = createSubject()
         let reducer = shortcutsLibraryReducer()
@@ -44,6 +45,7 @@ final class ShortcutsLibraryStateTests: XCTestCase {
         XCTAssertTrue(newState.shouldRecordImpressionTelemetry)
     }
 
+    @MainActor
     func test_impressionTelemetryRecordedAction_returnsExpectedState() throws {
         let initialState = createSubject()
         let reducer = shortcutsLibraryReducer()
@@ -61,7 +63,8 @@ final class ShortcutsLibraryStateTests: XCTestCase {
         XCTAssertEqual(newState.shortcuts.count, initialState.shortcuts.count)
     }
 
-    func test_retrievedUpdatedStoriesAction_returnsExpectedState() throws {
+    @MainActor
+    func test_retrievedUpdatedSitesAction_returnsExpectedState() throws {
         let initialState = createSubject()
         let reducer = shortcutsLibraryReducer()
 
@@ -87,7 +90,8 @@ final class ShortcutsLibraryStateTests: XCTestCase {
         XCTAssertEqual(newState.shortcuts.compactMap { $0.title }, ["hello"])
     }
 
-    func test_retrievedUpdatedStoriesAction_withEmptyShortcuts_returnsDefaultState() throws {
+    @MainActor
+    func test_retrievedUpdatedSitesAction_withEmptyShortcuts_returnsDefaultState() throws {
         let initialState = createSubject()
         let reducer = shortcutsLibraryReducer()
 

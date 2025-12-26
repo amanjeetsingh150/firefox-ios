@@ -6,7 +6,8 @@ import Common
 import Storage
 @testable import Client
 
-class DependencyHelperMock {
+final class DependencyHelperMock {
+    @MainActor
     func bootstrapDependencies(
         injectedWindowManager: WindowManager? = nil,
         injectedTabManager: TabManager? = nil,
@@ -20,13 +21,6 @@ class DependencyHelperMock {
         )
         AppContainer.shared.register(service: profile as Profile)
 
-        let searchEnginesManager = SearchEnginesManager(
-            prefs: profile.prefs,
-            files: profile.files,
-            engineProvider: MockSearchEngineProvider()
-        )
-        AppContainer.shared.register(service: searchEnginesManager)
-
         let diskImageStore: DiskImageStore = DefaultDiskImageStore(
             files: profile.files,
             namespace: TabManagerConstants.tabScreenshotNamespace,
@@ -37,24 +31,21 @@ class DependencyHelperMock {
         let windowManager: WindowManager = injectedWindowManager ?? MockWindowManager(
             wrappedManager: WindowManagerImplementation()
         )
-        let tabManager: TabManager =
-        injectedTabManager ?? TabManagerImplementation(profile: profile,
-                                                       uuid: ReservedWindowUUID(uuid: windowUUID, isNew: false),
-                                                       windowManager: windowManager)
+
+        var tabManager: TabManager!
 
         let appSessionProvider: AppSessionProvider = AppSessionManager()
         AppContainer.shared.register(service: appSessionProvider as AppSessionProvider)
 
-        // FIXME: FXIOS-13151 We need to handle main actor synchronized state in this setup method used across all unit tests
-        if Thread.isMainThread {
-            MainActor.assumeIsolated {
-                AppContainer.shared.register(service: MockThemeManager() as ThemeManager)
-            }
-        } else {
-            DispatchQueue.main.sync {
-                AppContainer.shared.register(service: MockThemeManager() as ThemeManager)
-            }
-        }
+        tabManager = injectedTabManager ?? MockTabManager()
+        AppContainer.shared.register(service: MockThemeManager() as ThemeManager)
+
+        let searchEnginesManager = SearchEnginesManager(
+            prefs: profile.prefs,
+            files: profile.files,
+            engineProvider: MockSearchEngineProvider()
+        )
+        AppContainer.shared.register(service: searchEnginesManager)
 
         let downloadQueue = DownloadQueue()
         AppContainer.shared.register(service: downloadQueue)

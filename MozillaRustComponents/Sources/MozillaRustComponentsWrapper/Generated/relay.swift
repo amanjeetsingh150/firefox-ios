@@ -400,6 +400,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -481,15 +497,101 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 
 
+/**
+ * Represents a client for the Relay API.
+ *
+ * Use this struct to connect and authenticate with a Relay server,
+ * managing authorization to call protected endpoints.
+ *
+ * # Authorization
+ * - Clients should use the [fxa_client::FirefoxAccount::getAccessToken()] function
+ * to obtain a relay-scoped access token (scope: `https://identity.mozilla.com/apps/relay`).
+ * - Then, construct the [`RelayClient`] with the access token.
+ * All requests will then be authenticated to the Relay server via `Authorization: Bearer {fxa-access-token}`.
+ * - The Relay server verifies this token with the FxA OAuth `/verify` endpoint.
+ * - Clients are responsible for getting a new access token when needed.
+ */
 public protocol RelayClientProtocol: AnyObject, Sendable {
     
+    /**
+     * Creates a Relay user record in the Relay service database.
+     *
+     * This function was originally used to signal acceptance of terms and privacy notices,
+     * but now primarily serves to provision (create) the Relay user record if one does not exist.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
     func acceptTerms() throws 
     
+    /**
+     * Creates a new Relay mask (alias) with the specified metadata.
+     *
+     * This is used to generate a new alias for use in an email field.
+     *
+     * - `description`: A label shown in the Relay dashboard; defaults to `generated_for`, user-editable later.
+     * - `generated_for`: The website for which the address is generated.
+     * - `used_on`: Comma-separated list of all websites where this address is used. Only updated by some clients.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
     func createAddress(description: String, generatedFor: String, usedOn: String) throws  -> RelayAddress
     
+    /**
+     * Retrieves all Relay addresses associated with the current account.
+     *
+     * Returns a vector of [`RelayAddress`] objects on success.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
     func fetchAddresses() throws  -> [RelayAddress]
     
+    /**
+     * Retrieves the profile for the authenticated user.
+     *
+     * Returns a [`RelayProfile`] object containing subscription status, usage statistics,
+     * and account settings. The `has_premium` field indicates whether the user has
+     * an active premium subscription.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response.
+     * Provides the HTTP `status` and response `body`; downstream consumers can inspect
+     * these fields. If the response body is JSON with `error_code` or `detail` fields,
+     * these are parsed and included for more granular handling; otherwise, the raw
+     * response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity,
+     * with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
+    func fetchProfile() throws  -> RelayProfile
+    
 }
+/**
+ * Represents a client for the Relay API.
+ *
+ * Use this struct to connect and authenticate with a Relay server,
+ * managing authorization to call protected endpoints.
+ *
+ * # Authorization
+ * - Clients should use the [fxa_client::FirefoxAccount::getAccessToken()] function
+ * to obtain a relay-scoped access token (scope: `https://identity.mozilla.com/apps/relay`).
+ * - Then, construct the [`RelayClient`] with the access token.
+ * All requests will then be authenticated to the Relay server via `Authorization: Bearer {fxa-access-token}`.
+ * - The Relay server verifies this token with the FxA OAuth `/verify` endpoint.
+ * - Clients are responsible for getting a new access token when needed.
+ */
 open class RelayClient: RelayClientProtocol, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
@@ -529,6 +631,16 @@ open class RelayClient: RelayClientProtocol, @unchecked Sendable {
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_relay_fn_clone_relayclient(self.pointer, $0) }
     }
+    /**
+     * Creates a new `RelayClient` instance.
+     *
+     * # Parameters
+     * - `server_url`: Base URL for the Relay API.
+     * - `auth_token`: Optional relay-scoped access token (see struct docs).
+     *
+     * # Returns
+     * A new [`RelayClient`] configured for the specified server and token.
+     */
 public convenience init(serverUrl: String, authToken: String?)throws  {
     let pointer =
         try rustCallWithError(FfiConverterTypeRelayApiError_lift) {
@@ -551,12 +663,39 @@ public convenience init(serverUrl: String, authToken: String?)throws  {
     
 
     
+    /**
+     * Creates a Relay user record in the Relay service database.
+     *
+     * This function was originally used to signal acceptance of terms and privacy notices,
+     * but now primarily serves to provision (create) the Relay user record if one does not exist.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
 open func acceptTerms()throws   {try rustCallWithError(FfiConverterTypeRelayApiError_lift) {
     uniffi_relay_fn_method_relayclient_accept_terms(self.uniffiClonePointer(),$0
     )
 }
 }
     
+    /**
+     * Creates a new Relay mask (alias) with the specified metadata.
+     *
+     * This is used to generate a new alias for use in an email field.
+     *
+     * - `description`: A label shown in the Relay dashboard; defaults to `generated_for`, user-editable later.
+     * - `generated_for`: The website for which the address is generated.
+     * - `used_on`: Comma-separated list of all websites where this address is used. Only updated by some clients.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
 open func createAddress(description: String, generatedFor: String, usedOn: String)throws  -> RelayAddress  {
     return try  FfiConverterTypeRelayAddress_lift(try rustCallWithError(FfiConverterTypeRelayApiError_lift) {
     uniffi_relay_fn_method_relayclient_create_address(self.uniffiClonePointer(),
@@ -567,9 +706,45 @@ open func createAddress(description: String, generatedFor: String, usedOn: Strin
 })
 }
     
+    /**
+     * Retrieves all Relay addresses associated with the current account.
+     *
+     * Returns a vector of [`RelayAddress`] objects on success.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response. Provides the HTTP `status` and response `body`; downstream consumers can inspect these fields. If the response body is JSON with `error_code` or `detail` fields, these are parsed and included for more granular handling; otherwise, the raw response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity, with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
 open func fetchAddresses()throws  -> [RelayAddress]  {
     return try  FfiConverterSequenceTypeRelayAddress.lift(try rustCallWithError(FfiConverterTypeRelayApiError_lift) {
     uniffi_relay_fn_method_relayclient_fetch_addresses(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Retrieves the profile for the authenticated user.
+     *
+     * Returns a [`RelayProfile`] object containing subscription status, usage statistics,
+     * and account settings. The `has_premium` field indicates whether the user has
+     * an active premium subscription.
+     *
+     * ## Errors
+     *
+     * - `RelayApi`: Returned for any non-successful (non-2xx) HTTP response.
+     * Provides the HTTP `status` and response `body`; downstream consumers can inspect
+     * these fields. If the response body is JSON with `error_code` or `detail` fields,
+     * these are parsed and included for more granular handling; otherwise, the raw
+     * response text is used as the error detail.
+     * - `Network`: Returned for transport-level failures, like loss of connectivity,
+     * with details in `reason`.
+     * - Other variants may be returned for unexpected deserialization, URL, or backend errors.
+     */
+open func fetchProfile()throws  -> RelayProfile  {
+    return try  FfiConverterTypeRelayProfile_lift(try rustCallWithError(FfiConverterTypeRelayApiError_lift) {
+    uniffi_relay_fn_method_relayclient_fetch_profile(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -630,6 +805,354 @@ public func FfiConverterTypeRelayClient_lower(_ value: RelayClient) -> UnsafeMut
 
 
 
+
+
+/**
+ * Client for fetching Relay data from Remote Settings
+ *
+ * This struct holds separate Remote Settings clients for the allowlist and denylist
+ * collections. It follows the same pattern as SuggestRemoteSettingsClient.
+ */
+public protocol RelayRemoteSettingsClientProtocol: AnyObject, Sendable {
+    
+    /**
+     * Determines whether Firefox Relay should be offered for a given site.
+     *
+     * This function implements the Relay visibility decision logic based on three factors:
+     * 1. Whether the site is on the denylist
+     * 2. Whether the user is an existing Relay user
+     * 3. Whether the site is on the allowlist
+     *
+     * # Decision Logic (in order)
+     *
+     * 1. If the site is on the **denylist**, don't show Relay (regardless of user status)
+     * 2. If the site is NOT on the denylist and the user **is** a Relay user, show Relay
+     * 3. If the site is NOT on the denylist and the user is **not** a Relay user, check the allowlist:
+     * - If the site is on the **allowlist**, show Relay (to promote Relay to new users)
+     * - Otherwise, don't show Relay
+     *
+     * # Fail-Safe Behavior
+     *
+     * If Remote Settings is unavailable:
+     * - If denylist fetch fails: don't show Relay (conservative: avoid showing on potentially blocked sites)
+     * - If allowlist fetch fails for non-Relay users: assume empty (conservative: don't promote without data)
+     *
+     * # Arguments
+     * * `host` - The full hostname (e.g., "mail.google.com", "www.example.com")
+     * * `domain` - The registrable domain from PSL (e.g., "google.com", "example.co.uk")
+     * * `is_relay_user` - Whether the user already has a Relay account
+     *
+     * # Public Suffix List (PSL)
+     *
+     * Mobile clients should use PSL to extract the domain:
+     * - **Host**: Full hostname like "mail.google.com"
+     * - **Domain**: Registrable domain (eTLD+1) like "google.com"
+     * - Swift: Use `URL.host` and extract domain via PSL library
+     * - Kotlin: Use `URL.host` and extract domain via PSL library
+     *
+     * # Returns
+     * `true` if Relay should be shown for this site, `false` otherwise
+     *
+     * # Determining if User is a Relay User
+     *
+     * Mobile clients should check if the user is a Relay user by calling
+     * `FirefoxAccount.getAttachedClients()` and checking if Relay is in the
+     * list of attached clients.
+     *
+     * # Example
+     * ```kotlin
+     * val url = URL("https://mail.google.com/inbox")
+     * val host = url.host // "mail.google.com"
+     * val domain = PublicSuffixList.getRegistrableDomain(host) // "google.com"
+     *
+     * val rsClient = RelayRemoteSettingsClient(remoteSettingsService)
+     * val attachedClients = fxAccount.getAttachedClients()
+     * val isRelayUser = attachedClients.any { it.clientId == RELAY_CLIENT_ID }
+     *
+     * if (rsClient.shouldShowRelay(host, domain, isRelayUser)) {
+     * // Show Relay UI
+     * }
+     * ```
+     */
+    func shouldShowRelay(host: String, domain: String, isRelayUser: Bool)  -> Bool
+    
+}
+/**
+ * Client for fetching Relay data from Remote Settings
+ *
+ * This struct holds separate Remote Settings clients for the allowlist and denylist
+ * collections. It follows the same pattern as SuggestRemoteSettingsClient.
+ */
+open class RelayRemoteSettingsClient: RelayRemoteSettingsClientProtocol, @unchecked Sendable {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_relay_fn_clone_relayremotesettingsclient(self.pointer, $0) }
+    }
+    /**
+     * Creates a new RelayRemoteSettingsClient from a RemoteSettingsService
+     */
+public convenience init(rsService: RemoteSettingsService) {
+    let pointer =
+        try! rustCall() {
+    uniffi_relay_fn_constructor_relayremotesettingsclient_new(
+        FfiConverterTypeRemoteSettingsService_lower(rsService),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_relay_fn_free_relayremotesettingsclient(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Determines whether Firefox Relay should be offered for a given site.
+     *
+     * This function implements the Relay visibility decision logic based on three factors:
+     * 1. Whether the site is on the denylist
+     * 2. Whether the user is an existing Relay user
+     * 3. Whether the site is on the allowlist
+     *
+     * # Decision Logic (in order)
+     *
+     * 1. If the site is on the **denylist**, don't show Relay (regardless of user status)
+     * 2. If the site is NOT on the denylist and the user **is** a Relay user, show Relay
+     * 3. If the site is NOT on the denylist and the user is **not** a Relay user, check the allowlist:
+     * - If the site is on the **allowlist**, show Relay (to promote Relay to new users)
+     * - Otherwise, don't show Relay
+     *
+     * # Fail-Safe Behavior
+     *
+     * If Remote Settings is unavailable:
+     * - If denylist fetch fails: don't show Relay (conservative: avoid showing on potentially blocked sites)
+     * - If allowlist fetch fails for non-Relay users: assume empty (conservative: don't promote without data)
+     *
+     * # Arguments
+     * * `host` - The full hostname (e.g., "mail.google.com", "www.example.com")
+     * * `domain` - The registrable domain from PSL (e.g., "google.com", "example.co.uk")
+     * * `is_relay_user` - Whether the user already has a Relay account
+     *
+     * # Public Suffix List (PSL)
+     *
+     * Mobile clients should use PSL to extract the domain:
+     * - **Host**: Full hostname like "mail.google.com"
+     * - **Domain**: Registrable domain (eTLD+1) like "google.com"
+     * - Swift: Use `URL.host` and extract domain via PSL library
+     * - Kotlin: Use `URL.host` and extract domain via PSL library
+     *
+     * # Returns
+     * `true` if Relay should be shown for this site, `false` otherwise
+     *
+     * # Determining if User is a Relay User
+     *
+     * Mobile clients should check if the user is a Relay user by calling
+     * `FirefoxAccount.getAttachedClients()` and checking if Relay is in the
+     * list of attached clients.
+     *
+     * # Example
+     * ```kotlin
+     * val url = URL("https://mail.google.com/inbox")
+     * val host = url.host // "mail.google.com"
+     * val domain = PublicSuffixList.getRegistrableDomain(host) // "google.com"
+     *
+     * val rsClient = RelayRemoteSettingsClient(remoteSettingsService)
+     * val attachedClients = fxAccount.getAttachedClients()
+     * val isRelayUser = attachedClients.any { it.clientId == RELAY_CLIENT_ID }
+     *
+     * if (rsClient.shouldShowRelay(host, domain, isRelayUser)) {
+     * // Show Relay UI
+     * }
+     * ```
+     */
+open func shouldShowRelay(host: String, domain: String, isRelayUser: Bool) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_relay_fn_method_relayremotesettingsclient_should_show_relay(self.uniffiClonePointer(),
+        FfiConverterString.lower(host),
+        FfiConverterString.lower(domain),
+        FfiConverterBool.lower(isRelayUser),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRelayRemoteSettingsClient: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = RelayRemoteSettingsClient
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> RelayRemoteSettingsClient {
+        return RelayRemoteSettingsClient(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: RelayRemoteSettingsClient) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RelayRemoteSettingsClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: RelayRemoteSettingsClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayRemoteSettingsClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> RelayRemoteSettingsClient {
+    return try FfiConverterTypeRelayRemoteSettingsClient.lift(pointer)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayRemoteSettingsClient_lower(_ value: RelayRemoteSettingsClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeRelayRemoteSettingsClient.lower(value)
+}
+
+
+
+
+/**
+ * Represents a bounce status object nested within the profile.
+ */
+public struct BounceStatus {
+    public var paused: Bool
+    public var bounceType: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(paused: Bool, bounceType: String) {
+        self.paused = paused
+        self.bounceType = bounceType
+    }
+}
+
+#if compiler(>=6)
+extension BounceStatus: Sendable {}
+#endif
+
+
+extension BounceStatus: Equatable, Hashable {
+    public static func ==(lhs: BounceStatus, rhs: BounceStatus) -> Bool {
+        if lhs.paused != rhs.paused {
+            return false
+        }
+        if lhs.bounceType != rhs.bounceType {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(paused)
+        hasher.combine(bounceType)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBounceStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BounceStatus {
+        return
+            try BounceStatus(
+                paused: FfiConverterBool.read(from: &buf), 
+                bounceType: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BounceStatus, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.paused, into: &buf)
+        FfiConverterString.write(value.bounceType, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBounceStatus_lift(_ buf: RustBuffer) throws -> BounceStatus {
+    return try FfiConverterTypeBounceStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBounceStatus_lower(_ value: BounceStatus) -> RustBuffer {
+    return FfiConverterTypeBounceStatus.lower(value)
+}
+
+
+/**
+ * Represents a Relay email address object returned by the Relay API.
+ *
+ * Includes metadata and statistics for an alias, such as its status,
+ * usage stats, and identifying information.
+ *
+ * See:
+ * https://mozilla.github.io/fx-private-relay/api_docs.html
+ */
 public struct RelayAddress {
     public var maskType: String
     public var enabled: Bool
@@ -828,13 +1351,267 @@ public func FfiConverterTypeRelayAddress_lower(_ value: RelayAddress) -> RustBuf
 }
 
 
+/**
+ * Represents a Relay user profile returned by the Relay API.
+ *
+ * Contains information about the user's subscription status, usage statistics,
+ * and account settings.
+ *
+ * See: https://mozilla.github.io/fx-private-relay/api_docs.html#tag/privaterelay/operation/profiles_retrieve
+ */
+public struct RelayProfile {
+    public var id: Int64
+    public var serverStorage: Bool
+    public var storePhoneLog: Bool
+    public var subdomain: String?
+    public var hasPremium: Bool
+    public var hasPhone: Bool
+    public var hasVpn: Bool
+    public var hasMegabundle: Bool
+    public var onboardingState: Int64
+    public var onboardingFreeState: Int64
+    public var datePhoneRegistered: String?
+    public var dateSubscribed: String?
+    public var avatar: String?
+    public var nextEmailTry: String
+    public var bounceStatus: BounceStatus
+    public var apiToken: String
+    public var emailsBlocked: Int64
+    public var emailsForwarded: Int64
+    public var emailsReplied: Int64
+    public var levelOneTrackersBlocked: Int64
+    public var removeLevelOneEmailTrackers: Bool?
+    public var totalMasks: Int64
+    public var atMaskLimit: Bool
+    public var metricsEnabled: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, serverStorage: Bool, storePhoneLog: Bool, subdomain: String?, hasPremium: Bool, hasPhone: Bool, hasVpn: Bool, hasMegabundle: Bool, onboardingState: Int64, onboardingFreeState: Int64, datePhoneRegistered: String?, dateSubscribed: String?, avatar: String?, nextEmailTry: String, bounceStatus: BounceStatus, apiToken: String, emailsBlocked: Int64, emailsForwarded: Int64, emailsReplied: Int64, levelOneTrackersBlocked: Int64, removeLevelOneEmailTrackers: Bool?, totalMasks: Int64, atMaskLimit: Bool, metricsEnabled: Bool) {
+        self.id = id
+        self.serverStorage = serverStorage
+        self.storePhoneLog = storePhoneLog
+        self.subdomain = subdomain
+        self.hasPremium = hasPremium
+        self.hasPhone = hasPhone
+        self.hasVpn = hasVpn
+        self.hasMegabundle = hasMegabundle
+        self.onboardingState = onboardingState
+        self.onboardingFreeState = onboardingFreeState
+        self.datePhoneRegistered = datePhoneRegistered
+        self.dateSubscribed = dateSubscribed
+        self.avatar = avatar
+        self.nextEmailTry = nextEmailTry
+        self.bounceStatus = bounceStatus
+        self.apiToken = apiToken
+        self.emailsBlocked = emailsBlocked
+        self.emailsForwarded = emailsForwarded
+        self.emailsReplied = emailsReplied
+        self.levelOneTrackersBlocked = levelOneTrackersBlocked
+        self.removeLevelOneEmailTrackers = removeLevelOneEmailTrackers
+        self.totalMasks = totalMasks
+        self.atMaskLimit = atMaskLimit
+        self.metricsEnabled = metricsEnabled
+    }
+}
+
+#if compiler(>=6)
+extension RelayProfile: Sendable {}
+#endif
+
+
+extension RelayProfile: Equatable, Hashable {
+    public static func ==(lhs: RelayProfile, rhs: RelayProfile) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.serverStorage != rhs.serverStorage {
+            return false
+        }
+        if lhs.storePhoneLog != rhs.storePhoneLog {
+            return false
+        }
+        if lhs.subdomain != rhs.subdomain {
+            return false
+        }
+        if lhs.hasPremium != rhs.hasPremium {
+            return false
+        }
+        if lhs.hasPhone != rhs.hasPhone {
+            return false
+        }
+        if lhs.hasVpn != rhs.hasVpn {
+            return false
+        }
+        if lhs.hasMegabundle != rhs.hasMegabundle {
+            return false
+        }
+        if lhs.onboardingState != rhs.onboardingState {
+            return false
+        }
+        if lhs.onboardingFreeState != rhs.onboardingFreeState {
+            return false
+        }
+        if lhs.datePhoneRegistered != rhs.datePhoneRegistered {
+            return false
+        }
+        if lhs.dateSubscribed != rhs.dateSubscribed {
+            return false
+        }
+        if lhs.avatar != rhs.avatar {
+            return false
+        }
+        if lhs.nextEmailTry != rhs.nextEmailTry {
+            return false
+        }
+        if lhs.bounceStatus != rhs.bounceStatus {
+            return false
+        }
+        if lhs.apiToken != rhs.apiToken {
+            return false
+        }
+        if lhs.emailsBlocked != rhs.emailsBlocked {
+            return false
+        }
+        if lhs.emailsForwarded != rhs.emailsForwarded {
+            return false
+        }
+        if lhs.emailsReplied != rhs.emailsReplied {
+            return false
+        }
+        if lhs.levelOneTrackersBlocked != rhs.levelOneTrackersBlocked {
+            return false
+        }
+        if lhs.removeLevelOneEmailTrackers != rhs.removeLevelOneEmailTrackers {
+            return false
+        }
+        if lhs.totalMasks != rhs.totalMasks {
+            return false
+        }
+        if lhs.atMaskLimit != rhs.atMaskLimit {
+            return false
+        }
+        if lhs.metricsEnabled != rhs.metricsEnabled {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(serverStorage)
+        hasher.combine(storePhoneLog)
+        hasher.combine(subdomain)
+        hasher.combine(hasPremium)
+        hasher.combine(hasPhone)
+        hasher.combine(hasVpn)
+        hasher.combine(hasMegabundle)
+        hasher.combine(onboardingState)
+        hasher.combine(onboardingFreeState)
+        hasher.combine(datePhoneRegistered)
+        hasher.combine(dateSubscribed)
+        hasher.combine(avatar)
+        hasher.combine(nextEmailTry)
+        hasher.combine(bounceStatus)
+        hasher.combine(apiToken)
+        hasher.combine(emailsBlocked)
+        hasher.combine(emailsForwarded)
+        hasher.combine(emailsReplied)
+        hasher.combine(levelOneTrackersBlocked)
+        hasher.combine(removeLevelOneEmailTrackers)
+        hasher.combine(totalMasks)
+        hasher.combine(atMaskLimit)
+        hasher.combine(metricsEnabled)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRelayProfile: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RelayProfile {
+        return
+            try RelayProfile(
+                id: FfiConverterInt64.read(from: &buf), 
+                serverStorage: FfiConverterBool.read(from: &buf), 
+                storePhoneLog: FfiConverterBool.read(from: &buf), 
+                subdomain: FfiConverterOptionString.read(from: &buf), 
+                hasPremium: FfiConverterBool.read(from: &buf), 
+                hasPhone: FfiConverterBool.read(from: &buf), 
+                hasVpn: FfiConverterBool.read(from: &buf), 
+                hasMegabundle: FfiConverterBool.read(from: &buf), 
+                onboardingState: FfiConverterInt64.read(from: &buf), 
+                onboardingFreeState: FfiConverterInt64.read(from: &buf), 
+                datePhoneRegistered: FfiConverterOptionString.read(from: &buf), 
+                dateSubscribed: FfiConverterOptionString.read(from: &buf), 
+                avatar: FfiConverterOptionString.read(from: &buf), 
+                nextEmailTry: FfiConverterString.read(from: &buf), 
+                bounceStatus: FfiConverterTypeBounceStatus.read(from: &buf), 
+                apiToken: FfiConverterString.read(from: &buf), 
+                emailsBlocked: FfiConverterInt64.read(from: &buf), 
+                emailsForwarded: FfiConverterInt64.read(from: &buf), 
+                emailsReplied: FfiConverterInt64.read(from: &buf), 
+                levelOneTrackersBlocked: FfiConverterInt64.read(from: &buf), 
+                removeLevelOneEmailTrackers: FfiConverterOptionBool.read(from: &buf), 
+                totalMasks: FfiConverterInt64.read(from: &buf), 
+                atMaskLimit: FfiConverterBool.read(from: &buf), 
+                metricsEnabled: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RelayProfile, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterBool.write(value.serverStorage, into: &buf)
+        FfiConverterBool.write(value.storePhoneLog, into: &buf)
+        FfiConverterOptionString.write(value.subdomain, into: &buf)
+        FfiConverterBool.write(value.hasPremium, into: &buf)
+        FfiConverterBool.write(value.hasPhone, into: &buf)
+        FfiConverterBool.write(value.hasVpn, into: &buf)
+        FfiConverterBool.write(value.hasMegabundle, into: &buf)
+        FfiConverterInt64.write(value.onboardingState, into: &buf)
+        FfiConverterInt64.write(value.onboardingFreeState, into: &buf)
+        FfiConverterOptionString.write(value.datePhoneRegistered, into: &buf)
+        FfiConverterOptionString.write(value.dateSubscribed, into: &buf)
+        FfiConverterOptionString.write(value.avatar, into: &buf)
+        FfiConverterString.write(value.nextEmailTry, into: &buf)
+        FfiConverterTypeBounceStatus.write(value.bounceStatus, into: &buf)
+        FfiConverterString.write(value.apiToken, into: &buf)
+        FfiConverterInt64.write(value.emailsBlocked, into: &buf)
+        FfiConverterInt64.write(value.emailsForwarded, into: &buf)
+        FfiConverterInt64.write(value.emailsReplied, into: &buf)
+        FfiConverterInt64.write(value.levelOneTrackersBlocked, into: &buf)
+        FfiConverterOptionBool.write(value.removeLevelOneEmailTrackers, into: &buf)
+        FfiConverterInt64.write(value.totalMasks, into: &buf)
+        FfiConverterBool.write(value.atMaskLimit, into: &buf)
+        FfiConverterBool.write(value.metricsEnabled, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayProfile_lift(_ buf: RustBuffer) throws -> RelayProfile {
+    return try FfiConverterTypeRelayProfile.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayProfile_lower(_ value: RelayProfile) -> RustBuffer {
+    return FfiConverterTypeRelayProfile.lower(value)
+}
+
+
 public enum RelayApiError: Swift.Error {
 
     
     
     case Network(reason: String
     )
-    case RelayApi(detail: String
+    case Api(status: UInt16, code: String, detail: String
     )
     case Other(reason: String
     )
@@ -857,7 +1634,9 @@ public struct FfiConverterTypeRelayApiError: FfiConverterRustBuffer {
         case 1: return .Network(
             reason: try FfiConverterString.read(from: &buf)
             )
-        case 2: return .RelayApi(
+        case 2: return .Api(
+            status: try FfiConverterUInt16.read(from: &buf), 
+            code: try FfiConverterString.read(from: &buf), 
             detail: try FfiConverterString.read(from: &buf)
             )
         case 3: return .Other(
@@ -880,8 +1659,10 @@ public struct FfiConverterTypeRelayApiError: FfiConverterRustBuffer {
             FfiConverterString.write(reason, into: &buf)
             
         
-        case let .RelayApi(detail):
+        case let .Api(status,code,detail):
             writeInt(&buf, Int32(2))
+            FfiConverterUInt16.write(status, into: &buf)
+            FfiConverterString.write(code, into: &buf)
             FfiConverterString.write(detail, into: &buf)
             
         
@@ -922,6 +1703,30 @@ extension RelayApiError: Foundation.LocalizedError {
 
 
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -987,19 +1792,29 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_relay_checksum_method_relayclient_accept_terms() != 14409) {
+    if (uniffi_relay_checksum_method_relayclient_accept_terms() != 12387) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_relay_checksum_method_relayclient_create_address() != 24773) {
+    if (uniffi_relay_checksum_method_relayclient_create_address() != 42709) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_relay_checksum_method_relayclient_fetch_addresses() != 28546) {
+    if (uniffi_relay_checksum_method_relayclient_fetch_addresses() != 52619) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_relay_checksum_constructor_relayclient_new() != 6164) {
+    if (uniffi_relay_checksum_method_relayclient_fetch_profile() != 54123) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_relay_checksum_method_relayremotesettingsclient_should_show_relay() != 53216) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_relay_checksum_constructor_relayclient_new() != 25664) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_relay_checksum_constructor_relayremotesettingsclient_new() != 27724) {
         return InitializationResult.apiChecksumMismatch
     }
 
+    uniffiEnsureRemoteSettingsInitialized()
     return InitializationResult.ok
 }()
 

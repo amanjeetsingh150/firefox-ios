@@ -56,7 +56,8 @@ final class NotificationsSettingsViewController: SettingsTableViewController, Fe
     private let prefs: Prefs
     private let hasAccount: Bool
     private var footerTitle = ""
-    private var notificationManager: NotificationManagerProtocol
+    // TODO: FXIOS-13584 - NotificationsSettingsViewController sending notificationManager risks causing data races
+    nonisolated(unsafe) private var notificationManager: NotificationManagerProtocol
 
     init(prefs: Prefs,
          hasAccount: Bool,
@@ -157,9 +158,8 @@ final class NotificationsSettingsViewController: SettingsTableViewController, Fe
         accessDenied.addAction(settingsAction)
         return accessDenied
     }
-}
 
-extension NotificationsSettingsViewController: Notifiable {
+    // MARK: Notifiable
     func addObservers() {
         startObservingNotifications(
             withNotificationCenter: notificationCenter,
@@ -168,7 +168,9 @@ extension NotificationsSettingsViewController: Notifiable {
         )
     }
 
-    func handleNotifications(_ notification: Notification) {
+    override func handleNotifications(_ notification: Notification) {
+        super.handleNotifications(notification)
+
         switch notification.name {
         case UIApplication.willEnterForegroundNotification:
             Task {

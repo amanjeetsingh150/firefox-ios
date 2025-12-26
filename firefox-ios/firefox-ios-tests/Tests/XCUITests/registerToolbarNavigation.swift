@@ -5,6 +5,7 @@
 import XCTest
 import MappaMundi
 
+@MainActor
 private func configureURLBarAvailable(_ screenState: MMScreenStateNode<FxUserState>, app: XCUIApplication) {
     let textField = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
     screenState.tap(textField, to: URLBarOpen)
@@ -13,6 +14,7 @@ private func configureURLBarAvailable(_ screenState: MMScreenStateNode<FxUserSta
     }
 }
 
+@MainActor
 private func configureToolBarAvailable(_ screenState: MMScreenStateNode<FxUserState>, app: XCUIApplication) {
     let settingButton = app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton]
     let tabsButton = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton]
@@ -28,6 +30,7 @@ private func configureToolBarAvailable(_ screenState: MMScreenStateNode<FxUserSt
     }
 }
 
+@MainActor
 func makeToolBarAvailable(_ screenState: MMScreenStateNode<FxUserState>, app: XCUIApplication) {
     screenState.tap(app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton], to: BrowserTabMenu)
     if isTablet {
@@ -39,13 +42,16 @@ func makeToolBarAvailable(_ screenState: MMScreenStateNode<FxUserState>, app: XC
     }
 }
 
+@MainActor
 func makeURLBarAvailable(_ screenState: MMScreenStateNode<FxUserState>, app: XCUIApplication) {
-    screenState.tap(app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField], to: URLBarOpen)
+    let addressToolbar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+    screenState.tap(addressToolbar, to: URLBarOpen)
     screenState.gesture(to: URLBarLongPressMenu) {
-        app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField].press(forDuration: 1.0)
+        addressToolbar.press(forDuration: 1.0)
     }
 }
 
+@MainActor
 func registerToolBarNavigation(in map: MMScreenGraph<FxUserState>, app: XCUIApplication) {
     map.addScreenState(NewTabScreen) { screenState in
         let tabsButtonSelector = app.buttons[AccessibilityIdentifiers.Toolbar.tabsButton]

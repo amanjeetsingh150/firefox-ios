@@ -8,15 +8,15 @@ import Glean
 import XCTest
 
 class TelemetryContextualIdentifierTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
         clearTest()
     }
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
         clearTest()
+        try await super.tearDown()
     }
 
     // MARK: Context id
@@ -42,6 +42,7 @@ class TelemetryContextualIdentifierTests: XCTestCase {
         XCTAssertNotNil(TelemetryContextualIdentifier.contextId)
     }
 
+    @MainActor
     func testTelemetryWrapper_setsContextId() {
         TelemetryWrapper.shared.setup(profile: MockProfile())
         XCTAssertNotNil(TelemetryContextualIdentifier.contextId)
@@ -49,11 +50,6 @@ class TelemetryContextualIdentifierTests: XCTestCase {
 
     // MARK: Helper methods
     func clearTest() {
-        // Due to changes allow certain custom pings to implement their own opt-out
-        // independent of Glean, custom pings may need to be registered manually in
-        // tests in order to put them in a state in which they can collect data.
-        Glean.shared.registerPings(GleanMetrics.Pings.shared)
-        Glean.shared.resetGlean(clearStores: true)
         TelemetryContextualIdentifier.clearUserDefaults()
     }
 }

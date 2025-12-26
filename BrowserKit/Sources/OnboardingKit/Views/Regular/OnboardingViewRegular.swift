@@ -6,8 +6,9 @@ import SwiftUI
 import ComponentLibrary
 import Common
 
-struct OnboardingViewRegular<ViewModel: OnboardingCardInfoModelProtocol>: View {
-    @State private var cardBackgroundColor: Color = .clear
+// TODO: - FXIOS-13874 sync ipad layout with iPhone
+struct OnboardingViewRegular<ViewModel: OnboardingCardInfoModelProtocol>: ThemeableView {
+    @State var theme: Theme
     @StateObject private var viewModel: OnboardingFlowViewModel<ViewModel>
 
     let windowUUID: WindowUUID
@@ -20,32 +21,41 @@ struct OnboardingViewRegular<ViewModel: OnboardingCardInfoModelProtocol>: View {
     ) {
         self.windowUUID = windowUUID
         self.themeManager = themeManager
+        self.theme = themeManager.getCurrentTheme(for: windowUUID)
         _viewModel = StateObject(
             wrappedValue: viewModel
         )
     }
 
     var body: some View {
-        ZStack {
-            AnimatedGradientMetalView(windowUUID: windowUUID, themeManager: themeManager)
+        ZStack(alignment: .topTrailing) {
+            AnimatedGradientView(windowUUID: windowUUID, themeManager: themeManager)
                 .edgesIgnoringSafeArea(.all)
             SheetSizedCard {
                 VStack {
                     tabView
                     pageControl
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: UX.CardView.cornerRadius)
-                        .fill(cardBackgroundColor)
-                )
+                .cardBackground(theme: theme, cornerRadius: UX.CardView.cornerRadius)
             }
+            .accessibilityScrollAction { edge in
+                handleAccessibilityScroll(from: edge)
+            }
+            Button(action: viewModel.skipOnboarding) {
+                Text(viewModel.skipText)
+                    .font(FXFontStyles.Bold.body.scaledSwiftUIFont(sizeCap: UX.Onboarding.Font.skipButtonSizeCap))
+            }
+            .padding(.top, UX.Onboarding.Spacing.standard)
+            .padding(.trailing, UX.Onboarding.Spacing.standard)
+            .skipButtonStyle(theme: theme)
+            .accessibilityLabel(viewModel.skipText)
         }
+        .listenToThemeChanges(theme: $theme, manager: themeManager, windowUUID: windowUUID)
         .onAppear {
-            applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
+            viewModel.handlePageChange()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .ThemeDidChange)) {
-            guard let uuid = $0.windowUUID, uuid == windowUUID else { return }
-            applyTheme(theme: themeManager.getCurrentTheme(for: windowUUID))
+        .onChange(of: viewModel.pageCount) { _ in
+            viewModel.handlePageChange()
         }
     }
 
@@ -75,8 +85,18 @@ struct OnboardingViewRegular<ViewModel: OnboardingCardInfoModelProtocol>: View {
         .padding(.bottom)
     }
 
-    private func applyTheme(theme: Theme) {
-        let color = theme.colors
-        cardBackgroundColor = Color(color.layer2)
+    private func handleAccessibilityScroll(from edge: Edge) {
+        if edge == .leading {
+            viewModel.scrollToPreviousPage()
+        } else if edge == .trailing {
+            viewModel.scrollToNextPage()
+        }
+        switch edge {
+        case .leading, .trailing:
+            DispatchQueue.main.async {
+                UIAccessibility.post(notification: .screenChanged, argument: nil)
+            }
+        default: break
+        }
     }
 }

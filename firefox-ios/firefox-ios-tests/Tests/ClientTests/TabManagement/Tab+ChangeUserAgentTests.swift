@@ -14,18 +14,23 @@ class ChangeUserAgentTests: XCTestCase {
         let expectContainsURL: Bool
     }
 
-    private var testFile: URL!
+    private var testFilename: String!
+    private var file: URL!
 
     override func setUp() {
         super.setUp()
-        testFile = URL(
-            fileURLWithPath: NSTemporaryDirectory()
-        ).appendingPathComponent("test-changed-ua-set-of-hosts.xcarchive")
+        testFilename = "test-changed-ua-set-of-hosts.xcarchive"
+        Tab.ChangeUserAgent.pathComponent = testFilename
+        file = {
+            let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            return root.appendingPathComponent(testFilename)
+        }()
     }
 
     override func tearDown() {
+        testFilename = nil
+        file = nil
         super.tearDown()
-        testFile = nil
     }
 
     func testUpdateAndContainsDidChangeUANotPrivate() {
@@ -145,6 +150,14 @@ class ChangeUserAgentTests: XCTestCase {
 
         Tab.ChangeUserAgent.clear()
         XCTAssertFalse(Tab.ChangeUserAgent.contains(url: url, isPrivate: false))
+    }
+
+    func testMigrationMovesFile() {
+        let fileManager = MockFileManager()
+        fileManager.fileExists = true
+        Tab.ChangeUserAgent.performMigration(fileManager: fileManager)
+
+        XCTAssertEqual(fileManager.moveItemAtURLCalled, 1)
     }
 
     // MARK: removeMobilePrefixFrom tests

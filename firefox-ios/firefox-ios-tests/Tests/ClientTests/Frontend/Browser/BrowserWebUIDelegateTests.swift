@@ -7,9 +7,11 @@ import WebEngine
 import WebKit
 @testable import Client
 
+@MainActor
 final class BrowserWebUIDelegateTests: XCTestCase {
     private var mockLegacyResponder: MockLegacyResponder!
     private var engineResponder: MockWKUIHandler!
+
     private var webView: WKWebView {
         return MockTabWebView(
             tab: MockTab(
@@ -19,8 +21,8 @@ final class BrowserWebUIDelegateTests: XCTestCase {
         )
     }
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         DependencyHelperMock().bootstrapDependencies()
         let profile = MockProfile()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
@@ -28,11 +30,11 @@ final class BrowserWebUIDelegateTests: XCTestCase {
         mockLegacyResponder = MockLegacyResponder()
     }
 
-    override func tearDown() {
+    override func tearDown()  async throws {
         DependencyHelperMock().reset()
         engineResponder = nil
         mockLegacyResponder = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testCreateWebView_respondsToEngineResponder() {

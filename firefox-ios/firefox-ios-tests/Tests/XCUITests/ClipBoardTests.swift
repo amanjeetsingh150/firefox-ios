@@ -15,18 +15,21 @@ class ClipBoardTests: BaseTestCase {
 
     // Copy url from the browser
     func copyUrl() {
-        navigator.goto(URLBarOpen)
         urlBarAddress.waitAndTap()
         if iPad() {
-            urlBarAddress.waitAndTap()
+            var attemptsiPad = 2
+            while !app.menuItems["Select All"].exists && attemptsiPad > 0 {
+                urlBarAddress.waitAndTap()
+                attemptsiPad -= 1
+            }
             app.menuItems["Select All"].waitAndTap()
         }
         // Retry tapping urlBarAddress if "Copy" is not visible
-        var attempts = 2
+        var attemptsiPhone = 2
         if !iPad() {
-            while !app.menuItems["Copy"].exists && attempts > 0 {
+            while !app.menuItems["Copy"].exists && attemptsiPhone > 0 {
                 urlBarAddress.waitAndTap()
-                attempts -= 1
+                attemptsiPhone -= 1
             }
         }
         app.menuItems["Copy"].waitAndTap()
@@ -61,7 +64,6 @@ class ClipBoardTests: BaseTestCase {
     // This test is disabled in release, but can still run on master
     // https://mozilla.testrail.io/index.php?/cases/view/2325688
     func testClipboard() {
-        navigator.nowAt(NewTabScreen)
         navigator.openURL(url)
         waitUntilPageLoad()
         checkUrl()

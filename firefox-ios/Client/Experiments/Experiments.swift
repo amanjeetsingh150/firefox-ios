@@ -59,7 +59,7 @@ enum Experiments {
 
     static func setStudiesSetting(_ setting: Bool) {
         studiesSetting = setting
-        updateGlobalUserParticipation()
+        updateUserParticipation()
     }
 
     static func setTelemetrySetting(_ setting: Bool) {
@@ -67,17 +67,19 @@ enum Experiments {
         if !setting {
             shared.resetTelemetryIdentifiers()
         }
-        updateGlobalUserParticipation()
+        updateUserParticipation()
     }
 
-    private static func updateGlobalUserParticipation() {
-        // we only want to reset the globalUserParticipation flag if both settings have been
+    private static func updateUserParticipation() {
+        // we only want to reset the participation flags if both settings have been
         // initialized.
         if let studiesSetting = studiesSetting, let telemetrySetting = telemetrySetting {
-            // we only enable experiments if users are opting in BOTH
+            // we only enable experiments and rollouts if users are opting in BOTH
             // telemetry and studies. If either is opted-out, we make
-            // sure users are not enrolled in any experiments
-            shared.globalUserParticipation = studiesSetting && telemetrySetting
+            // sure users are not enrolled in any experiments or rollouts
+            let participationEnabled = studiesSetting && telemetrySetting
+            shared.experimentParticipation = participationEnabled
+            shared.rolloutParticipation = participationEnabled
         }
     }
 
@@ -97,7 +99,7 @@ enum Experiments {
     static var dbPath: String? {
         let profilePath: String?
         if AppConstants.isRunningUITests || AppConstants.isRunningPerfTests {
-            profilePath = (UIApplication.shared.delegate as? UITestAppDelegate)?.dirForTestProfile
+            profilePath = UITestAppDelegate.dirForTestProfile
         } else if AppConstants.isRunningUnitTest {
             let dir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
             profilePath = dir.path
@@ -168,7 +170,7 @@ enum Experiments {
     }()
 
     private static func getAppSettings(isFirstRun: Bool) -> NimbusAppSettings {
-        let isPhone = UIDevice.current.userInterfaceIdiom == .phone
+        let isPhone = UIDeviceDetails.userInterfaceIdiom == .phone
 
         let customTargetingAttributes: [String: Any] = [
             "isFirstRun": "\(isFirstRun)",
@@ -198,6 +200,16 @@ enum Experiments {
     private static func hasEnabledTipsNotifications() -> Bool {
         let prefsReader = ProfilePrefsReader()
         return prefsReader.hasEnabledTipsNotifications()
+    }
+
+    private static func hasAcceptedTermsOfUse() -> Bool {
+        let prefsReader = ProfilePrefsReader()
+        return prefsReader.hasAcceptedTermsOfUse()
+    }
+
+    static func touExperiencePoints(region: String?) -> Int32 {
+        let prefsReader = ProfilePrefsReader()
+        return prefsReader.getTouExperiencePoints(region: region)
     }
 
     private static func isAppleIntelligenceAvailable() -> Bool {
@@ -233,12 +245,15 @@ enum Experiments {
             isDefaultBrowser: isDefaultBrowser(),
             isBottomToolbarUser: isBottomToolbarUser(),
             hasEnabledTipsNotifications: hasEnabledTipsNotifications(),
+            hasAcceptedTermsOfUse: hasAcceptedTermsOfUse(),
             isAppleIntelligenceAvailable: isAppleIntelligenceAvailable(),
             cannotUseAppleIntelligence: cannotUseAppleIntelligence()
         )
 
+        let profile: Profile = AppContainer.shared.resolve()
+        let remoteSettingsService = profile.remoteSettingsService
+
         return NimbusBuilder(dbPath: dbPath)
-            .with(url: remoteSettingsURL)
             .using(previewCollection: usePreviewCollection())
             .with(errorReporter: errorReporter)
             .with(initialExperiments: initialExperiments)
@@ -247,7 +262,31 @@ enum Experiments {
             .with(featureManifest: FxNimbus.shared)
             .with(commandLineArgs: CommandLine.arguments)
             .with(recordedContext: nimbusRecordedContext)
-            .build(appInfo: getAppSettings(isFirstRun: isFirstRun))
+            .onCreate(callback: { _ in
+                    DefaultLogger.shared.log(
+                        "Nimbus is ready",
+                        level: .info,
+                        category: .experiments
+                    )
+            })
+            .onApply(callback: { _ in
+                    DefaultLogger.shared.log(
+                        "Nimbus enrollment and experiments application complete",
+                        level: .info,
+                        category: .experiments
+                    )
+            })
+            .onFetch(callback: { _ in
+                DefaultLogger.shared.log(
+                    "Nimbus fetch of new experiments has completed",
+                    level: .info,
+                    category: .experiments
+                )
+            })
+            .build(
+                appInfo: getAppSettings(isFirstRun: isFirstRun),
+                remoteSettingsService: remoteSettingsService
+            )
     }
 
     /// A convenience method to initialize the `NimbusApi` object at startup.
@@ -264,7 +303,7 @@ enum Experiments {
         // Getting the singleton first time initializes it.
         let nimbus = Experiments.shared
 
-        DefaultLogger.shared.log("Nimbus is ready!",
+        DefaultLogger.shared.log("Nimbus singleton initialized successfully",
                                  level: .info,
                                  category: .experiments)
 

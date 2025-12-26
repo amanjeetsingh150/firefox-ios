@@ -5,8 +5,10 @@
 @testable import Client
 import Foundation
 import XCTest
+import Common
 import Shared
 
+@MainActor
 class SearchEnginesManagerTests: XCTestCase {
     private let defaultSearchEngineName = "ATester"
     private let expectedEngineNames = ["ATester", "BTester", "CTester", "DTester", "ETester", "FTester"]
@@ -15,9 +17,10 @@ class SearchEnginesManagerTests: XCTestCase {
     private var orderedEngines: [OpenSearchEngine]!
     private var mockSearchEngineProvider: MockSearchEngineProvider!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
+        DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile()
         mockSearchEngineProvider = MockSearchEngineProvider()
         searchEnginesManager = SearchEnginesManager(
@@ -27,12 +30,11 @@ class SearchEnginesManagerTests: XCTestCase {
         )
     }
 
-    override func tearDown() {
-        super.tearDown()
-
+    override func tearDown() async throws {
         profile = nil
         mockSearchEngineProvider = nil
         searchEnginesManager = nil
+        try await super.tearDown()
     }
 
     func testIncludesExpectedEngines() {
@@ -58,24 +60,29 @@ class SearchEnginesManagerTests: XCTestCase {
             XCTFail("Check that image is bundled for testing")
             return
         }
-        let testEngine = OpenSearchEngine(engineID: "ATester",
-                                          shortName: "ATester",
+
+        // Add a custom engine so we can test deleting it
+        let testEngine = OpenSearchEngine(engineID: "NewEngine",
+                                          shortName: "NewEngine",
                                           telemetrySuffix: nil,
                                           image: testImage,
                                           searchTemplate: "http://firefox.com/find?q={searchTerm}",
                                           suggestTemplate: nil,
                                           isCustomEngine: true)
 
-        searchEnginesManager.orderedEngines[0] = testEngine
         searchEnginesManager.addSearchEngine(testEngine)
-        XCTAssertEqual(searchEnginesManager.orderedEngines[1].engineID, testEngine.engineID)
+        XCTAssertEqual(searchEnginesManager.orderedEngines[safe: 1]?.engineID, testEngine.engineID)
 
-        var deleted: [OpenSearchEngine] = []
+        let exp = expectation(description: "Engine was deleted")
         searchEnginesManager.deleteCustomEngine(testEngine) { [self] in
-            deleted = searchEnginesManager.orderedEngines.filter { $0 == testEngine }
+            ensureMainThread {
+                XCTAssertFalse(self.searchEnginesManager.orderedEngines.contains(where: { $0 == testEngine }))
+
+                exp.fulfill()
+            }
         }
 
-        XCTAssertEqual(deleted, [])
+        waitForExpectations(timeout: 2)
     }
 
     func testDefaultEngine() {

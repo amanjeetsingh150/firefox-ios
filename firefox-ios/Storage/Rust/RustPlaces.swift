@@ -24,6 +24,7 @@ import struct MozillaAppServices.TopFrecentSiteInfo
 import struct MozillaAppServices.Url
 import struct MozillaAppServices.VisitObservation
 import struct MozillaAppServices.VisitTransitionSet
+import struct MozillaAppServices.HistoryMetadata
 
 // TODO: FXIOS-12903 Bookmark Data from Rust components is not Sendable
 extension BookmarkNodeData: @unchecked @retroactive Sendable {}
@@ -57,8 +58,28 @@ public protocol BookmarksHandler {
     func isBookmarked(url: String, completion: @escaping @Sendable (Result<Bool, Error>) -> Void)
 }
 
+public protocol HistoryHandler {
+    func applyObservation(visitObservation: VisitObservation,
+                          completion: @Sendable @escaping (Result<Void, any Error>) -> Void)
+
+    func getMostRecentSearchHistoryMetadata(
+        limit: Int32,
+        completion: @Sendable @escaping (Result<[HistoryMetadata], any Error>) -> Void
+    )
+
+    func noteHistoryMetadata(
+        for searchTerm: String,
+        and urlString: String,
+        completion: @Sendable @escaping (Result<(), any Error>) -> Void
+    )
+
+    func deleteSearchHistoryMetadata(
+        completion: @escaping @Sendable (Result<(), any Error>) -> Void
+    )
+}
+
 // TODO: FXIOS-13208 Make RustPlaces actually Sendable
-public class RustPlaces: @unchecked Sendable, BookmarksHandler {
+public class RustPlaces: @unchecked Sendable, BookmarksHandler, HistoryHandler {
     let databasePath: String
 
     let writerQueue: DispatchQueue
@@ -376,21 +397,28 @@ public class RustPlaces: @unchecked Sendable, BookmarksHandler {
     }
 
     public func deleteBookmarksWithURL(url: String) -> Success {
-        return getBookmarksWithURL(url: url) >>== { bookmarks in
-            let deferreds = bookmarks.map({ self.deleteBookmarkNode(guid: $0.guid) })
-            return all(deferreds).bind { results in
-                if let error = results.first(where: { $0.isFailure })?.failureValue {
-                    return deferMaybe(error)
+        return getBookmarksWithURL(url: url)
+            .bind { res in
+                guard case .success(let bookmarks) = res else {
+                    return Deferred(value: Maybe(failure: res.failureValue!))
                 }
+                let deferreds = bookmarks.map({ self.deleteBookmarkNode(guid: $0.guid) })
+                return all(deferreds).bind { results in
+                    if let error = results.first(where: { $0.isFailure })?.failureValue {
+                        return deferMaybe(error)
+                    }
 
-                self.notificationCenter.post(name: .BookmarksUpdated, withObject: self)
-                return succeed()
+                    self.notificationCenter.post(name: .BookmarksUpdated, withObject: self)
+                    return succeed()
+                }
             }
-        }
     }
 
-    public func createFolder(parentGUID: GUID, title: String,
-                             position: UInt32?) -> Deferred<Maybe<GUID>> {
+    public func createFolder(
+        parentGUID: GUID,
+        title: String,
+        position: UInt32?
+    ) -> Deferred<Maybe<GUID>> {
         return withWriter { connection in
             return try connection.createFolder(
                 parentGUID: parentGUID,
@@ -401,9 +429,12 @@ public class RustPlaces: @unchecked Sendable, BookmarksHandler {
     }
 
     /// This method is reimplemented with a completion handler because we want to incrementally get rid of using `Deferred`.
-    public func createFolder(parentGUID: GUID, title: String,
-                             position: UInt32?,
-                             completion: @Sendable @escaping (Result<GUID, any Error>) -> Void) {
+    public func createFolder(
+        parentGUID: GUID,
+        title: String,
+        position: UInt32?,
+        completion: @Sendable @escaping (Result<GUID, any Error>) -> Void
+    ) {
         withWriter({ connection in
                 return try connection.createFolder(
                     parentGUID: parentGUID,
@@ -529,6 +560,42 @@ public class RustPlaces: @unchecked Sendable, BookmarksHandler {
     }
 
     // MARK: History metadata
+    /// Fetches recent searches from the user's history storage.
+    public func getMostRecentSearchHistoryMetadata(
+        limit: Int32,
+        completion: @Sendable @escaping (Result<[HistoryMetadata], any Error>) -> Void
+    ) {
+        withReader({ connection in
+            return try connection.getMostRecentSearchHistoryMetadata(limit: limit)
+        }, completion: completion)
+    }
+
+    /// As part of the recent searches work, we are interesting in saving the search term in our history storage.
+    /// - Parameters:
+    ///   - searchTerm: The search term used to find a page.
+    ///   - urlString: The url of the page.
+    ///  `referrerUrl` and `viewTime` is nil because we only care about store search terms
+    ///  `.insertPage` is passed in because if we use default, it ignores and does not save the search term
+    public func noteHistoryMetadata(
+        for searchTerm: String,
+        and urlString: String,
+        completion: @Sendable @escaping (Result<(), any Error>) -> Void
+    ) {
+        withWriter(
+            { connection in
+                return try connection.noteHistoryMetadataObservationViewTime(
+                    key: HistoryMetadataKey(
+                        url: urlString,
+                        searchTerm: searchTerm,
+                        referrerUrl: nil
+                    ),
+                    viewTime: nil,
+                    .init(ifPageMissing: .insertPage)
+                )
+            },
+            completion: completion)
+    }
+
     // We are not collecting history metadata anymore since FXIOS-6729, but let's keep the possibility
     // to delete metadata for a while.
     public func deleteHistoryMetadataOlderThan(olderThan: Int64) -> Deferred<Maybe<Void>> {
@@ -536,6 +603,17 @@ public class RustPlaces: @unchecked Sendable, BookmarksHandler {
             let response: Void = try connection.deleteHistoryMetadataOlderThan(olderThan: olderThan)
             return response
         }
+    }
+
+    public func deleteSearchHistoryMetadata(
+        completion: @escaping @Sendable (Result<(), any Error>) -> Void
+    ) {
+        withWriter(
+            { connection in
+                return try connection.deleteSearchHistoryMetadata()
+            },
+            completion: completion
+        )
     }
 
     private func deleteHistoryMetadata(since startDate: Int64) -> Deferred<Maybe<Void>> {
@@ -641,6 +719,18 @@ extension RustPlaces {
         }.map { result in
             self.notificationCenter.post(name: .TopSitesUpdated, withObject: nil)
             return result
+        }
+    }
+
+    public func applyObservation(
+        visitObservation: VisitObservation,
+        completion: @Sendable @escaping (Result<Void, any Error>) -> Void
+    ) {
+        withWriter { connection in
+            return try connection.applyObservation(visitObservation: visitObservation)
+        } completion: { result in
+            self.notificationCenter.post(name: .TopSitesUpdated, withObject: nil)
+            completion(result)
         }
     }
 

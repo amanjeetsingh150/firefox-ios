@@ -11,6 +11,7 @@ enum WKInternalPageSchemeHandlerError: Error {
     case notAuthorized
 }
 
+@MainActor
 protocol WKInternalSchemeResponse {
     func response(forRequest: URLRequest) -> (URLResponse, Data)?
 }
@@ -25,7 +26,7 @@ public protocol SchemeHandler: WKURLSchemeHandler {
 ///  - NativeErrorPageViewController is shown in the Client through a redux action, fired when an error page
 ///  needs to be shown this mechanism still needs to be investigated and integrated so error pages can load
 ///  (natively) under browser kit.
-public class WKInternalSchemeHandler: NSObject, SchemeHandler {
+public final class WKInternalSchemeHandler: NSObject, SchemeHandler {
     public let scheme = "internal"
 
     override public init() {}

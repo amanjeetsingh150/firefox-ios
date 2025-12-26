@@ -9,14 +9,14 @@ import SummarizeKit
 @testable import Client
 
 final class MainMenuStateTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testInitialization() {
@@ -28,6 +28,7 @@ final class MainMenuStateTests: XCTestCase {
         XCTAssertNil(initialState.currentTabInfo)
     }
 
+    @MainActor
     func testUpdatingCurrentTabInfo() {
         let initialState = createSubject()
         let reducer = mainMenuReducer()
@@ -64,6 +65,7 @@ final class MainMenuStateTests: XCTestCase {
         XCTAssertEqual(newState.currentTabInfo, expectedResult)
     }
 
+    @MainActor
     func testNavigation_AllCases() {
         let initialState = createSubject()
         let reducer = mainMenuReducer()
@@ -88,6 +90,7 @@ final class MainMenuStateTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testToggleUserAgentAction() {
         let initialState = createSubject()
         let reducer = mainMenuReducer()
@@ -105,6 +108,7 @@ final class MainMenuStateTests: XCTestCase {
         XCTAssertTrue(newState.shouldDismiss)
     }
 
+    @MainActor
     func testCloseAction() {
         let initialState = createSubject()
         let reducer = mainMenuReducer()

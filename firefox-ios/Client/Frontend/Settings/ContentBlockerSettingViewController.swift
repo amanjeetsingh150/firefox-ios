@@ -7,8 +7,7 @@ import Foundation
 import Shared
 import ComponentLibrary
 
-class ContentBlockerSettingViewController: SettingsTableViewController,
-                                           Notifiable {
+class ContentBlockerSettingViewController: SettingsTableViewController {
     private struct UX {
         static let buttonContentInsets = NSDirectionalEdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0)
     }
@@ -36,6 +35,10 @@ class ContentBlockerSettingViewController: SettingsTableViewController,
                 style: .plain,
                 target: self,
                 action: #selector(done))
+            if #available(iOS 26.0, *) {
+                let theme = themeManager.getCurrentTheme(for: windowUUID)
+                navigationItem.rightBarButtonItem?.tintColor = theme.colors.textPrimary
+            }
         }
     }
 
@@ -210,10 +213,14 @@ class ContentBlockerSettingViewController: SettingsTableViewController,
     }
 
     // MARK: - Notifiable
-    func handleNotifications(_ notification: Notification) {
+    override func handleNotifications(_ notification: Notification) {
+        super.handleNotifications(notification)
+
         switch notification.name {
         case UIContentSizeCategory.didChangeNotification:
-            tableView.reloadData()
+            ensureMainThread {
+                self.tableView.reloadData()
+            }
         default:
             break
         }

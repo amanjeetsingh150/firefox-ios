@@ -6,25 +6,33 @@ import Common
 import Foundation
 import Storage
 
+@MainActor
 final class Debouncer {
     private let delay: TimeInterval
-    private var workItem: DispatchWorkItem?
+    private var task: Task<Void, Never>?
+    private let nanosecondsPerSecond: UInt64 = 1_000_000_000
 
     init(delay: TimeInterval) {
         self.delay = delay
     }
 
-    func call(action: @escaping () -> Void) {
-        workItem?.cancel()  // Cancel any previously scheduled work
-        workItem = DispatchWorkItem(block: action)
-        DispatchQueue.main.asyncAfter(
-            deadline: .now() + delay, execute: workItem!)
+    func call(action: @escaping @MainActor @Sendable () -> Void) {
+        task?.cancel()
+
+        let nanos = UInt64(delay) * nanosecondsPerSecond
+
+        task = Task {
+            try? await Task.sleep(nanoseconds: nanos)
+            guard !Task.isCancelled else { return }
+            action()
+        }
     }
 }
 
 /// `AccountSyncHandler` exists to observe certain `TabEventLabel` notifications,
 /// and react accordingly.
-class AccountSyncHandler: TabEventHandler {
+@MainActor
+final class AccountSyncHandler: TabEventHandler, Sendable {
     private let debouncer: Debouncer
     private let profile: Profile
     private let logger: Logger
@@ -36,7 +44,7 @@ class AccountSyncHandler: TabEventHandler {
         .allWindows
 
     // For testing purposes only:
-    private var onSyncCompleted: (() -> Void)?
+    private let onSyncCompleted: (@Sendable () -> Void)?
 
     init(
         with profile: Profile,
@@ -44,7 +52,7 @@ class AccountSyncHandler: TabEventHandler {
         queue: DispatchQueueInterface = DispatchQueue.global(),
         queueDelay: Double = 0.5,
         logger: Logger = DefaultLogger.shared,
-        onSyncCompleted: (() -> Void)? = nil
+        onSyncCompleted: (@Sendable () -> Void)? = nil
     ) {
         self.profile = profile
         self.debouncer = Debouncer(delay: debounceTime)
@@ -82,7 +90,9 @@ class AccountSyncHandler: TabEventHandler {
     /// To prevent multiple tab actions to have a separate syncs, we sync after 5s of no tab activity
     private func performClientsAndTabsSync() {
         guard profile.hasSyncableAccount() else { return }
-        debouncer.call { [weak self] in self?.storeTabs() }
+        debouncer.call { [weak self] in
+            self?.storeTabs()
+        }
     }
 
     private func storeTabs() {
@@ -93,15 +103,7 @@ class AccountSyncHandler: TabEventHandler {
         // Store tabs keyed by tabUUID to easily handle overrides.
         var storedTabsDict = [String: RemoteTab]()
         for manager in tabManagers {
-            // Set inactive tabs explicitly as inactive (initial state)
-            for tab in manager.inactiveTabs {
-                if let remoteTab = tab.toRemoteTab() {
-                    storedTabsDict[tab.tabUUID] = remoteTab
-                }
-            }
-
-            // Active tabs override inactive ones if there's overlap
-            for tab in manager.normalActiveTabs {
+            for tab in manager.normalTabs {
                 if let remoteTab = tab.toRemoteTab() {
                     storedTabsDict[tab.tabUUID] = remoteTab
                 }

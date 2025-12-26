@@ -31,7 +31,11 @@ class OneLineTableViewCell: UITableViewCell,
         static let verticalMargin: CGFloat = 8
         static let leftImageViewSize: CGFloat = 28
         static let separatorViewHeight: CGFloat = 0.7
-        static let labelMargin: CGFloat = 4
+        static let labelMargin: CGFloat = if #available(iOS 26.0, *) {
+            8
+        } else {
+            4
+        }
         static let shortLeadingMargin: CGFloat = 5
         static let longLeadingMargin: CGFloat = 13
         static let cornerRadius: CGFloat = 5
@@ -60,6 +64,8 @@ class OneLineTableViewCell: UITableViewCell,
     lazy var titleLabel: UILabel = .build { label in
         label.font = FXFontStyles.Regular.body.scaledFont()
         label.textAlignment = .natural
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
     }
 
     private lazy var bottomSeparatorView: UIView = .build { separatorLine in

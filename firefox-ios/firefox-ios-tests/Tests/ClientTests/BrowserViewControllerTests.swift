@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import Foundation
+import MozillaAppServices
 import Storage
 import XCTest
 import Glean
@@ -19,61 +20,40 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
     var mockStore: MockStoreForMiddleware<AppState>!
     var appStartupTelemetry: MockAppStartupTelemetry!
     var appState: AppState!
+    var recordVisitManager: MockRecordVisitObservationManager!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         setIsSwipingTabsEnabled(false)
         setIsHostedSummarizerEnabled(false)
-        DependencyHelperMock().bootstrapDependencies()
-        TelemetryContextualIdentifier.setupContextId()
-        // Due to changes allow certain custom pings to implement their own opt-out
-        // independent of Glean, custom pings may need to be registered manually in
-        // tests in order to put them in a state in which they can collect data.
-        Glean.shared.registerPings(GleanMetrics.Pings.shared)
-        Glean.shared.resetGlean(clearStores: true)
+        tabManager = MockTabManager()
+        DependencyHelperMock().bootstrapDependencies(injectedTabManager: tabManager)
 
         profile = MockProfile()
-        tabManager = MockTabManager()
         browserCoordinator = MockBrowserCoordinator()
         appStartupTelemetry = MockAppStartupTelemetry()
+        recordVisitManager = MockRecordVisitObservationManager()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
         setupStore()
     }
 
-    override func tearDown() {
-        TelemetryContextualIdentifier.clearUserDefaults()
+    override func tearDown() async throws {
         profile.shutdown()
         profile = nil
         tabManager = nil
         appStartupTelemetry = nil
-        Glean.shared.resetGlean(clearStores: true)
-        DependencyHelperMock().reset()
+        recordVisitManager = nil
         resetStore()
-        super.tearDown()
+        DependencyHelperMock().reset()
+        try await super.tearDown()
     }
 
     func testTrackVisibleSuggestion() {
+        TelemetryContextualIdentifier.setupContextId()
         let subject = createSubject()
-        let expectation = expectation(description: "The Firefox Suggest ping was sent")
-
-        GleanMetrics.Pings.shared.fxSuggest.testBeforeNextSubmit { _ in
-            XCTAssertEqual(GleanMetrics.FxSuggest.pingType.testGetValue(), "fxsuggest-impression")
-            XCTAssertEqual(
-                GleanMetrics.FxSuggest.contextId.testGetValue()?.uuidString,
-                TelemetryContextualIdentifier.contextId
-            )
-            XCTAssertEqual(GleanMetrics.FxSuggest.isClicked.testGetValue(), false)
-            XCTAssertEqual(GleanMetrics.FxSuggest.position.testGetValue(), 3)
-            XCTAssertEqual(GleanMetrics.FxSuggest.blockId.testGetValue(), 1)
-            XCTAssertEqual(GleanMetrics.FxSuggest.advertiser.testGetValue(), "test advertiser")
-            XCTAssertEqual(GleanMetrics.FxSuggest.iabCategory.testGetValue(), "999 - Test Category")
-            XCTAssertEqual(GleanMetrics.FxSuggest.reportingUrl.testGetValue(), "https://example.com/ios_test_impression_reporting_url")
-            XCTAssertEqual(GleanMetrics.FxSuggest.country.testGetValue(), "US")
-            expectation.fulfill()
-        }
-
-        let locale = Locale(identifier: "en-US")
-        let telemetry = FxSuggestTelemetry(locale: locale)
+        let locale = MockLocaleProvider()
+        let gleanWrapper = MockGleanWrapper()
+        let telemetry = FxSuggestTelemetry(locale: locale, gleanWrapper: gleanWrapper)
         subject.trackVisibleSuggestion(telemetryInfo: .firefoxSuggestion(
             RustFirefoxSuggestionTelemetryInfo.amp(
                 blockId: 1,
@@ -86,7 +66,12 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
             didTap: false
         ), suggestTelemetry: telemetry)
 
-        wait(for: [expectation], timeout: 5.0)
+        guard let savedPing = gleanWrapper.savedPing as? Ping<NoReasonCodes> else {
+            XCTFail("savedPing is not of type Ping<NoReasonCodes>")
+            return
+        }
+        XCTAssert(savedPing === GleanMetrics.Pings.shared.fxSuggest, "FxSuggest ping called")
+        XCTAssertEqual(gleanWrapper.submitPingCalled, 1)
     }
 
     func testAppWillResignActiveNotification_takesScreenshot_ifNoViewIsPresented() {
@@ -122,23 +107,7 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
     }
 
     @MainActor
-    func testDidSelectedTabChange_appliesExpectedUIModeToAllUIElements_whenToolbarRefactorDisabled() {
-        let subject = createSubject()
-        let topTabsViewController = TopTabsViewController(tabManager: tabManager, profile: profile)
-        let testTab = Tab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID)
-        let mockTabWebView = MockTabWebView(tab: testTab)
-        testTab.webView = mockTabWebView
-        setupNimbusToolbarRefactorTesting(isEnabled: false)
-
-        subject.topTabsViewController = topTabsViewController
-        subject.tabManager(tabManager, didSelectedTabChange: testTab, previousTab: nil, isRestoring: false)
-
-        XCTAssertEqual(topTabsViewController.privateModeButton.tintColor, DarkTheme().colors.iconOnColor)
-        XCTAssertFalse(subject.toolbar.privateModeBadge.badge.isHidden)
-    }
-
-    @MainActor
-    func testDidSelectedTabChange_appliesExpectedUIModeToTopTabsViewController_whenToolbarRefactorEnabled() {
+    func testDidSelectedTabChange_appliesExpectedUIModeToTopTabsViewController() {
         let subject = createSubject()
         let topTabsViewController = TopTabsViewController(tabManager: tabManager, profile: profile)
         let testTab = Tab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID)
@@ -151,7 +120,6 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         subject.tabManager(tabManager, didSelectedTabChange: testTab, previousTab: nil, isRestoring: false)
 
         XCTAssertEqual(topTabsViewController.privateModeButton.tintColor, DarkTheme().colors.iconOnColor)
-        XCTAssertTrue(subject.toolbar.privateModeBadge.badge.isHidden)
     }
 
     func test_didSelectedTabChange_fromHomepageToHomepage_triggersAppropriateDispatchAction() throws {
@@ -160,7 +128,6 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         testTab.url = URL(string: "internal://local/about/home")!
         let mockTabWebView = MockTabWebView(tab: testTab)
         testTab.webView = mockTabWebView
-        setupNimbusHomepageRebuildForTesting(isEnabled: true)
 
         let expectation = XCTestExpectation(description: "General browser action is dispatched")
         mockStore.dispatchCalled = {
@@ -176,13 +143,22 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(actionType, GeneralBrowserActionType.didSelectedTabChangeToHomepage)
     }
 
-    func testViewDidLoad_addsHomepage_whenSwipingTabsEnabled() {
-        let subject = createSubject()
+    func testViewDidLoad_addsHomepage_whenSwipingTabsEnabled_onIphone() {
+        let subject = createSubject(userInterfaceIdiom: .phone)
         setIsSwipingTabsEnabled(true)
 
         subject.loadViewIfNeeded()
 
         XCTAssertEqual(browserCoordinator.showHomepageCalled, 1)
+    }
+
+    func testViewDidLoad_doesNotAddHomepage_whenSwipingTabsEnabled_onIpad() {
+        let subject = createSubject(userInterfaceIdiom: .pad)
+        setIsSwipingTabsEnabled(true)
+
+        subject.loadViewIfNeeded()
+
+        XCTAssertEqual(browserCoordinator.showHomepageCalled, 0)
     }
 
     func testUpdateReaderModeState_whenSummarizeFeatureOn_dispatchesToolbarMiddlewareAction() throws {
@@ -216,6 +192,58 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
 //        let action = try XCTUnwrap(mockStore.dispatchedActions.first as? ToolbarMiddlewareAction)
 //        XCTAssertEqual(action.readerModeState, .active)
 //    }
+
+    func testHandle_withoutURL_withSelectedTab_notRestoring_opensBlankNewTab_ifTabHasURL_and_isNotHomepage() {
+        let mockBVC = MockBrowserViewController(profile: profile, tabManager: tabManager)
+        tabManager.selectedTab = MockTab(
+            profile: profile,
+            isPrivate: false,
+            windowUUID: .XCTestDefaultUUID,
+            isHomePage: false
+        )
+        tabManager.isRestoringTabs = false
+        tabManager.selectedTab?.url = URL(string: "https://example.com/")
+        mockBVC.handle(url: nil, isPrivate: false, options: nil)
+        XCTAssertTrue(mockBVC.openBlankNewTabCalled)
+    }
+
+    func testHandle_withoutURL_withSelectedTab_notRestoring_opensBlankNewTab_ifPrivateDoesNotMatch() {
+        let mockBVC = MockBrowserViewController(profile: profile, tabManager: tabManager)
+        tabManager.selectedTab = MockTab(
+            profile: profile,
+            isPrivate: false,
+            windowUUID: .XCTestDefaultUUID,
+            isHomePage: true
+        )
+        tabManager.isRestoringTabs = false
+        mockBVC.handle(url: nil, isPrivate: true, options: nil)
+        XCTAssertTrue(mockBVC.openBlankNewTabCalled)
+    }
+
+    func testShouldFocusLocationTextField_true_whenPrivateMatches_andIsFxHome() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, isPrivate: false, windowUUID: .XCTestDefaultUUID, isHomePage: true)
+        XCTAssertTrue(subject.shouldFocusLocationTextField(for: tab, isPrivate: false))
+    }
+
+    func testShouldFocusLocationTextField_true_whenPrivateMatches_andUrlIsNil() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, isPrivate: false, windowUUID: .XCTestDefaultUUID, isHomePage: false)
+        XCTAssertTrue(subject.shouldFocusLocationTextField(for: tab, isPrivate: false))
+    }
+
+    func testShouldFocusLocationTextField_false_whenPrivateMismatch() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, isPrivate: false, windowUUID: .XCTestDefaultUUID, isHomePage: false)
+        XCTAssertFalse(subject.shouldFocusLocationTextField(for: tab, isPrivate: true))
+    }
+
+    func testShouldFocusLocationTextField_false_whenHasURL_andNotFxHome() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, isPrivate: true, windowUUID: .XCTestDefaultUUID, isHomePage: false)
+        tab.url = URL(string: "https://example.com/")
+        XCTAssertFalse(subject.shouldFocusLocationTextField(for: tab, isPrivate: true))
+    }
 
     // MARK: - Handle PDF
 
@@ -318,7 +346,7 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         let newState = BrowserViewControllerState.reducer(
             BrowserViewControllerState(windowUUID: .XCTestDefaultUUID),
             NavigationBrowserAction(
-                navigationDestination: NavigationDestination(.zeroSearch),
+                navigationDestination: NavigationDestination(.homepageZeroSearch),
                 windowUUID: .XCTestDefaultUUID,
                 actionType: NavigationBrowserActionType.tapOnHomepageSearchBar
             )
@@ -415,27 +443,129 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(browserCoordinator.showSummarizePanelCalled, 1)
     }
 
-    private func createSubject() -> BrowserViewController {
+    func testWillNavigateAway_withValidTab_takesScreenshotAsynchronously() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let expectation = XCTestExpectation(description: "Screenshot should be taken asynchronously")
+
+        screenshotHelper.onTakeScreenshot = {
+            expectation.fulfill()
+        }
+
+        subject.willNavigateAway(from: tab)
+
+        // Screenshot should not be taken immediately due to async dispatch
+        XCTAssertFalse(screenshotHelper.takeScreenshotCalled)
+
+        wait(for: [expectation], timeout: 2.0)
+        XCTAssertTrue(screenshotHelper.takeScreenshotCalled)
+    }
+
+    func testWillNavigateAway_withNilTab_doesNotTakeScreenshot() {
+        let subject = createSubject()
+
+        subject.willNavigateAway(from: nil)
+
+        XCTAssertFalse(screenshotHelper.takeScreenshotCalled)
+    }
+
+    // MARK: - Record visit observation for History Panel
+
+    func testRecordVisitObservationIsCalledForNavigateInNewTabWithTitle() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: tab)
+        let url = URL(string: "https://example.com/")
+        mockTabWebView.loadedURL = url
+        tab.webView = mockTabWebView
+
+        subject.navigateInTab(tab: tab, to: nil, webViewStatus: .title)
+
+        XCTAssertEqual(recordVisitManager.recordVisitCalled, 1)
+        XCTAssertNotNil(recordVisitManager.lastVisitObservation)
+    }
+
+    func testRecordVisitObservationIsCalledForNavigateInNewTabWithURL() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: tab)
+        let url = URL(string: "https://example.com/")
+        mockTabWebView.loadedURL = url
+        tab.webView = mockTabWebView
+
+        subject.navigateInTab(tab: tab, to: nil, webViewStatus: .url)
+
+        XCTAssertEqual(recordVisitManager.recordVisitCalled, 1)
+        XCTAssertNotNil(recordVisitManager.lastVisitObservation)
+    }
+
+    func testRecordVisitObservationIsNotCalledForInternalURL() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: tab)
+        let url = URL(string: "http://localhost:\(AppInfo.webserverPort)/")
+        mockTabWebView.loadedURL = url
+        tab.webView = mockTabWebView
+
+        subject.navigateInTab(tab: tab, to: nil, webViewStatus: .title)
+
+        XCTAssertEqual(recordVisitManager.recordVisitCalled, 0)
+        XCTAssertNil(recordVisitManager.lastVisitObservation)
+    }
+
+    func testRecordVisitObservationIsNotCalledForFileURL() {
+        let subject = createSubject()
+        let tab = MockTab(profile: profile, windowUUID: .XCTestDefaultUUID)
+        let mockTabWebView = MockTabWebView(tab: tab)
+        let url = URL(fileURLWithPath: "/tmp/test.html")
+        mockTabWebView.loadedURL = url
+        tab.webView = mockTabWebView
+
+        subject.navigateInTab(tab: tab, to: nil, webViewStatus: .title)
+
+        XCTAssertEqual(recordVisitManager.recordVisitCalled, 0)
+        XCTAssertNil(recordVisitManager.lastVisitObservation)
+    }
+
+    func testResetObservationIsCalledForAddNewTabAction() throws {
+        let subject = createSubject()
+
+        let action = GeneralBrowserAction(windowUUID: .XCTestDefaultUUID,
+                                          actionType: GeneralBrowserActionType.addNewTab)
+        let newState = BrowserViewControllerState.reducer(
+            BrowserViewControllerState(windowUUID: .XCTestDefaultUUID), action)
+        subject.newState(state: newState)
+
+        XCTAssertEqual(recordVisitManager.resetVisitCalled, 1)
+        XCTAssertNil(recordVisitManager.lastVisitObservation)
+    }
+
+    // MARK: - Private
+
+    private func createSubject(userInterfaceIdiom: UIUserInterfaceIdiom? = nil,
+                               file: StaticString = #filePath,
+                               line: UInt = #line) -> BrowserViewController {
         let subject = BrowserViewController(profile: profile,
                                             tabManager: tabManager,
-                                            appStartupTelemetry: appStartupTelemetry)
+                                            appStartupTelemetry: appStartupTelemetry,
+                                            recordVisitManager: recordVisitManager)
         screenshotHelper = MockScreenshotHelper(controller: subject)
         subject.screenshotHelper = screenshotHelper
         subject.navigationHandler = browserCoordinator
         subject.browserDelegate = browserCoordinator
-        trackForMemoryLeaks(subject)
+
+        if let userInterfaceIdiom {
+            let toolbarHelper: ToolbarHelperInterface = ToolbarHelper(userInterfaceIdiom: userInterfaceIdiom)
+            subject.toolbarHelper = toolbarHelper
+        }
+
+        trackForMemoryLeaks(subject, file: file, line: line)
         return subject
     }
 
     private func setupNimbusToolbarRefactorTesting(isEnabled: Bool) {
         FxNimbus.shared.features.toolbarRefactorFeature.with { _, _ in
             return ToolbarRefactorFeature(enabled: isEnabled)
-        }
-    }
-
-    private func setupNimbusHomepageRebuildForTesting(isEnabled: Bool) {
-        FxNimbus.shared.features.homepageRebuildFeature.with { _, _ in
-            return HomepageRebuildFeature(enabled: isEnabled)
         }
     }
 
@@ -493,7 +623,7 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
         StoreTestUtilityHelper.setupStore(with: mockStore)
     }
 
-    // MARK: StoreTestUtility
+    // MARK: - StoreTestUtility
     func setupAppState() -> Client.AppState {
         let appState = AppState(
             activeScreens: ActiveScreensState(
@@ -522,11 +652,13 @@ class BrowserViewControllerTests: XCTestCase, StoreTestUtility {
 
 class MockScreenshotHelper: ScreenshotHelper {
     var takeScreenshotCalled = false
+    var onTakeScreenshot: (() -> Void)?
 
     override func takeScreenshot(_ tab: Tab,
                                  windowUUID: WindowUUID,
                                  screenshotBounds: CGRect) {
         takeScreenshotCalled = true
+        onTakeScreenshot?()
     }
 }
 

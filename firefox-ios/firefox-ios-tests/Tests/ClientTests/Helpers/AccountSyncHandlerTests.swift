@@ -8,6 +8,7 @@ import Common
 
 @testable import Client
 
+@MainActor
 class AccountSyncHandlerTests: XCTestCase {
     private var profile: MockProfile!
     private var syncManager: ClientSyncManagerSpy!
@@ -15,27 +16,30 @@ class AccountSyncHandlerTests: XCTestCase {
     private var mockWindowManager: MockWindowManager!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         self.profile = MockProfile()
         self.syncManager = profile.syncManager as? ClientSyncManagerSpy
         self.queue = MockDispatchQueue()
-        DependencyHelperMock().bootstrapDependencies(injectedWindowManager: mockWindowManager)
+        let mockTabManager =  MockTabManager()
+        DependencyHelperMock().bootstrapDependencies(
+            injectedWindowManager: mockWindowManager,
+            injectedTabManager: mockTabManager
+        )
+        mockTabManager.recentlyAccessedNormalTabs = [createTab(profile: profile)]
         mockWindowManager = MockWindowManager(
             wrappedManager: WindowManagerImplementation(),
-            tabManager: MockTabManager(
-                recentlyAccessedNormalTabs: [createTab(profile: profile)]
-            )
+            tabManager: mockTabManager
         )
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         self.syncManager = nil
         self.profile = nil
         self.queue = nil
         self.mockWindowManager = nil
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testTabDidGainFocus_doesntSyncWithoutAccount() {
@@ -43,6 +47,7 @@ class AccountSyncHandlerTests: XCTestCase {
         expectation.isInverted = true
         profile.hasSyncableAccountMock = false
         let subject = AccountSyncHandler(with: profile, queue: queue, onSyncCompleted: {
+            expectation.fulfill()
         })
         let tab = createTab(profile: profile)
         subject.tabDidGainFocus(tab)

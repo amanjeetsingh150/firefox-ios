@@ -19,7 +19,7 @@ public let defaultErrorReporter: NimbusErrorReporter = { err in
     }
 }
 
-class GleanMetricsHandler: MetricsHandler {
+final class GleanMetricsHandler: MetricsHandler {
     func recordEnrollmentStatuses(enrollmentStatusExtras: [EnrollmentStatusExtraDef]) {
         for extra in enrollmentStatusExtras {
             GleanMetrics.NimbusEvents.enrollmentStatus
@@ -92,20 +92,15 @@ public extension Nimbus {
         }
 
         let context = Nimbus.buildExperimentContext(appSettings)
-        let remoteSettings = server.map { server -> RemoteSettingsConfig in
-            RemoteSettingsConfig(
-                collectionName: server.collection,
-                server: .custom(url: server.url.absoluteString)
-            )
-        }
         let nimbusClient = try NimbusClient(
             appCtx: context,
             recordedContext: recordedContext,
             coenrollingFeatureIds: coenrollingFeatureIds,
             dbpath: dbPath,
-            remoteSettingsConfig: remoteSettings,
             metricsHandler: GleanMetricsHandler(),
-            geckoPrefHandler: nil
+            geckoPrefHandler: nil,
+            remoteSettingsService: server?.remoteSettingsService,
+            collectionName: server?.collection
         )
 
         return Nimbus(
@@ -119,8 +114,24 @@ public extension Nimbus {
     static func buildExperimentContext(
         _ appSettings: NimbusAppSettings,
         bundle: Bundle = Bundle.main,
-        device: UIDevice = .current
+        device currentDevice: UIDevice? = nil
     ) -> AppContext {
+        var systemName = ""
+        var systemVersion = ""
+
+        // FIXME: FXIOS-13512 Questionable workaround to get main actor isolated UIDevice.current; rearchitect later
+        if Thread.isMainThread {
+            MainActor.assumeIsolated {
+                systemName = (currentDevice ?? UIDevice.current).systemName
+                systemVersion = (currentDevice ?? UIDevice.current).systemVersion
+            }
+        } else {
+            DispatchQueue.main.sync {
+                systemName = (currentDevice ?? UIDevice.current).systemName
+                systemVersion = (currentDevice ?? UIDevice.current).systemVersion
+            }
+        }
+
         let info = bundle.infoDictionary ?? [:]
         var inferredDateInstalledOn: Date? {
             guard
@@ -143,12 +154,11 @@ public extension Nimbus {
             deviceManufacturer: Sysctl.manufacturer,
             deviceModel: Sysctl.model,
             locale: getLocaleTag(), // from Glean utils
-            os: device.systemName,
-            osVersion: device.systemVersion,
+            os: systemName,
+            osVersion: systemVersion,
             androidSdkVersion: nil,
             debugTag: "Nimbus.rs",
             installationDate: installationDateSinceEpoch,
-            homeDirectory: nil,
             customTargetingAttributes: try? appSettings.customTargetingAttributes.stringify()
         )
     }

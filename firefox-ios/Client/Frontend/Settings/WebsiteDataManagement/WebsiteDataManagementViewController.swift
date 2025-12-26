@@ -145,7 +145,10 @@ class WebsiteDataManagementViewController: UIViewController,
         searchController.searchBar.delegate = self
         searchController.searchBar.barStyle = currentTheme().type.getBarStyle()
 
-        navigationItem.hidesSearchBarWhenScrolling = false
+        if #unavailable(iOS 26.0) {
+            navigationItem.hidesSearchBarWhenScrolling = false
+        }
+
         navigationItem.searchController = searchController
         self.searchController = searchController
         self.tableView = tableView
@@ -263,7 +266,6 @@ class WebsiteDataManagementViewController: UIViewController,
         case .sites:
             guard let item = viewModel.siteRecords[safe: indexPath.row] else { return }
             viewModel.selectItem(item)
-            break
         case .showMore:
             viewModel.showMoreButtonPressed()
             tableView.reloadData()
@@ -282,7 +284,6 @@ class WebsiteDataManagementViewController: UIViewController,
         case .sites:
             guard let item = viewModel.siteRecords[safe: indexPath.row] else { return }
             viewModel.deselectItem(item)
-            break
         default: break
         }
     }

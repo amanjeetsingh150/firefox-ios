@@ -9,8 +9,8 @@ import Glean
  * Instances of this class are useful for implementing a messaging service based upon
  * Nimbus.
  *
- * The message helper is designed to help string interpolation and JEXL evalutaiuon against the context
- * of the attrtibutes Nimbus already knows about.
+ * The message helper is designed to help string interpolation and JEXL evaluation against the context
+ * of the attributes Nimbus already knows about.
  *
  * App-specific, additional context can be given at creation time.
  *
@@ -41,10 +41,11 @@ public protocol NimbusMessagingHelperProtocol: NimbusStringHelperProtocol, Nimbu
  *
  * It should also provide a similar function for String substitution, though this scheduled for EXP-2159.
  */
-public class NimbusMessagingHelper: NimbusMessagingHelperProtocol {
+public final class NimbusMessagingHelper: NimbusMessagingHelperProtocol {
     private let targetingHelper: NimbusTargetingHelperProtocol
     private let stringHelper: NimbusStringHelperProtocol
-    private var cache: [String: Bool]
+    // FIXME: FXIOS-13501 Unprotected shared mutable state is an error in Swift 6
+    private nonisolated(unsafe) var cache: [String: Bool]
 
     public init(targetingHelper: NimbusTargetingHelperProtocol,
                 stringHelper: NimbusStringHelperProtocol,
@@ -80,7 +81,7 @@ public class NimbusMessagingHelper: NimbusMessagingHelperProtocol {
 
 // MARK: Dummy implementations
 
-class AlwaysConstantTargetingHelper: NimbusTargetingHelperProtocol {
+final class AlwaysConstantTargetingHelper: NimbusTargetingHelperProtocol {
     private let constant: Bool
 
     init(constant: Bool = false) {
@@ -92,7 +93,7 @@ class AlwaysConstantTargetingHelper: NimbusTargetingHelperProtocol {
     }
 }
 
-class EchoStringHelper: NimbusStringHelperProtocol {
+final class EchoStringHelper: NimbusStringHelperProtocol {
     func getUuid(template _: String) -> String? {
         nil
     }

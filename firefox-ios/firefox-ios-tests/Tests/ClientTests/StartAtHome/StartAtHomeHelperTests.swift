@@ -10,28 +10,25 @@ import Common
 class StartAtHomeHelperTests: XCTestCase {
     private var helper: StartAtHomeHelper!
     private var profile: MockProfile!
-    private var tabManager: TabManager!
+    private var tabManager: MockTabManager!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
-        DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile()
-        tabManager = TabManagerImplementation(profile: profile,
-                                              uuid: ReservedWindowUUID(uuid: .XCTestDefaultUUID, isNew: false))
+        tabManager = MockTabManager()
 
-        DependencyHelperMock().bootstrapDependencies()
+        await DependencyHelperMock().bootstrapDependencies()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
     }
 
-    override func tearDown() {
-        super.tearDown()
-
+    override func tearDown() async throws {
         profile = nil
         tabManager = nil
         helper = nil
 
         DependencyHelperMock().reset()
+        try await super.tearDown()
     }
 
     func testShouldNotSkipStartAtHome() throws {
@@ -92,6 +89,7 @@ class StartAtHomeHelperTests: XCTestCase {
         XCTAssertFalse(helper.shouldStartAtHome(with: Date()), "Expected to fail for disabled state")
     }
 
+    @MainActor
     func testScanForExistingHomeTab_ForEmptyTabs() {
         setupHelper()
         let homeTab = helper.scanForExistingHomeTab(in: [], with: profile.prefs)

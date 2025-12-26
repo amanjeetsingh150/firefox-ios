@@ -7,24 +7,21 @@ import XCTest
 
 @testable import Client
 
-class WallpaperSelectorViewModelTests: XCTestCase {
+@MainActor
+final class WallpaperSelectorViewModelTests: XCTestCase {
     private var wallpaperManager: WallpaperManagerInterface!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
         wallpaperManager = WallpaperManagerMock()
         addWallpaperCollections()
-        // Due to changes allow certain custom pings to implement their own opt-out
-        // independent of Glean, custom pings may need to be registered manually in
-        // tests in order to put them in a state in which they can collect data.
-        Glean.shared.registerPings(GleanMetrics.Pings.shared)
-        Glean.shared.resetGlean(clearStores: true)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
+        Self.tearDownTelemetry()
         wallpaperManager = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testInit_hasCorrectNumberOfWallpapers() {
@@ -51,26 +48,30 @@ class WallpaperSelectorViewModelTests: XCTestCase {
         let subject = createSubject()
         let indexPath = IndexPath(item: 1, section: 0)
 
-        subject.downloadAndSetWallpaper(at: indexPath) { result in
+        subject.downloadAndSetWallpaper(at: indexPath) { [mockManager] result in
             XCTAssertEqual(subject.selectedIndexPath, indexPath)
             XCTAssertEqual(mockManager.setCurrentWallpaperCallCount, 1)
         }
     }
 
-    func testRecordsWallpaperSelectorView() {
+    // TODO: FXIOS-13652 - Migrate FixWallpaperSelectorViewModelTests to use mock telemetry or GleanWrapper
+    func testRecordsWallpaperSelectorView() throws {
+        Self.setupTelemetry(with: MockProfile())
         wallpaperManager = WallpaperManager()
         let subject = createSubject()
         subject.sendImpressionTelemetry()
 
-        testEventMetricRecordingSuccess(metric: GleanMetrics.Onboarding.wallpaperSelectorView)
+        try testEventMetricRecordingSuccess(metric: GleanMetrics.Onboarding.wallpaperSelectorView)
     }
 
-    func testRecordsWallpaperSelectorClose() {
+    // TODO: FXIOS-13652 - Migrate FixWallpaperSelectorViewModelTests to use mock telemetry or GleanWrapper
+    func testRecordsWallpaperSelectorClose() throws {
+        Self.setupTelemetry(with: MockProfile())
         wallpaperManager = WallpaperManager()
         let subject = createSubject()
         subject.sendDismissImpressionTelemetry()
 
-        testEventMetricRecordingSuccess(metric: GleanMetrics.Onboarding.wallpaperSelectorClose)
+        try testEventMetricRecordingSuccess(metric: GleanMetrics.Onboarding.wallpaperSelectorClose)
     }
 
 //    func testClickingCell_recordsWallpaperChange() {

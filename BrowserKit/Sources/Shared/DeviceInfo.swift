@@ -6,66 +6,8 @@ import Common
 import UIKit
 
 extension DeviceInfo {
-    // List of device names that don't support advanced visual settings
-    static let lowGraphicsQualityModels = ["iPad",
-                                           "iPad1,1",
-                                           "iPhone1,1",
-                                           "iPhone1,2",
-                                           "iPhone2,1",
-                                           "iPhone3,1",
-                                           "iPhone3,2",
-                                           "iPhone3,3",
-                                           "iPod1,1",
-                                           "iPod2,1",
-                                           "iPod2,2",
-                                           "iPod3,1",
-                                           "iPod4,1",
-                                           "iPad2,1",
-                                           "iPad2,2",
-                                           "iPad2,3",
-                                           "iPad2,4",
-                                           "iPad3,1",
-                                           "iPad3,2",
-                                           "iPad3,3"]
-
-    public static var specificModelName: String {
-        var systemInfo = utsname()
-        uname(&systemInfo)
-
-        let machine = systemInfo.machine
-        let mirror = Mirror(reflecting: machine)
-        var identifier = ""
-
-        // Parses the string for the model name via NSUTF8StringEncoding, refer to
-        // http://stackoverflow.com/questions/26028918/ios-how-to-determine-iphone-model-in-swift
-        for child in mirror.children.enumerated() {
-            if let value = child.1.value as? Int8, value != 0 {
-                identifier.append(String(UnicodeScalar(UInt8(value))))
-            }
-        }
-        return identifier
-    }
-
-    public class func clientIdentifier(_ prefs: Prefs) -> String {
-        if let id = prefs.stringForKey("clientIdentifier") {
-            return id
-        }
-        let id = UUID().uuidString
-        prefs.setString(id, forKey: "clientIdentifier")
-        return id
-    }
-
     public class func deviceModel() -> String {
         return UIDeviceDetails.model
-    }
-
-    public class func isBlurSupported() -> Bool {
-        // We've tried multiple ways to make this change visible on simulators, but we
-        // haven't found a solution that worked:
-        // 1. http://stackoverflow.com/questions/21603475/how-can-i-detect-if-the-iphone-my-app-is-on-is-going-to-use-a-simple-transparen
-        // 2. https://gist.github.com/conradev/8655650
-        // Thus, testing has to take place on actual devices.
-        return !lowGraphicsQualityModels.contains(specificModelName)
     }
 
     public class func hasConnectivity() -> Bool {
@@ -89,6 +31,24 @@ extension DeviceInfo {
         default:
             return .offline
         }
+    }
+
+    /// Returns true for devices running iOS 26 Beta 1 to 3 (developer betas). These betas have an Apple bug with
+    /// `UIGlassEffect`. See FXIOS-13528 for details. This workaround can probably be removed soon after iOS 26 official
+    /// release and user adoption.
+    public class var isRunningLiquidGlassEarlyBeta: Bool {
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+
+        // Note: Info collected from https://betawiki.net/wiki/IOS_26. Beta 4 was the first public build.
+        let betaBlockLists: [String] = [
+            "23A257a",  // Unconfirmed early release
+            "23A5260n", // Developer Beta 1
+            "23A5260u", // Developer Beta 1 Update for iPhone 15 and 16 series
+            "23A5276f", // Developer Beta 2
+            "23A5287g", // Developer Beta 3
+        ]
+
+        return betaBlockLists.contains { systemVersion.contains($0) }
     }
 
     // Reports portrait screen size regardless of the current orientation.

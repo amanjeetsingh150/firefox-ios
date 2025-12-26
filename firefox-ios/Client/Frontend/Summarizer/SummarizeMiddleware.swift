@@ -6,6 +6,7 @@ import Common
 import Redux
 import SummarizeKit
 
+@MainActor
 final class SummarizerMiddleware {
     private let summarizerNimbusUtils: SummarizerNimbusUtils
     private let summarizationChecker: SummarizationCheckerProtocol
@@ -46,6 +47,7 @@ final class SummarizerMiddleware {
         return SummarizerConfigManager().getConfig(summarizerType, contentType: contentType)
     }
 
+    @MainActor
     func checkSummarizationResult(_ tab: Tab) async -> SummarizationCheckResult? {
         guard let webView = tab.webView else { return nil }
         let result = await summarizationChecker.check(on: webView, maxWords: maxWords)
@@ -59,12 +61,13 @@ final class SummarizerMiddleware {
         )
     }
 
+    @MainActor
     private func dispatchSummarizeConfigurationAction(for action: Action) async {
         guard let tab = windowManager.tabManager(for: action.windowUUID).selectedTab else { return }
         let result = await checkSummarizationResult(tab)
         let contentType = result?.contentType ?? .generic
         guard result?.canSummarize == true else { return }
-        store.dispatchLegacy(
+        store.dispatch(
             SummarizeAction(
                 windowUUID: action.windowUUID,
                 actionType: SummarizeMiddlewareActionType.configuredSummarizer,

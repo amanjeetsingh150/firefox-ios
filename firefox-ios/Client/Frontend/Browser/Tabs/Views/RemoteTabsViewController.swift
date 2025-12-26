@@ -153,13 +153,16 @@ class RemoteTabsViewController: UIViewController,
     }
 
     func newState(state: RemoteTabsPanelState) {
+        let currentClientAndTabs = self.state.clientAndTabs
         self.state = state
-        reloadUI()
+        reloadUI(currentClientAndTabs: currentClientAndTabs)
     }
 
-    private func reloadUI() {
+    private func reloadUI(currentClientAndTabs: [ClientAndTabs] = []) {
         updateUI()
-        tableView.reloadData()
+        if currentClientAndTabs != self.state.clientAndTabs {
+            tableView.reloadData()
+        }
     }
 
     private func updateUI() {
@@ -285,8 +288,11 @@ class RemoteTabsViewController: UIViewController,
         reloadUI()
     }
 
-    func presentContextMenu(for site: Site, with indexPath: IndexPath,
-                            completionHandler: @escaping () -> PhotonActionSheet?) {
+    func presentContextMenu(
+        for site: Site,
+        with indexPath: IndexPath,
+        completionHandler: @escaping () -> PhotonActionSheet?
+    ) {
         guard let contextMenu = completionHandler() else { return }
 
         present(contextMenu, animated: true, completion: nil)
@@ -433,9 +439,10 @@ class RemoteTabsViewController: UIViewController,
 
         let isCollapsed = hiddenSections.contains(section)
         let collapsibleState = isCollapsed ? ExpandButtonState.trailing : ExpandButtonState.down
-        let headerModel = SiteTableViewHeaderModel(title: client.name,
-                                                   isCollapsible: true,
-                                                   collapsibleState: collapsibleState)
+        let headerModel = SiteTableViewHeaderModel(
+            title: client.name,
+            accessory: .collapsible(state: collapsibleState)
+        )
         headerView.configure(headerModel)
         headerView.showBorder(for: .bottom, true)
         headerView.showBorder(for: .top, section != 0)

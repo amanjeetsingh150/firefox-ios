@@ -6,8 +6,10 @@ import UIKit
 import Common
 
 /// Helper utility that aims to detect potential bugs in production which could result in tab loss.
+@MainActor
 final class TabErrorTelemetryHelper {
     static let shared = TabErrorTelemetryHelper()
+
     private let telemetryWrapper: TelemetryWrapperProtocol
     private let defaults: UserDefaultsInterface
     private let windowManager: WindowManager
@@ -54,23 +56,21 @@ final class TabErrorTelemetryHelper {
     /// Records the window's tab count upon the app being backgrounded.
     /// This count is then checked again upon foregrounding in an attempt to
     /// identify potential tab-loss errors.
-    func recordTabCountForBackgroundedScene(_ window: WindowUUID) {
+    nonisolated func recordTabCountForBackgroundedScene(_ window: WindowUUID) {
         ensureMainThread { self.recordTabCount(window, entryPoint: .backgroundForeground) }
     }
 
     /// Validates the tab count when the app is foregrounded to ensure the
     /// count is consistent with the count upon backgrounding.
-    func validateTabCountForForegroundedScene(_ window: WindowUUID) {
+    nonisolated func validateTabCountForForegroundedScene(_ window: WindowUUID) {
         ensureMainThread { self.validateTabCount(window, entryPoint: .backgroundForeground) }
     }
 
-    @MainActor
-    func recordTabCountAfterPreservingTabs(_ window: WindowUUID) async {
+    func recordTabCountAfterPreservingTabs(_ window: WindowUUID) {
         recordTabCount(window, entryPoint: .preserveRestore)
     }
 
-    @MainActor
-    func validateTabCountAfterRestoringTabs(_ window: WindowUUID) async {
+    func validateTabCountAfterRestoringTabs(_ window: WindowUUID) {
         validateTabCount(window, entryPoint: .preserveRestore)
     }
 

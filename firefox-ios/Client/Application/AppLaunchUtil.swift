@@ -35,7 +35,13 @@ final class AppLaunchUtil: Sendable {
             logger.copyLogsToDocuments()
         }
 
-        DefaultBrowserUtil().processUserDefaultState(isFirstRun: introScreenManager.shouldShowIntroScreen)
+        DefaultBrowserUtility().processUserDefaultState(isFirstRun: introScreenManager.shouldShowIntroScreen)
+        DefaultBrowserUtility().migrateDefaultBrowserStatusIfNeeded(isFirstRun: introScreenManager.shouldShowIntroScreen)
+        if #available(iOS 26, *) {
+            #if canImport(FoundationModels)
+                AppleIntelligenceUtil().processAvailabilityState()
+            #endif
+        }
 
         // Need to get "settings.sendCrashReports" this way so that Sentry can be initialized before getting the Profile.
         let sendCrashReports = NSUserDefaultsPrefs(prefix: "profile").boolForKey(AppConstants.prefSendCrashReports) ?? true
@@ -137,7 +143,17 @@ final class AppLaunchUtil: Sendable {
                    level: .debug,
                    category: .setup)
 
+        // Migrate legacy ToS users who don't have date/version preferences saved
+        // This must be done after telemetry is set up
+        termsOfServiceManager.migrateLegacyToSAcceptance()
+
         AppEventQueue.signal(event: .preLaunchDependenciesComplete)
+
+        if #available(iOS 26, *) {
+            #if canImport(FoundationModels)
+                AppleIntelligenceUtil().processAvailabilityState()
+            #endif
+        }
     }
 
     func setUpPostLaunchDependencies() {

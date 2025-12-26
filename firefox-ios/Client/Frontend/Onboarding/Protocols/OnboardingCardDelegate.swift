@@ -4,6 +4,7 @@
 
 import Common
 import ComponentLibrary
+import OnboardingKit
 import Foundation
 
 /// The ``OnboardingCardDelegate`` is responsible for handling a variety of
@@ -108,29 +109,28 @@ extension OnboardingCardDelegate where Self: OnboardingViewControllerProtocol,
         let instructionsVC = OnboardingInstructionPopupViewController(
             viewModel: popupViewModel,
             windowUUID: windowUUID,
-            buttonTappedFinishFlow: {
-                self.advance(
+            buttonTappedFinishFlow: { [weak self] in
+                self?.viewModel.telemetryUtility.sendGoToSettingsButtonTappedTelemetry()
+                self?.advance(
                     numberOfPages: 1,
                     from: name,
                     completionIfLastCard: completionIfLastCard
                 )
             }
         )
-        let bottomSheetViewModel = BottomSheetViewModel(
-            shouldDismissForTapOutside: true,
-            closeButtonA11yLabel: .CloseButtonTitle,
-            closeButtonA11yIdentifier:
-                AccessibilityIdentifiers.Onboarding.bottomSheetCloseButton
+
+        let bottomSheetVC = OnboardingBottomSheetViewController(windowUUID: windowUUID)
+        bottomSheetVC.onDismiss = { [weak self] in
+            self?.viewModel.telemetryUtility.sendDismissButtonTappedTelemetry()
+        }
+        bottomSheetVC.configure(
+            closeButtonModel: CloseButtonViewModel(
+                a11yLabel: .CloseButtonTitle,
+                a11yIdentifier: AccessibilityIdentifiers.Onboarding.bottomSheetCloseButton
+            ),
+            child: instructionsVC
         )
-        let bottomSheetVC = BottomSheetViewController(
-            viewModel: bottomSheetViewModel,
-            childViewController: instructionsVC,
-            usingDimmedBackground: true,
-            windowUUID: windowUUID)
-
-        instructionsVC.dismissDelegate = bottomSheetVC
-
-        self.present(bottomSheetVC, animated: false, completion: nil)
+        present(bottomSheetVC, animated: true)
     }
 
     // MARK: - Sync sign in
@@ -155,7 +155,9 @@ extension OnboardingCardDelegate where Self: OnboardingViewControllerProtocol,
             style: .plain,
             target: self,
             action: selector)
-        buttonItem.tintColor = themeManager.getCurrentTheme(for: windowUUID).colors.actionPrimary
+        if #available(iOS 26.0, *) {
+            buttonItem.tintColor = themeManager.getCurrentTheme(for: windowUUID).colors.textPrimary
+        }
         singInSyncVC.navigationItem.rightBarButtonItem = buttonItem
         (singInSyncVC as? FirefoxAccountSignInViewController)?.qrCodeNavigationHandler = qrCodeNavigationHandler
 

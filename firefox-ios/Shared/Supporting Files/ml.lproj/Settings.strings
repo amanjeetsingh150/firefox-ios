@@ -58,6 +58,9 @@
 /* Label used as an item in Settings screen. When touched, it will take user to address autofill settings page to that will allow user to add or modify saved addresses to allow for autofill in a webpage. */
 "Settings.AddressAutofill.Title.v126" = "വിലാസങ്ങള്‍";
 
+/* Section header title in Appearance settings that configures the middle button of the bottom toolbar. */
+"Settings.Appearance.NavigationToolbar.SectionHeader.v145" = "കരുപട്ട കുടുക്കു്";
+
 /* Default section header title under page zoom settings. Indicates the default value for all websites */
 "Settings.Appearance.Zoom.Default.Title.v140" = "തനിമട്ട്";
 
@@ -110,22 +113,13 @@
 "Settings.Browsing.Title.v137" = "തിരച്ചിൽ";
 
 /* Title for a link that explains how Mozilla send crash reports. */
-"Settings.CrashReports.Link.v135" = "കൂടുതൽ അറിയുക.";
-
-/* Title for a link that explains how Mozilla send crash reports. */
 "Settings.CrashReports.Link.v136" = "കൂടുതല്‍ അറിയുക";
-
-/* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
-"Settings.CrashReports.Message.v135" = "തകർച്ച റിപ്പോർട്ടുകൾ അന്വേഷിയന്ത്രത്തിന്റെ കൂടെയുള്ള എല്ലാ കുഴപ്പങ്ങളും കണ്ടെത്താനും പരിഹരിക്കാനും സഹായിക്കാരുണ്ടു്.";
 
 /* On the Settings screen, this is the subtitle text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Message.v136" = "ഇതു് അന്വേഷിയന്ത്ര കുഴപ്പങ്ങളെ കണ്ടുപിടിക്കാനും അവയെ പരിഹരിക്കാനും തുണയ്ക്കുന്നു.";
 
 /* On the Settings screen, this is the title text for a toggle which controls automatically sending crash reports. */
 "Settings.CrashReports.Title.v135" = "തകർച്ച വിവരങ്ങൾ തന്നെതാന്നെ അയയ്ക്കുക";
-
-/* Title for a link that explains how Mozilla send daily usage ping. */
-"Settings.DailyUsagePing.Link.v135" = "കൂടുതൽ അറിയുക.";
 
 /* Title for a link that explains how Mozilla send daily usage ping. */
 "Settings.DailyUsagePing.Link.v136" = "കൂടുതല്‍ അറിയുക";
@@ -221,17 +215,32 @@
 "Settings.Summarize.Title.v142" = "താൾ ചുരുക്കം";
 
 /* Title for a link that explains how Mozilla send technical and interaction data. */
-"Settings.TechnicalData.Link.v135" = "കൂടുതൽ അറിയുക.";
-
-/* Title for a link that explains how Mozilla send technical and interaction data. */
 "Settings.TechnicalData.Link.v136" = "കൂടുതല്‍ അറിയുക";
-
-/* On the Settings screen, this is the title text for a toggle which controls sending technical and interaction data. */
-"Settings.TechnicalData.Title.v135" = "സാങ്കേതിയും ഇടപാടുനീയ ദത്ത";
 
 /* On the Settings screen, this is the title text for a toggle which controls sending technical and interaction data. */
 "Settings.TechnicalData.Title.v136" = "സാങ്കേതിയും ഇടപാടുനീയ ദത്ത അയയ്ക്കുക";
 
 /* Terms of Use settings section title */
 "Settings.TermsOfUse.Title.v137" = "ഉപയോഗനിബന്ധനകള്‍";
+
+/* In the Appearance settings menu, in the Toolbar Button section, this label indicates that selecting this will make the home button appear in the middle of the navigation toolbar. */
+"Settings.Toolbar.Navigation.MiddleButton.Home.v145" = "പൂമുഖം";
+
+/* In the Appearance settings menu, in the Toolbar Button section, this label indicates that selecting this will make the New Tab button appear in the middle of the navigation toolbar. */
+"Settings.Toolbar.Navigation.MiddleButton.NewTab.v145" = "പുതിയ ടാബു്";
+
+/* This is the section title text for the the Translation feature under the Translation settings section. */
+"Settings.Translation.SectionTitle.v145" = "വിവർത്തനത്തുള്ള മുൻഗണനകള്‍";
+
+/* In the settings menu, in the General section, this is the text to show next to the Translation setting title and indicates if the translation feature has been disabled. */
+"Settings.Translation.SettingOff.v145" = "അണച്ചതു്";
+
+/* In the settings menu, in the General section, this is the text to show next to the Translation setting title and indicates if the translation feature has been enabled. */
+"Settings.Translation.SettingOn.v145" = "തുടങ്ങിവച്ചതു്";
+
+/* In the settings menu, in the General section, this is the title for the Translation settings section. */
+"Settings.Translation.Title.v145" = "മൊഴിമാറ്റം";
+
+/* This is the title for the setting that toggles the Translation feature that allows users to translate web pages under the Translation settings section. */
+"Settings.Translation.ToggleTitle.v145" = "മൊഴിമാറ്റങ്ങൾ പ്രവൎത്തനക്ഷമമാക്കുക";
 

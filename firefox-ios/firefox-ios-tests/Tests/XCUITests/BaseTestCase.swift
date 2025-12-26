@@ -10,7 +10,10 @@ import Shared
 let page1 = "http://localhost:\(serverPort)/test-fixture/find-in-page-test.html"
 let page2 = "http://localhost:\(serverPort)/test-fixture/test-example.html"
 let serverPort = ProcessInfo.processInfo.environment["WEBSERVER_PORT"] ?? "\(Int.random(in: 1025..<65000))"
+@MainActor
 let urlBarAddress = XCUIApplication().textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
+@MainActor
+let homepageSearchBar = XCUIApplication().cells[AccessibilityIdentifiers.FirefoxHomepage.SearchBar.itemCell]
 
 func path(forTestPage page: String) -> String {
     return "http://localhost:\(serverPort)/test-fixture/\(page)"
@@ -21,6 +24,7 @@ let TIMEOUT: TimeInterval = 20
 let TIMEOUT_LONG: TimeInterval = 45
 let MAX_SWIPE = 5
 
+@MainActor
 class BaseTestCase: XCTestCase {
     var navigator: MMNavigator<FxUserState>!
     let app = XCUIApplication()
@@ -68,15 +72,21 @@ class BaseTestCase: XCTestCase {
     func removeApp() {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let icon = springboard.icons.containingText("Fennec").element(boundBy: 0)
+        let iPadIcon = springboard.icons.containingText("Fennec").element(boundBy: 1)
         if icon.exists {
-            icon.press(forDuration: 1.5)
-            springboard.buttons["Remove App"].waitAndTap()
+            if #available(iOS 26, *), iPad() {
+                iPadIcon.press(forDuration: 1.0)
+                springboard.buttons["Options"].tapWithRetry()
+            } else {
+                icon.press(forDuration: 1.0)
+            }
+            springboard.buttons["Remove App"].tapWithRetry()
             mozWaitForElementToNotExist(springboard.buttons["Remove App"])
             mozWaitForElementToExist(springboard.alerts.firstMatch)
-            springboard.alerts.buttons["Delete App"].waitAndTap()
+            springboard.alerts.buttons["Delete App"].tapWithRetry()
             mozWaitForElementToNotExist(springboard.alerts.buttons["Delete App"])
             mozWaitForElementToExist(springboard.alerts.firstMatch)
-            springboard.alerts.buttons["Delete"].waitAndTap()
+            springboard.alerts.buttons["Delete"].tapWithRetry()
         }
     }
 
@@ -103,22 +113,18 @@ class BaseTestCase: XCTestCase {
         } else {
             app.launchArguments = [LaunchArguments.PerformanceTest] + launchArguments
         }
-
-        // FXIOS-13129: Remove these arguments once we migrate existing tests to support homepage redesign
-        app.launchArguments.append("\(LaunchArguments.LoadExperiment)\("homepageRedesignOff")")
-        app.launchArguments.append("\(LaunchArguments.ExperimentFeatureName)\("homepage-redesign-feature")")
     }
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
         setUpApp()
         setUpScreenGraph()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         app.terminate()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     var skipPlatform: Bool {
@@ -306,9 +312,13 @@ class BaseTestCase: XCTestCase {
         userState = navigator.userState
     }
 
-    func addContentToReaderView() {
+    func addContentToReaderView(isHomePageOn: Bool = true) {
         updateScreenGraph()
         userState.url = path(forTestPage: "test-mozilla-book.html")
+        if isHomePageOn {
+            navigator.nowAt(HomePanelsScreen)
+            navigator.goto(URLBarOpen)
+        }
         navigator.openURL(path(forTestPage: "test-mozilla-book.html"))
         waitUntilPageLoad()
         app.buttons["Reader View"].waitAndTap()
@@ -360,8 +370,10 @@ class BaseTestCase: XCTestCase {
     func waitUntilPageLoad() {
         let app = XCUIApplication()
         let progressIndicator = app.progressIndicators.element(boundBy: 0)
-
-        mozWaitForElementToNotExist(progressIndicator, timeout: 90.0)
+        if progressIndicator.waitForExistence(timeout: 5) {
+            // Wait for the loading indicator to disappear
+            _ = progressIndicator.waitForNonExistence(timeout: 10)
+        }
     }
 
     func waitForTabsButton() {
@@ -422,6 +434,13 @@ class BaseTestCase: XCTestCase {
         XCTAssertEqual(result, .completed, "Element did not become hittable in time.")
     }
 
+    func mozWaitElementEnabled(element: XCUIElement, timeout: Double) {
+        let predicate = NSPredicate(format: "exists == true && hittable == true && enabled == true")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        XCTAssertEqual(result, .completed, "Element did not become enabled in time.")
+    }
+
     // Theme settings has been replaced with Appearance screen
     func switchThemeToDarkOrLight(theme: String) {
         if !app.buttons[AccessibilityIdentifiers.Toolbar.settingsMenuButton].isHittable {
@@ -449,15 +468,15 @@ class BaseTestCase: XCTestCase {
 
     func openNewTabAndValidateURLisPaste(url: String) {
         app.buttons[AccessibilityIdentifiers.Toolbar.addNewTabButton].waitAndTap()
-        app.buttons["Cancel"].waitAndTap()
+        app.buttons["Cancel"].tapWithRetry()
         let urlBar = app.textFields[AccessibilityIdentifiers.Browser.AddressToolbar.searchTextField]
         let pasteAction = app.tables.buttons[AccessibilityIdentifiers.Photon.pasteAction]
-        urlBar.press(forDuration: 2)
-        if !pasteAction.exists {
-            urlBar.press(forDuration: 2)
-        }
+        urlBar.waitAndTap()
+        urlBar.pressWithRetry(duration: 2.0, element: pasteAction)
         mozWaitForElementToExist(app.tables["Context Menu"])
         pasteAction.waitAndTap()
+        springboard.buttons["Allow Paste"].tapIfExists(timeout: 1.5)
+        mozWaitForElementToExist(urlBar)
         mozWaitForValueContains(urlBar, value: url)
     }
 
@@ -477,22 +496,37 @@ class BaseTestCase: XCTestCase {
         let result = XCTWaiter.wait(for: expectations, timeout: timeout)
         if result == .timedOut { XCTFail(message ?? expectations.description) }
     }
+
+    func dragAndDrop(dragElement: XCUIElement, dropOnElement: XCUIElement) {
+        var nrOfAttempts = 0
+        mozWaitForElementToExist(dropOnElement)
+        let startCoordinate = dragElement.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+        let endCoordinate = dropOnElement.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        startCoordinate.press(forDuration: 2.0, thenDragTo: endCoordinate)
+        mozWaitForElementToExist(dragElement)
+        // Repeat the action in case the first drag and drop attempt was not successful
+        while dragElement.isLeftOf(rightElement: dropOnElement) && nrOfAttempts < 5 {
+            dragElement.press(forDuration: 1.5, thenDragTo: dropOnElement)
+            nrOfAttempts = nrOfAttempts + 1
+            mozWaitForElementToExist(dragElement)
+        }
+    }
 }
 
 class IpadOnlyTestCase: BaseTestCase {
-    override func setUp() {
+    override func setUp() async throws {
         specificForPlatform = .pad
         if iPad() {
-            super.setUp()
+            try await super.setUp()
         }
     }
 }
 
 class IphoneOnlyTestCase: BaseTestCase {
-    override func setUp() {
+    override func setUp() async throws {
         specificForPlatform = .phone
         if !iPad() {
-            super.setUp()
+            try await super.setUp()
         }
     }
 }
@@ -618,6 +652,26 @@ extension XCUIElement {
         }
         if self.isHittable {
             XCTFail("\(self) was not tapped")
+        }
+    }
+
+    func pressWithRetry(duration: TimeInterval, timeout: TimeInterval = TIMEOUT, element: XCUIElement) {
+        BaseTestCase().mozWaitForElementToExist(self, timeout: timeout)
+        self.press(forDuration: duration)
+        if element.waitForExistence(timeout: 1.0) {
+            return
+        }
+        var attempts = 5
+        while !element.exists && attempts > 0 {
+            self.press(forDuration: duration)
+            if element.waitForExistence(timeout: 1.0) {
+                return
+            }
+            attempts -= 1
+        }
+
+        if !element.exists {
+            XCTFail("\(element) is not visible after \(attempts) attempts")
         }
     }
 

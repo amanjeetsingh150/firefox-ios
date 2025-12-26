@@ -6,7 +6,7 @@ import Foundation
 import Redux
 import Common
 
-struct AppState: StateType {
+struct AppState: StateType, Sendable {
     let activeScreens: ActiveScreensState
 
     static let reducer: Reducer<Self> = { state, action in
@@ -35,6 +35,7 @@ struct AppState: StateType {
                 case (.passwordGenerator(let state), .passwordGenerator): return state as? S
                 case (.nativeErrorPage(let state), .nativeErrorPage): return state as? S
                 case (.shortcutsLibrary(let state), .shortcutsLibrary): return state as? S
+                case (.storiesFeed(let state), .storiesFeed): return state as? S
                 default: return nil
                 }
             }.first(where: {
@@ -61,6 +62,7 @@ extension AppState {
     }
 }
 
+@MainActor
 let middlewares = [
     FeltPrivacyMiddleware().privacyManagerProvider,
     MainMenuMiddleware().mainMenuProvider,
@@ -83,19 +85,22 @@ let middlewares = [
     StartAtHomeMiddleware().startAtHomeProvider,
     ShortcutsLibraryMiddleware().shortcutsLibraryProvider,
     SummarizerMiddleware().summarizerProvider,
-    TermsOfUseMiddleware().termsOfUseProvider
+    TermsOfUseMiddleware().termsOfUseProvider,
+    TranslationsMiddleware().translationsProvider
 ]
 
 // In order for us to mock and test the middlewares easier,
 // we change the store to be instantiated as a variable.
 // For non testing builds, we leave the store as a constant.
 #if TESTING
-nonisolated(unsafe) var store: any DefaultDispatchStore<AppState> = Store(
+@MainActor
+var store: any DefaultDispatchStore<AppState> = Store(
     state: AppState(),
     reducer: AppState.reducer,
     middlewares: AppConstants.isRunningUnitTest ? [] : middlewares
 )
 #else
+@MainActor
 let store: any DefaultDispatchStore<AppState> = Store(state: AppState(),
                                                       reducer: AppState.reducer,
                                                       middlewares: middlewares)

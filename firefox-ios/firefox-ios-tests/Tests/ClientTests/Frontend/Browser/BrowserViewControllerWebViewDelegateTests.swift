@@ -18,9 +18,9 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
     }
     private lazy var allowBlockingUniversalLinksPolicy = WKNavigationActionPolicy(rawValue: allowPolicyRawValue + 2)
 
-    override func setUp() {
-        super.setUp()
-        DependencyHelperMock().bootstrapDependencies()
+    override func setUp() async throws {
+        try await super.setUp()
+        await DependencyHelperMock().bootstrapDependencies()
         profile = MockProfile()
         LegacyFeatureFlagsManager.shared.initializeDeveloperFeatures(with: profile)
         tabManager = MockTabManager()
@@ -28,14 +28,15 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         setWebEngineIntegrationEnabled(false)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         profile = nil
         tabManager = nil
         fileManager = nil
         DependencyHelperMock().reset()
-        super.tearDown()
+        try await super.tearDown()
     }
 
+    @MainActor
     func testWKUIDelegate_isBrowserWebUIDelegate_whenWebEngineIntegrationIsEnabled() {
         let subject = createSubject()
 
@@ -44,6 +45,7 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         XCTAssertTrue(subject.wkUIDelegate is BrowserWebUIDelegate)
     }
 
+    @MainActor
     func testWKUIDelegate_isBrowserViewController_whenWebEngineIntegrationIsDisabled() {
         let subject = createSubject()
 
@@ -183,12 +185,18 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         let tab = createTab()
         let url = URL(string: "https://www.example.com")!
         tabManager.tabs = [tab]
+        let expectation = XCTestExpectation()
 
         subject.webView(tab.webView!,
                         decidePolicyFor: MockNavigationAction(url: url,
                                                               type: .linkActivated)) { _ in
-            XCTAssertNotNil(subject.pendingRequests[url.absoluteString])
+            ensureMainThread {
+                XCTAssertNotNil(subject.pendingRequests[url.absoluteString])
+                expectation.fulfill()
+            }
         }
+
+        wait(for: [expectation])
     }
 
     @MainActor
@@ -231,6 +239,48 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
                         decidePolicyFor: MockNavigationAction(url: pdfURL,
                                                               type: .other)) { policy in
             XCTAssertEqual(policy, .allow)
+        }
+    }
+
+    @MainActor
+    func testWebViewDecidePolicyForNavigationAction_allowMarketPlaceScheme_whenUserAction() {
+        let subject = createSubject()
+        let url = URL(string: "marketplace-kit://install?exampleApp.com")!
+        let tab = createTab()
+        tabManager.tabs = [tab]
+        let navigationAction = MockNavigationAction(url: url, type: .linkActivated)
+
+        subject.webView(tab.webView!,
+                        decidePolicyFor: navigationAction) { policy in
+            XCTAssertEqual(policy, .allow)
+        }
+    }
+
+    @MainActor
+    func testWebViewDecidePolicyForNavigationAction_cancelMarketPlaceScheme_whenNotMainFrame() {
+        let subject = createSubject()
+        let url = URL(string: "marketplace-kit://install?exampleApp.com")!
+        let tab = createTab()
+        tabManager.tabs = [tab]
+        let navigationAction = MockNavigationAction(url: url, type: .linkActivated, isMainFrame: false)
+
+        subject.webView(tab.webView!,
+                        decidePolicyFor: navigationAction) { policy in
+            XCTAssertEqual(policy, .cancel)
+        }
+    }
+
+    @MainActor
+    func testWebViewDecidePolicyForNavigationAction_cancelMarketPlaceScheme_whenReloadAction() {
+        let subject = createSubject()
+        let url = URL(string: "marketplace-kit://install?exampleApp.com")!
+        let tab = createTab()
+        tabManager.tabs = [tab]
+        let navigationAction = MockNavigationAction(url: url, type: .reload)
+
+        subject.webView(tab.webView!,
+                        decidePolicyFor: navigationAction) { policy in
+            XCTAssertEqual(policy, .cancel)
         }
     }
 
@@ -288,6 +338,7 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         }
     }
 
+    @MainActor
     private func createSubject() -> BrowserViewController {
         let subject = BrowserViewController(
             profile: profile,
@@ -298,12 +349,14 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         return subject
     }
 
+    @MainActor
     private func anyWebView(url: URL? = nil) -> MockTabWebView {
         let tab = MockTabWebView(frame: .zero, configuration: WKWebViewConfiguration(), windowUUID: .XCTestDefaultUUID)
         tab.loadedURL = url
         return tab
     }
 
+    @MainActor
     private func createTab(isPrivate: Bool = false) -> Tab {
         let tab = Tab(
             profile: profile,
@@ -345,6 +398,7 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
     // This test is being skipped because there are some very strange side effects
     // in webView didFinish because the profile database is not being stubbed out
     // TODO: FXIOS-13435 to look in to this
+    @MainActor
     func testWebViewDidFinishNavigation_takeScreenshotWhenTabIsSelected() {
         let subject = createSubject()
         let screenshotHelper = MockScreenshotHelper(controller: subject)
@@ -357,113 +411,5 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
         subject.webView(tab.webView!, didFinish: nil)
 
         XCTAssertTrue(screenshotHelper.takeScreenshotCalled)
-    }
-}
-
-class MockNavigationAction: WKNavigationAction {
-    private var type: WKNavigationType?
-    private var urlRequest: URLRequest
-
-    override var navigationType: WKNavigationType {
-        return type ?? .other
-    }
-
-    override var request: URLRequest {
-        return urlRequest
-    }
-
-    init(url: URL, type: WKNavigationType? = nil) {
-        self.type = type
-        self.urlRequest = URLRequest(url: url)
-    }
-}
-
-class MockURLAuthenticationChallengeSender: NSObject, URLAuthenticationChallengeSender {
-    func use(_ credential: URLCredential, for challenge: URLAuthenticationChallenge) {}
-
-    func continueWithoutCredential(for challenge: URLAuthenticationChallenge) {}
-
-    func cancel(_ challenge: URLAuthenticationChallenge) {}
-}
-
-final class MockFileManager: FileManagerProtocol, @unchecked Sendable {
-    var fileExistsCalled = 0
-    var fileExists = false
-    var urlsForDirectoryCalled = 0
-    var contentOfDirectoryCalled = 0
-    var removeItemAtPathCalled = 0
-    var removeItemAtURLCalled = 0
-    var copyItemCalled = 0
-    var createDirectoryCalled = 0
-    var contentOfDirectoryAtPathCalled = 0
-
-    /// Fires every time `removeItem(at: URL)` is called. This is useful for tests that fire this on a background thread
-    /// (e.g. in a deinit) and we want to wait for an expectation of a file removal to be fulfilled.
-    /// Closure contains the updated value of `removeItemAtURLCalled`.
-    var removeItemAtURLDispatch: ((Int) -> Void)?
-
-    func fileExists(atPath path: String) -> Bool {
-        fileExistsCalled += 1
-        return fileExists
-    }
-
-    func urls(for directory: FileManager.SearchPathDirectory,
-              in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
-        urlsForDirectoryCalled += 1
-        return []
-    }
-
-    func contentsOfDirectory(atPath path: String) throws -> [String] {
-        contentOfDirectoryCalled += 1
-        return []
-    }
-
-    func contentsOfDirectoryAtPath(
-        _ path: String,
-        withFilenamePrefix prefix: String
-    ) throws -> [String] {
-        contentOfDirectoryAtPathCalled += 1
-        return []
-    }
-
-    func removeItem(atPath path: String) throws {
-        removeItemAtPathCalled += 1
-    }
-
-    func removeItem(at url: URL) throws {
-        removeItemAtURLCalled += 1
-        removeItemAtURLDispatch?(removeItemAtURLCalled)
-    }
-
-    func copyItem(at srcURL: URL, to dstURL: URL) throws {
-        copyItemCalled += 1
-    }
-
-    func createDirectory(
-        atPath path: String,
-        withIntermediateDirectories createIntermediates: Bool,
-        attributes: [FileAttributeKey: Any]?
-    ) throws {
-        createDirectoryCalled += 1
-    }
-
-    func contents(atPath path: String) -> Data? {
-        return nil
-    }
-
-    func contentsOfDirectory(
-        at url: URL,
-        includingPropertiesForKeys keys: [URLResourceKey]?,
-        options mask: FileManager.DirectoryEnumerationOptions
-    ) throws -> [URL] {
-        return []
-    }
-
-    func createFile(
-        atPath path: String,
-        contents data: Data?,
-        attributes attr: [FileAttributeKey: Any]?
-    ) -> Bool {
-        return true
     }
 }

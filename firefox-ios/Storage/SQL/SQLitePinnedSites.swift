@@ -73,10 +73,15 @@ extension BrowserDBSQLite: PinnedSites {
 
         // do a fuzzy delete so dupes can be removed
         let query: (String, Args?) = ("DELETE FROM pinned_top_sites where domain = ?", [host])
-        return database.run([query]) >>== {
-            self.notificationCenter.post(name: .TopSitesUpdated, object: self)
-            return self.database.run([("UPDATE domains SET showOnTopSites = 1 WHERE domain = ?", [host])])
-        }
+        return database.run([query])
+            .bind { result in
+                if let failureValue = result.failureValue {
+                    return deferMaybe(failureValue)
+                }
+
+                self.notificationCenter.post(name: .TopSitesUpdated, object: self)
+                return self.database.run([("UPDATE domains SET showOnTopSites = 1 WHERE domain = ?", [host])])
+            }
     }
 
     public func isPinnedTopSite(_ url: String) -> Deferred<Maybe<Bool>> {
@@ -106,10 +111,24 @@ extension BrowserDBSQLite: PinnedSites {
         let args: Args = [site.url, now, site.title, host]
         let arglist = BrowserDB.varlist(args.count)
 
-        return self.database.run([("INSERT OR REPLACE INTO pinned_top_sites (url, pinDate, title, domain) VALUES \(arglist)", args)])
-        >>== {
-            self.notificationCenter.post(name: .TopSitesUpdated, object: self)
-            return succeed()
+        return self.database
+            .run([("INSERT OR REPLACE INTO pinned_top_sites (url, pinDate, title, domain) VALUES \(arglist)", args)])
+            .bind { result in
+                if let error = result.failureValue {
+                    return deferMaybe(error)
+                }
+                self.notificationCenter.post(name: .TopSitesUpdated, object: self)
+                return succeed()
+            }
+    }
+
+    public func addPinnedTopSite(_ site: Site, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        addPinnedTopSite(site).upon { result in
+            if result.successValue != nil {
+                completion(.success(()))
+            } else if let error = result.failureValue {
+                completion(.failure(error))
+            }
         }
     }
 }

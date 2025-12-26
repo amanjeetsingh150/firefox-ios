@@ -13,18 +13,18 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
     var mockStore: MockStoreForMiddleware<AppState>!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         DependencyHelperMock().bootstrapDependencies()
 
         // We must reset the global mock store prior to each test
         setupStore()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         DependencyHelperMock().reset()
         resetStore()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func tests_initialState_returnsExpectedState() {
@@ -42,7 +42,14 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         let newState = reducer(
             initialState,
             ToolbarAction(
+                toolbarPosition: .bottom,
+                toolbarLayout: .version1,
+                isTranslucent: true,
+                addressBorderPosition: .none,
                 displayNavBorder: true,
+                isNewTabFeatureEnabled: true,
+                canShowDataClearanceAction: false,
+                middleButton: .newTab,
                 windowUUID: windowUUID,
                 actionType: ToolbarActionType.didLoadToolbars
             )
@@ -74,7 +81,7 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
         XCTAssertEqual(newState.actions[0].isEnabled, true)
         XCTAssertEqual(newState.actions[1].actionType, .forward)
         XCTAssertEqual(newState.actions[1].isEnabled, false)
-        XCTAssertEqual(newState.actions[2].actionType, .home)
+        XCTAssertEqual(newState.actions[2].actionType, .newTab)
         XCTAssertEqual(newState.actions[3].actionType, .menu)
         XCTAssertEqual(newState.actions[4].actionType, .tabs)
     }
@@ -180,6 +187,59 @@ final class NavigationBarStateTests: XCTestCase, StoreTestUtility {
 
         XCTAssertEqual(newState.windowUUID, windowUUID)
         XCTAssertEqual(newState.displayBorder, true)
+    }
+
+    func test_navigationMiddleButtonDidChangeAction_onHomePage_returnsExpectedState() {
+        let initialState = createSubject()
+        let reducer = navigationBarReducer()
+
+        let newState = reducer(
+            initialState,
+            ToolbarAction(
+                middleButton: .home,
+                windowUUID: windowUUID,
+                actionType: ToolbarActionType.navigationMiddleButtonDidChange
+            )
+        )
+
+        XCTAssertEqual(newState.windowUUID, windowUUID)
+        XCTAssertEqual(newState.actions[2].actionType, .search)
+    }
+
+    func test_navigationMiddleButtonDidChangeAction_onWebsite_hasHomeButton() {
+        let initialState = createSubject()
+        let reducer = navigationBarReducer()
+
+        let navigationMiddleButtonDidChangeState = reducer(
+            initialState,
+            ToolbarAction(
+                middleButton: .home,
+                windowUUID: windowUUID,
+                actionType: ToolbarActionType.navigationMiddleButtonDidChange
+            )
+        )
+        let newState = loadWebsiteAction(state: navigationMiddleButtonDidChangeState, reducer: reducer)
+
+        XCTAssertEqual(newState.windowUUID, windowUUID)
+        XCTAssertEqual(newState.actions[2].actionType, .home)
+    }
+
+    func test_navigationMiddleButtonDidChangeAction_onWebsite_hasNewTabButton() {
+        let initialState = createSubject()
+        let reducer = navigationBarReducer()
+
+        let navigationMiddleButtonDidChangeState = reducer(
+            initialState,
+            ToolbarAction(
+                middleButton: .newTab,
+                windowUUID: windowUUID,
+                actionType: ToolbarActionType.navigationMiddleButtonDidChange
+            )
+        )
+        let newState = loadWebsiteAction(state: navigationMiddleButtonDidChangeState, reducer: reducer)
+
+        XCTAssertEqual(newState.windowUUID, windowUUID)
+        XCTAssertEqual(newState.actions[2].actionType, .newTab)
     }
 
     // MARK: - Private

@@ -8,16 +8,17 @@ import XCTest
 final class DefaultRouterTests: XCTestCase {
     var navigationController: MockNavigationController!
 
-    override func setUp() {
-        super.setUp()
-        navigationController = MockNavigationController()
+    override func setUp() async throws {
+        try await super.setUp()
+        navigationController = await MockNavigationController()
     }
 
     override func tearDown() {
-        super.tearDown()
         navigationController = nil
+        super.tearDown()
     }
 
+    @MainActor
     func testInitialState() {
         let subject = DefaultRouter(navigationController: navigationController)
 
@@ -26,6 +27,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(subject.completions.count, 0)
     }
 
+    @MainActor
     func testPresentViewController_presentCalled() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -36,6 +38,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(subject.completions.count, 1)
     }
 
+    @MainActor
     func testPresentViewController_dismissModalCompletionCalled() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -49,6 +52,7 @@ final class DefaultRouterTests: XCTestCase {
         waitForExpectations(timeout: 0.1)
     }
 
+    @MainActor
     func testRunCompletion_DoesNotRunForNonExistingCompletion() {
         let subject = DefaultRouter(navigationController: navigationController)
 
@@ -58,6 +62,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(subject.completions.count, 0)
     }
 
+    @MainActor
     func testDismissModule() {
         let subject = DefaultRouter(navigationController: navigationController)
         subject.dismiss()
@@ -65,6 +70,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(navigationController.dismissCalled, 1)
     }
 
+    @MainActor
     func testPresentThenDismiss_removesCompletion() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -76,6 +82,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(subject.completions.count, 0)
     }
 
+    @MainActor
     func testPushModule_pushViewController() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -86,6 +93,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(subject.completions.count, 1)
     }
 
+    @MainActor
     func testPopViewController() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -100,6 +108,32 @@ final class DefaultRouterTests: XCTestCase {
         waitForExpectations(timeout: 0.1)
     }
 
+    @MainActor
+    func testPopToViewController_notifiesDismissals_andRunsCompletions() throws {
+        let baseVC = UIViewController()
+        let pushedVC = MockDismissalNotifiableViewController()
+        var completionCalled = false
+
+        let subject = DefaultRouter(navigationController: navigationController)
+        subject.push(baseVC, animated: false)
+        subject.push(pushedVC, animated: false) { completionCalled = true }
+
+        let returnedViewControllers = subject.popToViewController(baseVC, reason: .deeplink, animated: false)
+
+        XCTAssertEqual(navigationController.popToViewControllerCalled, 1)
+        XCTAssertEqual(returnedViewControllers?.count, 1)
+
+        let poppedControllers = try XCTUnwrap(returnedViewControllers)
+        XCTAssertTrue(poppedControllers.contains(where: { $0 === pushedVC }))
+
+        XCTAssertEqual(pushedVC.dismissalReason, .deeplink)
+
+        XCTAssertTrue(completionCalled)
+
+        XCTAssertEqual(navigationController.viewControllers, [baseVC])
+    }
+
+    @MainActor
     func testSetRootViewController() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -109,6 +143,7 @@ final class DefaultRouterTests: XCTestCase {
         XCTAssertEqual(navigationController.isNavigationBarHidden, true)
     }
 
+    @MainActor
     func testSetRootViewController_withPushedViewController_completionIsCalled() {
         let subject = DefaultRouter(navigationController: navigationController)
         let viewController = UIViewController()
@@ -125,6 +160,7 @@ final class DefaultRouterTests: XCTestCase {
 
     // MARK: - UINavigationControllerDelegate
 
+    @MainActor
     func testNavigationControllerDelegate_doesntRunCompletionWhenNoFromVC() {
         let subject = DefaultRouter(navigationController: navigationController)
         let expectation = expectation(description: "Completion is called")
@@ -139,6 +175,7 @@ final class DefaultRouterTests: XCTestCase {
         waitForExpectations(timeout: 0.1, handler: nil)
     }
 
+    @MainActor
     func testNavigationControllerDelegate_runsCompletionForPoppedViewController() {
         let subject = DefaultRouter(navigationController: navigationController)
         let expectation = expectation(description: "Completion is called")
@@ -148,6 +185,7 @@ final class DefaultRouterTests: XCTestCase {
         subject.push(viewController) {
             expectation.fulfill()
         }
+        navigationController.viewControllers = []
         subject.checkNavigationCompletion(for: navigationController)
 
         waitForExpectations(timeout: 0.1, handler: nil)

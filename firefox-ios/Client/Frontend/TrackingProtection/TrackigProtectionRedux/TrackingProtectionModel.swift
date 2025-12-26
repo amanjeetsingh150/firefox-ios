@@ -155,12 +155,14 @@ class TrackingProtectionModel {
             .withRenderingMode(.alwaysTemplate)
     }
 
+    @MainActor
     func toggleSiteSafelistStatus() {
         TelemetryWrapper.recordEvent(category: .action, method: .add, object: .trackingProtectionSafelist)
         ContentBlocker.shared.safelist(enable: contentBlockerStatus != .safelisted, url: url) {
         }
     }
 
+    @MainActor
     func isURLSafelisted() -> Bool {
         return ContentBlocker.shared.isSafelisted(url: url)
     }
@@ -183,14 +185,14 @@ class TrackingProtectionModel {
             self?.selectedTab?.webView?.reload()
 
             guard let windowUUID = self?.selectedTab?.windowUUID else { return }
-            store.dispatchLegacy(
+            store.dispatch(
                 TrackingProtectionMiddlewareAction(
                     windowUUID: windowUUID,
                     actionType: TrackingProtectionMiddlewareActionType.dismissTrackingProtection
                 )
             )
 
-            store.dispatchLegacy(
+            store.dispatch(
                 GeneralBrowserAction(
                     toastType: .clearCookies,
                     windowUUID: windowUUID,

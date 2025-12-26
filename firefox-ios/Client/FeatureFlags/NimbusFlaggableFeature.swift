@@ -13,23 +13,25 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case addressAutofillEdit
     case addressBarMenu
     case appearanceMenu
+    case appIconSelection
     case bottomSearchBar
     case deeplinkOptimizationRefactor
     case defaultZoomFeature
     case downloadLiveActivities
     case feltPrivacyFeltDeletion
     case feltPrivacySimplifiedUI
+    case firefoxJpGuideDefaultSite
     case firefoxSuggestFeature
     case hntSponsoredShortcuts
-    case hntTopSitesVisualRefresh
-    case homepageRebuild
     case homepageRedesign
     case homepageSearchBar
     case homepageShortcutsLibrary
     case homepageStoriesRedesign
+    case homepageStoriesRedesignV2
+    case homepageScrim
     case homepageDiscoverMoreButton
     case homepageDiscoverMoreExperience
-    case inactiveTabs
+    case shouldUseJapanConfiguration
     case menuDefaultBrowserBanner
     case menuRefactor
     case menuRedesignHint
@@ -37,10 +39,12 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case modernOnboardingUI
     case nativeErrorPage
     case noInternetConnectionErrorPage
-    case pdfRefactor
+    case otherErrorPages
+    case recentSearches
     case reportSiteIssue
-    case revertUnsafeContinuationsRefactor
-    case searchEngineConsolidation
+    case relayIntegration
+    case sentFromFirefox
+    case sentFromFirefoxTreatmentA
     case splashScreen
     case startAtHome
     case appleSummarizer
@@ -58,11 +62,14 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     case toolbarRefactor
     case toolbarSwipingTabs
     case toolbarTranslucency
+    case toolbarTranslucencyRefactor
     case toolbarMinimalAddressBar
+    case toolbarMiddleButtonCustomization
     case tosFeature
     case touFeature
     case trackingProtectionRefactor
-    case unifiedAds
+    case translation
+    case trendingSearches
     case unifiedSearch
     case updatedPasswordManager
     case webEngineIntegrationRefactor
@@ -71,32 +78,38 @@ enum NimbusFeatureFlagID: String, CaseIterable {
     var debugKey: String? {
         switch self {
         case    .appearanceMenu,
+                .appIconSelection,
+                .appleSummarizer,
                 .addressBarMenu,
                 .deeplinkOptimizationRefactor,
                 .defaultZoomFeature,
-                .hntTopSitesVisualRefresh,
-                .homepageRebuild,
+                .downloadLiveActivities,
                 .homepageStoriesRedesign,
+                .homepageStoriesRedesignV2,
                 .homepageSearchBar,
                 .homepageShortcutsLibrary,
                 .homepageDiscoverMoreButton,
                 .homepageDiscoverMoreExperience,
+                .homepageScrim,
+                .hostedSummarizer,
                 .feltPrivacyFeltDeletion,
                 .feltPrivacySimplifiedUI,
                 .menuRefactor,
                 .microsurvey,
                 .nativeErrorPage,
                 .noInternetConnectionErrorPage,
-                .searchEngineConsolidation,
+                .otherErrorPages,
+                .recentSearches,
+                .relayIntegration,
+                .tabScrollRefactorFeature,
+                .sentFromFirefox,
                 .tabTrayUIExperiments,
                 .toolbarRefactor,
-                .trackingProtectionRefactor,
-                .pdfRefactor,
-                .downloadLiveActivities,
-                .appleSummarizer,
-                .hostedSummarizer,
+                .toolbarTranslucencyRefactor,
                 .touFeature,
-                .unifiedAds,
+                .trackingProtectionRefactor,
+                .translation,
+                .trendingSearches,
                 .unifiedSearch,
                 .updatedPasswordManager,
                 .webEngineIntegrationRefactor:
@@ -129,12 +142,13 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
             return FlagKeys.FirefoxSuggest
         case .hntSponsoredShortcuts:
             return FlagKeys.SponsoredShortcuts
-        case .inactiveTabs:
-            return FlagKeys.InactiveTabs
+        case .sentFromFirefox:
+            return FlagKeys.SentFromFirefox
         case .startAtHome:
             return FlagKeys.StartAtHome
         // Cases where users do not have the option to manipulate a setting. Please add in alphabetical order.
         case .appearanceMenu,
+                .appIconSelection,
                 .addressAutofillEdit,
                 .addressBarMenu,
                 .deeplinkOptimizationRefactor,
@@ -142,14 +156,16 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .downloadLiveActivities,
                 .feltPrivacyFeltDeletion,
                 .feltPrivacySimplifiedUI,
-                .hntTopSitesVisualRefresh,
-                .homepageRebuild,
+                .firefoxJpGuideDefaultSite,
                 .homepageRedesign,
                 .homepageSearchBar,
                 .homepageShortcutsLibrary,
                 .homepageStoriesRedesign,
+                .homepageStoriesRedesignV2,
+                .homepageScrim,
                 .homepageDiscoverMoreButton,
                 .homepageDiscoverMoreExperience,
+                .shouldUseJapanConfiguration,
                 .menuDefaultBrowserBanner,
                 .menuRefactor,
                 .menuRedesignHint,
@@ -157,10 +173,10 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .modernOnboardingUI,
                 .nativeErrorPage,
                 .noInternetConnectionErrorPage,
-                .pdfRefactor,
+                .otherErrorPages,
+                .recentSearches,
                 .reportSiteIssue,
-                .revertUnsafeContinuationsRefactor,
-                .searchEngineConsolidation,
+                .sentFromFirefoxTreatmentA,
                 .splashScreen,
                 .appleSummarizer,
                 .appleSummarizerToolbarEntrypoint,
@@ -168,6 +184,7 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .hostedSummarizer,
                 .hostedSummarizerToolbarEntrypoint,
                 .hostedSummarizerShakeGesture,
+                .relayIntegration,
                 .tabScrollRefactorFeature,
                 .tabTrayUIExperiments,
                 .tabTrayTranslucency,
@@ -177,11 +194,14 @@ struct NimbusFlaggableFeature: HasNimbusSearchBar {
                 .toolbarRefactor,
                 .toolbarSwipingTabs,
                 .toolbarTranslucency,
+                .toolbarTranslucencyRefactor,
                 .toolbarMinimalAddressBar,
+                .toolbarMiddleButtonCustomization,
                 .tosFeature,
                 .touFeature,
                 .trackingProtectionRefactor,
-                .unifiedAds,
+                .translation,
+                .trendingSearches,
                 .unifiedSearch,
                 .updatedPasswordManager,
                 .webEngineIntegrationRefactor:

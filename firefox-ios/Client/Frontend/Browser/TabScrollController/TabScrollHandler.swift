@@ -17,6 +17,9 @@ protocol TabScrollHandlerProtocol: AnyObject {
     func beginObserving(scrollView: UIScrollView)
     func stopObserving(scrollView: UIScrollView)
     func traitCollectionDidChange()
+    func createToolbarTapHandler() -> (() -> Void)
+
+    func didChangeTopTab()
 }
 
 final class TabScrollHandler: NSObject,
@@ -24,24 +27,21 @@ final class TabScrollHandler: NSObject,
                               TabScrollHandlerProtocol,
                               UIScrollViewDelegate {
     protocol Delegate: AnyObject {
+        @MainActor
         func updateToolbarTransition(progress: CGFloat, towards state: ToolbarDisplayState)
+        @MainActor
         func showToolbar()
+        @MainActor
         func hideToolbar()
     }
 
     private struct UX {
         static let abruptScrollEventOffset: CGFloat = 200
-        static let toolbarBaseAnimationDuration: CGFloat = 0.2
-        static let minimalAddressBarAnimationDuration: CGFloat = 0.4
-        static let heightOffset: CGFloat = 14
         static let minimumScrollThreshold: CGFloat = 20
-        // Setting a very high number to use translation mainly
-        static let minimumScrollVelocity: CGFloat = 1000
     }
 
     private var isMinimalAddressBarEnabled: Bool {
-        return featureFlags.isFeatureEnabled(.toolbarMinimalAddressBar, checking: .buildOnly) &&
-        featureFlags.isFeatureEnabled(.toolbarRefactor, checking: .buildOnly)
+        return featureFlags.isFeatureEnabled(.toolbarMinimalAddressBar, checking: .buildAndUser)
     }
 
     enum ScrollDirection {
@@ -90,6 +90,7 @@ final class TabScrollHandler: NSObject,
     var toolbarDisplayState = ToolbarDisplayState()
     var lastValidState: ToolbarDisplayState = .expanded
     private var isStatusBarScrollToTop = false
+    var didTapChangePreventScrollToTop = false
 
     private weak var delegate: TabScrollHandler.Delegate?
     private let windowUUID: WindowUUID
@@ -281,20 +282,29 @@ final class TabScrollHandler: NSObject,
     }
 
     func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
-        isStatusBarScrollToTop = true
         if toolbarDisplayState.isCollapsed { showToolbars(animated: true) }
-        return true
+
+        isStatusBarScrollToTop = !didTapChangePreventScrollToTop
+        didTapChangePreventScrollToTop = false
+        return isStatusBarScrollToTop
     }
 
     func scrollViewDidScrollToTop(_ scrollView: UIScrollView) {
         isStatusBarScrollToTop = false
     }
 
-    // MARK: - Private
+    func createToolbarTapHandler() -> (() -> Void) {
+        return { [unowned self] in
+            guard isMinimalAddressBarEnabled && toolbarDisplayState.isCollapsed  else { return }
+            showToolbars(animated: true)
+        }
+    }
 
-    func configureToolbarViews(overKeyboardContainer: BaseAlphaStackView?,
-                               bottomContainer: BaseAlphaStackView?,
-                               headerContainer: BaseAlphaStackView? ) {}
+    func didChangeTopTab() {
+        didTapChangePreventScrollToTop = true
+    }
+
+    // MARK: - Private
 
     private func handleOnTabContentLoading() {
         if tabIsLoading() || (tabProvider?.isFxHomeTab ?? false) {
@@ -308,7 +318,6 @@ final class TabScrollHandler: NSObject,
     /// based on minimum translation distance and velocity thresholds.
     ///
     /// - Parameters:
-    ///   - velocity: The pan gesture recognizer used to detect scroll movement.
     ///   - delta: The vertical scroll delta calculated from gesture translation.
     /// - Returns: A Boolean value indicating whether the gesture should trigger a UI response.
     private func shouldConfirmTransition(for velocity: CGPoint,
@@ -316,11 +325,9 @@ final class TabScrollHandler: NSObject,
         guard shouldUpdateUIWhenScrolling else { return false }
 
         let isSignificantScroll = abs(delta) > UX.minimumScrollThreshold
-//        let isFastEnough = abs(velocity.y) > UX.minimumScrollVelocity
-        return isSignificantScroll  // || isFastEnough
+        return isSignificantScroll
     }
 
-    @objc
     private func reload() {
         guard let tabProvider = tabProvider else { return }
         tabProvider.reloadPage()
@@ -397,7 +404,7 @@ final class TabScrollHandler: NSObject,
         if (lastContentOffsetY > 0 && contentOffset.y <= 0) ||
             (lastContentOffsetY <= 0 && contentOffset.y > 0) {
             lastContentOffsetY = contentOffset.y
-            store.dispatchLegacy(
+            store.dispatch(
                 GeneralBrowserMiddlewareAction(
                     scrollOffset: contentOffset,
                     windowUUID: windowUUID,
