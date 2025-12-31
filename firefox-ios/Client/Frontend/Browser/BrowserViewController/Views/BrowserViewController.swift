@@ -775,11 +775,10 @@ class BrowserViewController: UIViewController,
         let views: [UIView] = [header, overKeyboardContainer, bottomContainer, statusBarOverlay]
         views.forEach {
             ($0 as? ThemeApplicable)?.applyTheme(theme: theme)
-
-            if !isToolbarTranslucencyRefactorEnabled {
-                $0.setNeedsLayout()
-                $0.layoutIfNeeded()
-            }
+            // TODO: FXIOS-14536 Can we figure out a way not to do these calls? Sometimes they are needed
+            // for specific layout calls.
+            $0.setNeedsLayout()
+            $0.layoutIfNeeded()
         }
     }
 
@@ -851,7 +850,7 @@ class BrowserViewController: UIViewController,
         notificationCenter.post(name: .SearchBarPositionDidChange, withObject: notificationObject)
     }
 
-    func updateToolbarStateForTraitCollection(_ newCollection: UITraitCollection) {
+    func updateToolbarStateForTraitCollection(_ newCollection: UITraitCollection, shouldUpdateBlurViews: Bool = true) {
         let showNavToolbar = toolbarHelper.shouldShowNavigationToolbar(for: newCollection)
         let showTopTabs = toolbarHelper.shouldShowTopTabs(for: newCollection)
 
@@ -872,7 +871,7 @@ class BrowserViewController: UIViewController,
             view.layoutSubviews()
         }
 
-        updateToolbarDisplay()
+        updateToolbarDisplay(shouldUpdateBlurViews: shouldUpdateBlurViews)
     }
 
     private func updateSwipingTabs() {
@@ -1506,7 +1505,7 @@ class BrowserViewController: UIViewController,
         }
 
         updateTabCountUsingTabManager(tabManager, animated: false)
-        updateToolbarStateForTraitCollection(traitCollection)
+        updateToolbarStateForTraitCollection(traitCollection, shouldUpdateBlurViews: !isToolbarTranslucencyEnabled)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -2836,6 +2835,8 @@ class BrowserViewController: UIViewController,
             navigationHandler?.showStoriesFeed()
         case .storiesWebView:
             navigationHandler?.showStoriesWebView(url: type.url)
+        case .privacyNoticeLink(let url):
+            navigationHandler?.showPrivacyNoticeLink(url: url)
         }
     }
 
