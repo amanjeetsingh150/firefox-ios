@@ -68,7 +68,7 @@
 "Settings.Appearance.NavigationToolbar.Description.v145" = "Araç çubuğunun ortasındaki düğmeyi değiştirir.";
 
 /* Section header title in Appearance settings that configures the middle button of the bottom toolbar. */
-"Settings.Appearance.NavigationToolbar.SectionHeader.v145" = "Araç çubuğu düğmesi";
+"Settings.Appearance.NavigationToolbar.SectionHeader.v145" = "ARAÇ ÇUBUĞU DÜĞMESİ";
 
 /* Default section header title under page zoom settings. Indicates the default value for all websites */
 "Settings.Appearance.Zoom.Default.Title.v140" = "Varsayılan";
@@ -175,6 +175,9 @@
 /* Title for a link that explains what Mozilla means by Rollouts */
 "Settings.Rollouts.Link.v148" = "Daha fazla bilgi alın";
 
+/* A short description that explains that Mozilla may change features remotely. %@ is the app name (e.g. Firefox). */
+"Settings.Rollouts.Message.v148" = "%@ her güncellemede özellikleri, performansı ve kararlılığı iyileştirecektir. Değişiklikler uzaktan uygulanır.";
+
 /* Label used as a toggle item in Settings. When this is off, the user is opting out of all rollouts. */
 "Settings.Rollouts.Title.v148" = "Uzaktan iyileştirmelere izin ver";
 
@@ -266,7 +269,7 @@
 "Settings.Summarize.GesturesSection.ShakeGestureTitle.v142" = "Özetlemek için salla";
 
 /* This is the section title for the gestures features under the Summarize settings section. */
-"Settings.Summarize.GesturesSection.Title.v142" = "Parmak hareketleri";
+"Settings.Summarize.GesturesSection.Title.v142" = "PARMAK HAREKETLERİ";
 
 /* This is the title for the setting that toggles the Summarize feature under the Summarize settings section. */
 "Settings.Summarize.SummarizePagesTitle.v142" = "Sayfaları özetle";
