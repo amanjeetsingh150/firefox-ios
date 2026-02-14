@@ -6,11 +6,12 @@ import Common
 import Glean
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class WallpaperSettingsViewModelTests: XCTestCase {
+final class WallpaperSettingsViewModelTests: LeakDetectingTestCase {
     private var wallpaperManager: WallpaperManagerInterface!
 
     override func setUp() async throws {

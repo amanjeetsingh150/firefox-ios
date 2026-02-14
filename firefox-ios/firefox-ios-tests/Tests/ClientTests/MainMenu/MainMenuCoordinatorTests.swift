@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class MainMenuCoordinatorTests: XCTestCase {
+final class MainMenuCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
 
     override func setUp() async throws {

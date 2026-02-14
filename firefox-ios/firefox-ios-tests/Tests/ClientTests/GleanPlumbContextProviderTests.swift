@@ -5,9 +5,10 @@
 import Common
 import Shared
 import XCTest
+import TestKit
 @testable import Client
 
-class GleanPlumbContextProviderTests: XCTestCase {
+class GleanPlumbContextProviderTests: LeakDetectingTestCase {
     private var userDefaults: UserDefaultsInterface!
     private var contextProvider: GleanPlumbContextProvider!
     private var profile: MockProfile!

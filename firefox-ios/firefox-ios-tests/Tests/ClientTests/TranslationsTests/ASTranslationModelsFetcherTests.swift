@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 import MozillaAppServices
 
-final class ASTranslationModelsFetcherTests: XCTestCase {
+final class ASTranslationModelsFetcherTests: LeakDetectingTestCase {
     func testFetchModels_directModel_returnsSingleEntry() async throws {
         let directRecord = makeModelRecord(
             id: "direct-fr-de",

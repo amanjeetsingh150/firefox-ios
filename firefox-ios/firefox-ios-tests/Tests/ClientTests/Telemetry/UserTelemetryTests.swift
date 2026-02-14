@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class UserTelemetryTests: XCTestCase {
+final class UserTelemetryTests: LeakDetectingTestCase {
     let mockFirefoxAccountId = "8a583618afa8468684cac629d899e0af" // FxA uses uuid v4 format
     var mockGleanWrapper: MockGleanWrapper!
 

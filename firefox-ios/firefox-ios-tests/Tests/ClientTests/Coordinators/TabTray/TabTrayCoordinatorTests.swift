@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class TabTrayCoordinatorTests: XCTestCase {
+final class TabTrayCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var profile: MockProfile!
     private var parentCoordinator: MockTabTrayCoordinatorDelegate!

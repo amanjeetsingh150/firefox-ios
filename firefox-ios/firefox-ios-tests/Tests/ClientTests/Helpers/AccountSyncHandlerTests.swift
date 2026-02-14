@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 import Common
 
 @testable import Client
 
 @MainActor
-class AccountSyncHandlerTests: XCTestCase {
+class AccountSyncHandlerTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var syncManager: ClientSyncManagerSpy!
     private var queue: MockDispatchQueue!

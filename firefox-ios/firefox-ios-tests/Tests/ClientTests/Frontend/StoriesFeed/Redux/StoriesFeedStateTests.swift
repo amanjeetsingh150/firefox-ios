@@ -5,10 +5,11 @@
 import Redux
 import MozillaAppServices
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class StoriesFeedStateTests: XCTestCase {
+final class StoriesFeedStateTests: LeakDetectingTestCase {
     func tests_initialState_returnsExpectedState() {
         let initialState = createSubject()
 

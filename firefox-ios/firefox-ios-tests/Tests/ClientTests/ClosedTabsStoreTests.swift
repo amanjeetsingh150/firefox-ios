@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 import Storage
 
-class ClosedTabsStoreTests: XCTestCase {
+class ClosedTabsStoreTests: LeakDetectingTestCase {
     func testStoreHasNoTabsAtInit() {
         let store = createStore()
         XCTAssertEqual(store.tabs.count, 0)

@@ -4,9 +4,10 @@
 
 import UIKit
 import XCTest
+import TestKit
 
 @MainActor
-final class UIStackViewExtensionsTests: XCTestCase {
+final class UIStackViewExtensionsTests: LeakDetectingTestCase {
     // MARK: Top
 
     func testAddArrangedViewToTop_whenEmpty() {

@@ -4,12 +4,13 @@
 
 import UIKit
 import XCTest
+import TestKit
 import Shared
 
 @testable import Client
 
 @MainActor
-class SearchBarSettingsViewModelTests: XCTestCase {
+class SearchBarSettingsViewModelTests: LeakDetectingTestCase {
     var prefs: Prefs!
     var mockNotificationCenter: MockNotificationCenter!
 

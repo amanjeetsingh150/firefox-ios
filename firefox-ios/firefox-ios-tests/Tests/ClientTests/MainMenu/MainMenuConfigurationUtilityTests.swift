@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import Shared
 import SummarizeKit
@@ -10,7 +11,7 @@ import SummarizeKit
 @testable import Client
 
 @MainActor
-final class MainMenuConfigurationUtilityTests: XCTestCase {
+final class MainMenuConfigurationUtilityTests: LeakDetectingTestCase {
     var configUtility: MainMenuConfigurationUtility!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 

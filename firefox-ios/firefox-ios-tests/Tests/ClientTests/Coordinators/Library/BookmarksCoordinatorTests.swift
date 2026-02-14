@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class BookmarksCoordinatorTests: XCTestCase {
+final class BookmarksCoordinatorTests: LeakDetectingTestCase {
     private var router: MockRouter!
     private var profile: MockProfile!
     private var parentCoordinator: MockLibraryCoordinatorDelegate!

@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class TabTrayViewControllerTests: XCTestCase {
+final class TabTrayViewControllerTests: LeakDetectingTestCase {
     var delegate: MockTabTrayViewControllerDelegate!
     var navigationController: DismissableNavigationViewController!
     private var tabManager: MockTabManager!

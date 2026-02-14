@@ -3,8 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
-class DictionaryExtensionsTests: XCTestCase {
+class DictionaryExtensionsTests: LeakDetectingTestCase {
     // MARK: - asString
 
     func test_asString_emptyDictionary_returnsEmptyString() {

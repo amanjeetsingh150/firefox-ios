@@ -4,8 +4,9 @@
 
 import Foundation
 import XCTest
+import TestKit
 
-class RelativeDatesTests: XCTestCase {
+class RelativeDatesTests: LeakDetectingTestCase {
     func testRelativeDates() {
         let dateOrig = Date()
         var date = Date(timeInterval: 0, since: dateOrig)

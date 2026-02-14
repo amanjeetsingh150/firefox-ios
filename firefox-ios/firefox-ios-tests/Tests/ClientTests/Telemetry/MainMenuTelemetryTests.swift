@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class MainMenuTelemetryTests: XCTestCase {
+final class MainMenuTelemetryTests: LeakDetectingTestCase {
     var subject: MainMenuTelemetry?
     var mockGleanWrapper: MockGleanWrapper!
 

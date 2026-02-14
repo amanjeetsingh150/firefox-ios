@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 import SwiftUI
 
 @MainActor
-final class SettingsCoordinatorTests: XCTestCase {
+final class SettingsCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var wallpaperManager: WallpaperManagerMock!
     private var delegate: MockSettingsCoordinatorDelegate!

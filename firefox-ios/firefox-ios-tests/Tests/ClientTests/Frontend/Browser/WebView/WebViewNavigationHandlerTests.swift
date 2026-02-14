@@ -6,8 +6,9 @@
 
 import WebKit
 import XCTest
+import TestKit
 
-class WebViewNavigationHandlerTests: XCTestCase {
+class WebViewNavigationHandlerTests: LeakDetectingTestCase {
     // MARK: - Data scheme
 
     func testShouldNotHandleNonDataSchemeURL() {

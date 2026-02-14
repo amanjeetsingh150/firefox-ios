@@ -6,12 +6,13 @@ import Common
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 import Glean
 
 @testable import Client
 
 @MainActor
-class PasswordManagerViewModelTests: XCTestCase {
+class PasswordManagerViewModelTests: LeakDetectingTestCase {
     var viewModel: PasswordManagerViewModel!
     var dataSource: LoginDataSource!
     var mockDelegate: MockLoginViewModelDelegate!

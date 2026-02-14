@@ -4,12 +4,13 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
 // TODO: FXIOS-13742 - Migrate ShareTelemetryTests to use mock telemetry or GleanWrapper
 @MainActor
-final class ShareTelemetryTests: XCTestCase {
+final class ShareTelemetryTests: LeakDetectingTestCase {
     private let testWebURL = URL(string: "https://mozilla.org")!
     var gleanWrapper: MockGleanWrapper!
     typealias EventExtrasType = GleanMetrics.ShareSheet.SharedToExtra

@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class PasswordGeneratorTelemetryTests: XCTestCase {
+final class PasswordGeneratorTelemetryTests: LeakDetectingTestCase {
     var gleanWrapper: MockGleanWrapper!
 
     override func setUp() async throws {

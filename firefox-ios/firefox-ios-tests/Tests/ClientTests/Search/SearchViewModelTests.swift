@@ -5,11 +5,12 @@
 import Foundation
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class SearchViewModelTests: XCTestCase {
+final class SearchViewModelTests: LeakDetectingTestCase {
     var profile: MockProfile!
     var mockDelegate: MockSearchDelegate!
     var searchEnginesManager: SearchEnginesManager!

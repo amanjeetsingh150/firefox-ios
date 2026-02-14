@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 import UniformTypeIdentifiers
 import Glean
@@ -10,7 +11,7 @@ import Glean
 @testable import Client
 
 @MainActor
-final class ShareTelemetryActivityItemProviderTests: XCTestCase {
+final class ShareTelemetryActivityItemProviderTests: LeakDetectingTestCase {
     let testMessage = "Test message"
     let testSubtitle = "Test subtitle"
     private let testFileURL = URL(string: "file://some/file/url")!

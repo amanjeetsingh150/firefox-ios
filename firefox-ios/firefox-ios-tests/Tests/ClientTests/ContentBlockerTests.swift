@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
-final class ContentBlockerTests: XCTestCase {
+final class ContentBlockerTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
 

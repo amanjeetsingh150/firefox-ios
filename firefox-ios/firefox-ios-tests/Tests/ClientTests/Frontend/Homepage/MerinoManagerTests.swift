@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import MozillaAppServices
 
 @testable import Client
 
 @MainActor
-final class MerinoManagerTests: XCTestCase {
+final class MerinoManagerTests: LeakDetectingTestCase {
     let storyProvider = MockStoryProvider()
 
     func test_getMerinoItems_withHomepageSource_returnExpectedStories() async {

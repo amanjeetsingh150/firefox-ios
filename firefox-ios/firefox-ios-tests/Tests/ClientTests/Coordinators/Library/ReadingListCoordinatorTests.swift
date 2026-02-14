@@ -4,11 +4,12 @@
 
 import MozillaAppServices
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class ReadingListCoordinatorTests: XCTestCase {
+final class ReadingListCoordinatorTests: LeakDetectingTestCase {
     var router: MockRouter!
     var parentCoordinator: MockLibraryCoordinatorDelegate!
     private var navigationHandler: MockLibraryNavigationHandler!

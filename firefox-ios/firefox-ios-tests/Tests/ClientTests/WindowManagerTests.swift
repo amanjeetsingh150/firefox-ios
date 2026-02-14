@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Common
 @testable import Client
 
 @MainActor
-class WindowManagerTests: XCTestCase {
+class WindowManagerTests: LeakDetectingTestCase {
     let tabManager = MockTabManager(windowUUID: WindowUUID())
     let secondTabManager = MockTabManager(windowUUID: WindowUUID())
     let mockTabDataStore = MockTabDataStore()

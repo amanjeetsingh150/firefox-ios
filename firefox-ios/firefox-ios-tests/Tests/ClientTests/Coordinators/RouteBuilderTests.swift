@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class RouteBuilderTests: XCTestCase {
+final class RouteBuilderTests: LeakDetectingTestCase {
     let testURL = URL(string: "https://example.com")
     let handoffUserActivity = NSUserActivity(activityType: browsingActivityType)
     let universalLinkUserActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)

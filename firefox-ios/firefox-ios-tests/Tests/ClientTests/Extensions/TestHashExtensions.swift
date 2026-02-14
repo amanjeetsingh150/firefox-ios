@@ -4,8 +4,9 @@
 
 import Foundation
 import XCTest
+import TestKit
 
-class TestHashExtensions: XCTestCase {
+class TestHashExtensions: LeakDetectingTestCase {
     func testSha1() {
         XCTAssertEqual(
             "test1test2".sha1.hexEncodedString,

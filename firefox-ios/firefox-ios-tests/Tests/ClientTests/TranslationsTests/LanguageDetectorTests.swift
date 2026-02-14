@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class LanguageDetectorTests: XCTestCase {
+final class LanguageDetectorTests: LeakDetectingTestCase {
     var mockLanguageSampleSource = MockLanguageSampleSource()
 
     func test_detectLanguage_withFrench_returnsProperLanguageCode() async throws {

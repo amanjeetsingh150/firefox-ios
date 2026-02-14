@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class StoriesFeedViewControllerTests: XCTestCase {
+final class StoriesFeedViewControllerTests: LeakDetectingTestCase {
     var mockStore: MockStoreForMiddleware<AppState>!
 
     override func setUp() async throws {

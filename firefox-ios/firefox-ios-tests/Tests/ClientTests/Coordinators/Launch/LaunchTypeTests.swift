@@ -4,9 +4,10 @@
 
 import Common
 import XCTest
+import TestKit
 @testable import Client
 
-final class LaunchTypeTests: XCTestCase {
+final class LaunchTypeTests: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 
     override func setUp() async throws {

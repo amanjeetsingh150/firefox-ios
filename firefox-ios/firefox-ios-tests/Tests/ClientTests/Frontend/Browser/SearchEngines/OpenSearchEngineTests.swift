@@ -5,10 +5,11 @@
 @testable import Client
 import Foundation
 import XCTest
+import TestKit
 import Shared
 import Storage
 
-class OpenSearchEngineTests: XCTestCase {
+class OpenSearchEngineTests: LeakDetectingTestCase {
     func testEncodeDecodeOpenSearchEngine_withBundledImages_Single() throws {
         let searchEngine = try Self.generateOpenSearchEngine(type: .wikipedia)
 

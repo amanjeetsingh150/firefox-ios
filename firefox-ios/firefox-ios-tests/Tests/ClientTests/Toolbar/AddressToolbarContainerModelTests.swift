@@ -6,8 +6,9 @@
 @testable import ToolbarKit
 import Common
 import XCTest
+import TestKit
 
-final class AddressToolbarContainerModelTests: XCTestCase {
+final class AddressToolbarContainerModelTests: LeakDetectingTestCase {
     private var mockProfile: MockProfile!
     private var searchEnginesManager: SearchEnginesManagerProvider!
     private let windowUUID: WindowUUID = .XCTestDefaultUUID

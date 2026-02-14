@@ -6,10 +6,11 @@ import Redux
 import Shared
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class JumpBackInSectionStateTests: XCTestCase {
+final class JumpBackInSectionStateTests: LeakDetectingTestCase {
     var mockProfile: MockProfile!
 
     override func setUp() async throws {

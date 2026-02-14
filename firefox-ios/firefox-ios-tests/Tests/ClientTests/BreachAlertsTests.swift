@@ -6,6 +6,7 @@
 import Storage
 import Shared
 import XCTest
+import TestKit
 
 let blockbusterBreach = BreachRecord(
     name: "MockBreach",
@@ -57,7 +58,7 @@ class MockBreachAlertsClient: BreachAlertsClientProtocol {
     var etag: String?
 }
 
-class BreachAlertsTests: XCTestCase {
+class BreachAlertsTests: LeakDetectingTestCase {
     var breachAlertsManager: BreachAlertsManager!
     let unbreachedLoginSet = Set<LoginRecord>(arrayLiteral: unbreachedLogin)
     let breachedLoginSet = Set<LoginRecord>(arrayLiteral: breachedLogin)

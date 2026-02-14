@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WidgetKit
 
 @testable import Client
 
-class DownloadLiveActivityAttributesTests: XCTestCase {
+class DownloadLiveActivityAttributesTests: LeakDetectingTestCase {
     func testContentStateComputedProperties() {
         let download1 = makeDownload(type: DownloadType.normal, isComplete: true)
         let download2 = makeDownload(type: DownloadType.contentEncoded, isComplete: true)

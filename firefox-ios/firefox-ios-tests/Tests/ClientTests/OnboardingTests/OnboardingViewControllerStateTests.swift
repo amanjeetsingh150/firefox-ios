@@ -5,10 +5,11 @@
 import Common
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class OnboardingViewControllerStateTests: XCTestCase {
+final class OnboardingViewControllerStateTests: LeakDetectingTestCase {
     private let windowUUID: WindowUUID = .XCTestDefaultUUID
 
     // MARK: - Initialization Tests

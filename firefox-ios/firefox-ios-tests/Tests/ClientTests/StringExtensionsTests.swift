@@ -5,9 +5,10 @@
 import Common
 import Foundation
 import XCTest
+import TestKit
 @testable import Client
 
-class StringExtensionsTests: XCTestCase {
+class StringExtensionsTests: LeakDetectingTestCase {
     func testStringByTrimmingLeadingCharactersInSet() {
         XCTAssertEqual("foo   ", "   foo   ".stringByTrimmingLeadingCharactersInSet(.whitespaces))
         XCTAssertEqual("foo456", "123foo456".stringByTrimmingLeadingCharactersInSet(.decimalDigits))

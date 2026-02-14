@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-class GroupedTabContainerCellTests: XCTestCase {
+class GroupedTabContainerCellTests: LeakDetectingTestCase {
     func testGroupedTabContainerCell_hasNoLeaks() throws {
         let cell = GroupedTabContainerCell()
         let delegate = MockGroupedTabsDelegate()

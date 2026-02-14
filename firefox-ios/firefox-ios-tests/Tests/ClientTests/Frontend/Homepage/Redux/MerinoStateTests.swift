@@ -5,10 +5,11 @@
 import Redux
 import MozillaAppServices
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class MerinoStateTests: XCTestCase {
+final class MerinoStateTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

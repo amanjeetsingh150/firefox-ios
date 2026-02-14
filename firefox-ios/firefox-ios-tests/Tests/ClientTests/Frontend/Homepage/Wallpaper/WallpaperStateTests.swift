@@ -4,10 +4,11 @@
 
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class WallpaperStateTests: XCTestCase {
+final class WallpaperStateTests: LeakDetectingTestCase {
     let image = UIImage.templateImageNamed(ImageIdentifiers.logo)
 
     func test_initialState_returnsExpectedState() {

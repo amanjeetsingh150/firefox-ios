@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 import Common
 import Shared
@@ -10,7 +11,7 @@ import Shared
 @testable import Client
 
 @MainActor
-final class TabScrollHandlerTests: XCTestCase {
+final class TabScrollHandlerTests: LeakDetectingTestCase {
     var tab: Tab!
     var mockProfile: MockProfile!
     let windowUUID: WindowUUID = .XCTestDefaultUUID

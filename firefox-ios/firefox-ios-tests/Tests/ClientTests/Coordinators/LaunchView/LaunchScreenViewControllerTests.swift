@@ -4,10 +4,11 @@
 
 import Common
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class LaunchScreenViewControllerTests: XCTestCase {
+final class LaunchScreenViewControllerTests: LeakDetectingTestCase {
     private var viewModel: MockLaunchScreenViewModel!
     private var profile: MockProfile!
     private var coordinatorDelegate: MockLaunchFinishedLoadingDelegate!

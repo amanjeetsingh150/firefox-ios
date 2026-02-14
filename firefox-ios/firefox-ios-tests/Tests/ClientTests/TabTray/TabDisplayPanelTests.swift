@@ -4,9 +4,10 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
-final class TabDisplayPanelTests: XCTestCase {
+final class TabDisplayPanelTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

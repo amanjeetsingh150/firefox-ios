@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class SecurityManagerTests: XCTestCase {
+final class SecurityManagerTests: LeakDetectingTestCase {
     let secureURL = URL(string: "https://foo.com")!
     let insecureURL = URL(string: "http://bar.com")!
     let secureFrameScheme = "https"

@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 
 @testable import Client
 
 @MainActor
-final class DownloadsPanelViewModelTests: XCTestCase {
+final class DownloadsPanelViewModelTests: LeakDetectingTestCase {
     private var fileFetcher: MockDownloadFileFetcher!
 
     override func setUp() async throws {

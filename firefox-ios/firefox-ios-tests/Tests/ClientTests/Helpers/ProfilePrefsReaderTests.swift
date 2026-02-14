@@ -4,10 +4,11 @@
 
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
-class ProfilePrefsReaderTests: XCTestCase {
+class ProfilePrefsReaderTests: LeakDetectingTestCase {
     private var mockUserDefaults: MockUserDefaults!
     private var prefsReader: ProfilePrefsReader!
 

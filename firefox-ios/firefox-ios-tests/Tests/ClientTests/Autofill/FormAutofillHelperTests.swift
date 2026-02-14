@@ -5,12 +5,13 @@
 @testable import Client
 import Foundation
 import XCTest
+import TestKit
 import WebKit
 import Common
 import Storage
 
 @MainActor
-final class FormAutofillHelperTests: XCTestCase {
+final class FormAutofillHelperTests: LeakDetectingTestCase {
     var formAutofillHelper: FormAutofillHelper!
     var tab: MockTab!
     var profile: MockProfile!

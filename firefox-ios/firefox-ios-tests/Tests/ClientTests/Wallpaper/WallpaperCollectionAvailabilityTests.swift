@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
-class WallpaperCollectionAvailabilityTests: XCTestCase {
+class WallpaperCollectionAvailabilityTests: LeakDetectingTestCase {
     func testFullAvailability() {
         let subject = WallpaperCollectionAvailability(start: nil, end: nil)
         XCTAssertTrue(subject.isAvailable, "Wallpaper collection should be available")

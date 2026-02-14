@@ -5,11 +5,12 @@
 import Common
 import Shared
 import XCTest
+import TestKit
 import OnboardingKit
 @testable import Client
 
 @MainActor
-final class LaunchScreenViewModelTests: XCTestCase {
+final class LaunchScreenViewModelTests: LeakDetectingTestCase {
     private var messageManager: MockGleanPlumbMessageManagerProtocol!
     private var profile: MockProfile!
     private var delegate: MockLaunchFinishedLoadingDelegate!

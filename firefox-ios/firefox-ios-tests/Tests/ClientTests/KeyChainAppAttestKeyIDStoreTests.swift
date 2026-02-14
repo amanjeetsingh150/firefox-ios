@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import SummarizeKit
 
 /// NOTE: This test is intentionally in `ClientTests` instead of `BrowserKit/Tests` since bare SPM packages
 /// cannot have keychain entitlement meaning these tests will always fail for the wrong reasons.
-final class KeychainAppAttestKeyIDStoreTests: XCTestCase {
+final class KeychainAppAttestKeyIDStoreTests: LeakDetectingTestCase {
     // Use a unique service per test run to avoid polluting real keychain entries.
     private static let testService = "org.mozilla.browserkit.appattest.keyid.test"
     private static let testAccount = "test"

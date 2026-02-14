@@ -5,10 +5,11 @@
 import GCDWebServers
 import UIKit
 import XCTest
+import TestKit
 
 @testable import Client
 
-class SearchTests: XCTestCase {
+class SearchTests: LeakDetectingTestCase {
     func testURIFixup() {
         // Check valid URLs. We can load these after some fixup.
         checkValidURL("http://www.mozilla.org", afterFixup: "http://www.mozilla.org")

@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import CoreSpotlight
 
 @testable import Client
 
 @MainActor
-final class UserActivityRouteTests: XCTestCase {
+final class UserActivityRouteTests: LeakDetectingTestCase {
     // Test the Route initializer with a Siri shortcut user activity.
     func testSiriShortcutUserActivity() {
         let subject = createSubject()

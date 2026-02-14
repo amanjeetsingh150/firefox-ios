@@ -6,12 +6,13 @@ import Common
 import Redux
 import Storage
 import XCTest
+import TestKit
 
 import struct MozillaAppServices.Device
 
 @testable import Client
 
-final class RemoteTabPanelStateTests: XCTestCase {
+final class RemoteTabPanelStateTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

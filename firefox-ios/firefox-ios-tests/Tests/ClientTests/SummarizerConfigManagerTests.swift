@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import SummarizeKit
 @testable import Client
 
 @MainActor
-final class SummarizerConfigManagerTests: XCTestCase {
+final class SummarizerConfigManagerTests: LeakDetectingTestCase {
     func testReturnsEmptyConfigWhenNoSourcesProvided() async {
         let subject = createSubject(sources: [])
         let config = subject.getConfig(.appleSummarizer, contentType: .generic)

@@ -5,10 +5,11 @@
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-class CanRemoveQuickActionBookmarkTests: XCTestCase {
+class CanRemoveQuickActionBookmarkTests: LeakDetectingTestCase {
     private var subject: MockCanRemoveQuickActionBookmark!
     private var mockBookmarksHandler: MockBookmarksHandler!
     private var mockQuickActions: MockQuickActions!

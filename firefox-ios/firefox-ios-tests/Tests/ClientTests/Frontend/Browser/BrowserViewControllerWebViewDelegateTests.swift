@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import WebKit
 import Shared
 
 @testable import Client
 
-class BrowserViewControllerWebViewDelegateTests: XCTestCase {
+class BrowserViewControllerWebViewDelegateTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var tabManager: MockTabManager!
     private var fileManager: MockFileManager!

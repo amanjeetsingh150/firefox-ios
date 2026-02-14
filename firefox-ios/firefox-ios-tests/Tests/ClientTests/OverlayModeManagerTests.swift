@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
-class OverlayModeManagerTests: XCTestCase {
+class OverlayModeManagerTests: LeakDetectingTestCase {
     private var urlBar: MockURLBarView!
     private var subject: MockOverlayModeManager!
 

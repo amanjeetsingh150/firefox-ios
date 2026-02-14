@@ -4,10 +4,11 @@
 
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class MessageCardStateTests: XCTestCase {
+final class MessageCardStateTests: LeakDetectingTestCase {
     func tests_initialState_returnsExpectedState() {
         let initialState = createSubject()
 

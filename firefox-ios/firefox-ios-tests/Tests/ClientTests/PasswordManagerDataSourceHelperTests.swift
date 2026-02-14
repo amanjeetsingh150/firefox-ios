@@ -6,8 +6,9 @@
 import Storage
 import Shared
 import XCTest
+import TestKit
 
-class PasswordManagerDataSourceHelperTests: XCTestCase {
+class PasswordManagerDataSourceHelperTests: LeakDetectingTestCase {
     func testSetDomainLookup() {
         let subject = PasswordManagerDataSourceHelper()
         let login = LoginRecord(fromJSONDict: [

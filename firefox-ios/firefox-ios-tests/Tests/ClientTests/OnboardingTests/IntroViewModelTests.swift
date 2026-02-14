@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
 @MainActor
-class IntroViewModelTests: XCTestCase {
+class IntroViewModelTests: LeakDetectingTestCase {
     var nimbusUtility: NimbusOnboardingTestingConfigUtility!
     typealias cards = NimbusOnboardingTestingConfigUtility.CardOrder
     let windowUUID: WindowUUID = .XCTestDefaultUUID

@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
-class AddressLocaleFeatureValidatorTests: XCTestCase {
+class AddressLocaleFeatureValidatorTests: LeakDetectingTestCase {
     func testValidRegionCA() {
         let locale = MockLocaleProvider(regionCode: "CA")
         XCTAssertTrue(

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import OnboardingKit
 @testable import Client
 
@@ -150,7 +151,7 @@ class MockActivityEventHelper: ActivityEventHelper {
 // MARK: - Test Class
 
 @MainActor
-final class OnboardingServiceTests: XCTestCase {
+final class OnboardingServiceTests: LeakDetectingTestCase {
     var sut: OnboardingService!
     var mockDelegate: MockOnboardingServiceDelegate!
     var mockNavigationDelegate: MockOnboardingNavigationDelegate!

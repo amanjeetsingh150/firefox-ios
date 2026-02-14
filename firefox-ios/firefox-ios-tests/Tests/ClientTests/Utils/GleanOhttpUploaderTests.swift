@@ -4,9 +4,10 @@
 
 import Glean
 import XCTest
+import TestKit
 @testable import Client
 
-class GleanOhttpUploaderTests: XCTestCase {
+class GleanOhttpUploaderTests: LeakDetectingTestCase {
     let mockRequest = MockGleanPingUploadRequest()
 
     func testUploadWithoutData_thenReturnsRecoverableFailure() {

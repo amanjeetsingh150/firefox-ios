@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-class NativeErrorPageFeatureFlagTests: XCTestCase {
+class NativeErrorPageFeatureFlagTests: LeakDetectingTestCase {
     var subject: NativeErrorPageFeatureFlag!
 
     override func setUp() {

@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
-final class DefaultRouterTests: XCTestCase {
+final class DefaultRouterTests: LeakDetectingTestCase {
     var navigationController: MockNavigationController!
 
     override func setUp() async throws {

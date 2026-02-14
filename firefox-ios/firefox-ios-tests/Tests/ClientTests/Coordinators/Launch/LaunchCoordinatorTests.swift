@@ -6,10 +6,11 @@ import SwiftUI
 import Common
 import OnboardingKit
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class LaunchCoordinatorTests: XCTestCase {
+final class LaunchCoordinatorTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var mockRouter: MockRouter!
     private var delegate: MockLaunchCoordinatorDelegate!

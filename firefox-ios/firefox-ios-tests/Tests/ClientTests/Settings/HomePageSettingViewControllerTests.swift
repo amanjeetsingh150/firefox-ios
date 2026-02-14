@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 
 @testable import Client
 
 @MainActor
-final class HomePageSettingViewControllerTests: XCTestCase {
+final class HomePageSettingViewControllerTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var wallpaperManager: WallpaperManagerMock!
     private var delegate: MockSettingsDelegate!

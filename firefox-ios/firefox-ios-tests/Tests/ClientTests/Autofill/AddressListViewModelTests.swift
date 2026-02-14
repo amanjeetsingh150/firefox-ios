@@ -5,12 +5,13 @@
 import Combine
 import MozillaAppServices
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
 @MainActor
-final class AddressListViewModelTests: XCTestCase {
+final class AddressListViewModelTests: LeakDetectingTestCase {
     var viewModel: AddressListViewModel!
     var mockProfile: MockProfile!
     var mockLogger: MockLogger!

@@ -4,11 +4,12 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class WallpaperSelectorViewModelTests: XCTestCase {
+final class WallpaperSelectorViewModelTests: LeakDetectingTestCase {
     private var wallpaperManager: WallpaperManagerInterface!
 
     override func setUp() async throws {

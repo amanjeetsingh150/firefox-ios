@@ -5,10 +5,11 @@
 import Redux
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ShortcutsLibraryStateTests: XCTestCase {
+final class ShortcutsLibraryStateTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

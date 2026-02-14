@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Storage
 import Common
 @testable import Client
 
 @MainActor
-final class PasswordManagerCoordinatorTests: XCTestCase {
+final class PasswordManagerCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var mockParentCoordinator: PasswordManagerCoordinatorDelegateMock!
     let windowUUID: WindowUUID = .XCTestDefaultUUID

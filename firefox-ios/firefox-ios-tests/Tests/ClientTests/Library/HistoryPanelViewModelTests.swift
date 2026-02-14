@@ -7,11 +7,12 @@ import MozillaAppServices
 import Shared
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class HistoryPanelViewModelTests: XCTestCase {
+class HistoryPanelViewModelTests: LeakDetectingTestCase {
     var profile: MockProfile!
 
     override func setUp() async throws {

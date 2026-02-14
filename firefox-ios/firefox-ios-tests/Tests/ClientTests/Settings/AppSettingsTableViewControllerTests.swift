@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 @testable import Client
 
 @MainActor
-class AppSettingsTableViewControllerTests: XCTestCase {
+class AppSettingsTableViewControllerTests: LeakDetectingTestCase {
     private var profile: Profile!
     private var tabManager: MockTabManager!
     private var appAuthenticator: MockAppAuthenticator!

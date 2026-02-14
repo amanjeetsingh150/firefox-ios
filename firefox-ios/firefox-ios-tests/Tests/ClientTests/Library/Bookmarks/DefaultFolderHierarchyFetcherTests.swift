@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import MozillaAppServices
 @testable import Client
 
-final class DefaultFolderHierarchyFetcherTests: XCTestCase {
+final class DefaultFolderHierarchyFetcherTests: LeakDetectingTestCase {
     var mockProfile: MockProfile!
     let rootFolderGUID = BookmarkRoots.MobileFolderGUID
     let testFolderTitle = "testTitle"

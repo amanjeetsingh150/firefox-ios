@@ -5,6 +5,7 @@
 import Testing
 
 import XCTest
+import TestKit
 import SnapKit
 import Common
 import Shared
@@ -12,7 +13,7 @@ import Shared
 @testable import Client
 
 @MainActor
-final class ToolbarAnimatorTests: XCTestCase {
+final class ToolbarAnimatorTests: LeakDetectingTestCase {
     var mockView: MockToolbarView!
     var context: ToolbarContext!
     var delegate: MockToolbarAnimatorDelegate!

@@ -5,10 +5,11 @@
 import Foundation
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ToastTelemetryTests: XCTestCase {
+final class ToastTelemetryTests: LeakDetectingTestCase {
     var mockGleanWrapper: MockGleanWrapper!
     override func setUp() {
         super.setUp()

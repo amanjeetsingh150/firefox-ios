@@ -7,11 +7,12 @@ import MozillaAppServices
 import Shared
 import StoreKit
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class RatingPromptManagerTests: XCTestCase {
+class RatingPromptManagerTests: LeakDetectingTestCase {
     var urlOpenerSpy: URLOpenerSpy!
     var prefs: MockProfilePrefs!
     var logger: CrashingMockLogger!

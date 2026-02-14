@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class HomepageDimensionCalculatorTests: XCTestCase {
+class HomepageDimensionCalculatorTests: LeakDetectingTestCase {
     struct UX {
         struct DeviceSize {
             static let iPhone14 = CGSize(width: 390, height: 844)

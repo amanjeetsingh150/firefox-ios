@@ -6,8 +6,9 @@ import MobileCoreServices
 import UIKit
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 
-class UIPasteboardExtensionsTests: XCTestCase {
+class UIPasteboardExtensionsTests: LeakDetectingTestCase {
     fileprivate var pasteboard: UIPasteboard!
 
     override func setUp() {

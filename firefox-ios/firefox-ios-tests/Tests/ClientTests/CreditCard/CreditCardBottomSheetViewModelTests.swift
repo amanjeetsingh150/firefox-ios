@@ -7,10 +7,11 @@ import Shared
 import Storage
 import UIKit
 import XCTest
+import TestKit
 
 @testable import Client
 
-class CreditCardBottomSheetViewModelTests: XCTestCase {
+class CreditCardBottomSheetViewModelTests: LeakDetectingTestCase {
     private var autofill: MockCreditCardProvider!
     private var dispatchQueue: MockDispatchQueue!
     private var samplePlainTextCard = UnencryptedCreditCardFields(ccName: "Allen Burges",

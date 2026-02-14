@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Foundation
 import WebKit
 @testable import Client
 
-class DownloadHelperTests: XCTestCase {
+class DownloadHelperTests: LeakDetectingTestCase {
     @MainActor
     func test_init_whenMIMETypeIsNil_initializeCorrectly() {
         let response = anyResponse(mimeType: nil)

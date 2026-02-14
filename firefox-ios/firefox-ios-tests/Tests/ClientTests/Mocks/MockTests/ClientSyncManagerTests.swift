@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Foundation
 
-final class ClientSyncManagerTests: XCTestCase {
+final class ClientSyncManagerTests: LeakDetectingTestCase {
     private var sut: ClientSyncManagerSpy!
     private let engine = "creditcards"
 

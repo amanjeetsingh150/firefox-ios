@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class BrowserViewControllerConstraintTestsBase: XCTestCase {
+class BrowserViewControllerConstraintTestsBase: LeakDetectingTestCase {
     var profile: MockProfile!
     var tabManager: MockTabManager!
 

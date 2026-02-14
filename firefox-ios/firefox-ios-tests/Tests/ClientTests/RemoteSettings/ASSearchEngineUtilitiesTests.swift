@@ -6,10 +6,11 @@ import Foundation
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 import MozillaAppServices
 
-class ASSearchEngineUtilitiesTests: XCTestCase {
+class ASSearchEngineUtilitiesTests: LeakDetectingTestCase {
     private let leo_eng_deu_engine_no_search_params =
     SearchEngineDefinition(
         aliases: [],

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebEngine
 import WebKit
 @testable import Client
@@ -15,7 +16,7 @@ import WebKit
 // so unit test makes more sense to live in actual implementation like (engineResponder/legacyResponder)
 
 @MainActor
-final class BrowserWebUIDelegateTests: XCTestCase {
+final class BrowserWebUIDelegateTests: LeakDetectingTestCase {
     private var mockLegacyResponder: MockLegacyResponder!
     private var engineResponder: MockWKUIHandler!
 

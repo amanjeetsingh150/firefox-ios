@@ -4,8 +4,9 @@
 
 import Foundation
 import XCTest
+import TestKit
 
-class WallpaperMigrationUtilityTests: XCTestCase {
+class WallpaperMigrationUtilityTests: LeakDetectingTestCase {
     override func setUp() {
         super.setUp()
         removeAllFolders()

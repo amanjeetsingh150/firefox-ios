@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import UIKit
 @testable import Client
 
 @MainActor
-class SurveySurfaceManagerTests: XCTestCase {
+class SurveySurfaceManagerTests: LeakDetectingTestCase {
     private var messageManager: MockGleanPlumbMessageManagerProtocol!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 

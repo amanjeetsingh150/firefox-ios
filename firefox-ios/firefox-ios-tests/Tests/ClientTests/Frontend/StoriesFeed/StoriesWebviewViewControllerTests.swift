@@ -4,10 +4,11 @@
 
 import WebKit
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class StoriesWebviewViewControllerTests: XCTestCase {
+final class StoriesWebviewViewControllerTests: LeakDetectingTestCase {
     @MainActor
     func test_decidePolicy_alwaysAllow() throws {
         let subject = createSubject()

@@ -7,8 +7,9 @@
 import Common
 import Shared
 import XCTest
+import TestKit
 
-class SearchBarLocationSaverTests: XCTestCase {
+class SearchBarLocationSaverTests: LeakDetectingTestCase {
     private var profile: MockProfile!
 
     override func setUp() async throws {

@@ -4,10 +4,11 @@
 
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class TitleActivityItemProviderTests: XCTestCase {
+final class TitleActivityItemProviderTests: LeakDetectingTestCase {
     let testMessage = "Test message"
 
     func testNoShare_forMailActivity() throws {

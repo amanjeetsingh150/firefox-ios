@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 @testable import Client
 
-class LibraryViewModelTests: XCTestCase {
+class LibraryViewModelTests: LeakDetectingTestCase {
     private var subject: LibraryViewModel!
     private var profile: MockProfile!
 

@@ -6,9 +6,10 @@ import Foundation
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 
-class RemoteSettingsFetchConfigTests: XCTestCase {
+class RemoteSettingsFetchConfigTests: LeakDetectingTestCase {
     func testLoadValidRemoteSettingsFetchConfig() {
         guard let config = RemoteSettingsFetchConfig.loadSettingsFetchConfig() else {
             XCTFail("Failed to load valid RemoteSettingsFetchConfig.json")

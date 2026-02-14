@@ -5,12 +5,13 @@
 import Foundation
 @testable import Client
 import XCTest
+import TestKit
 import Shared
 import Common
 import OnboardingKit
 
 @MainActor
-final class UpdateViewModelTests: XCTestCase {
+final class UpdateViewModelTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 

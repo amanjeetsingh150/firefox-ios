@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
 @MainActor
-final class LabelButtonHeaderViewTests: XCTestCase {
+final class LabelButtonHeaderViewTests: LeakDetectingTestCase {
     let theme = DarkTheme()
     let sectionHeaderState = SectionHeaderConfiguration(title: "test title", a11yIdentifier: "test a11y identifier")
 

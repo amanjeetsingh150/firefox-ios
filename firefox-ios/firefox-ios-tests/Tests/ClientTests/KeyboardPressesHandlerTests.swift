@@ -7,10 +7,11 @@ import Foundation
 @testable import Client
 
 import XCTest
+import TestKit
 
 @available(iOS 13.4, *)
 @MainActor
-class KeyboardPressesHandlerTests: XCTestCase {
+class KeyboardPressesHandlerTests: LeakDetectingTestCase {
     func testDefaultsPressedAreFalse() {
         let handler = KeyboardPressesHandler()
         XCTAssertEqual(handler.isOnlyCmdPressed, false)

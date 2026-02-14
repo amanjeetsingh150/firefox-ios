@@ -4,10 +4,11 @@
 
 import Storage
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class DefaultBackgroundTabLoaderTests: XCTestCase {
+final class DefaultBackgroundTabLoaderTests: LeakDetectingTestCase {
     private var applicationHelper: MockApplicationHelper!
     private var tabQueue: MockTabQueue!
 

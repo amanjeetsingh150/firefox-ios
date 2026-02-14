@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 import Common
 import Foundation
@@ -10,7 +11,7 @@ import MozillaAppServices
 
 @testable import Client
 
-final class NimbusMessagingTriggerTests: XCTestCase {
+final class NimbusMessagingTriggerTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

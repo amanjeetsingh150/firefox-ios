@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ContextMenuTelemetryTests: XCTestCase {
+final class ContextMenuTelemetryTests: LeakDetectingTestCase {
     let x = BookmarksTelemetry()
     var subject: ContextMenuTelemetry?
     var gleanWrapper: MockGleanWrapper!

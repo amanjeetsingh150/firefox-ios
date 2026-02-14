@@ -5,12 +5,13 @@
 import Shared
 import Storage
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
 @MainActor
-final class TopSitesManagerTests: XCTestCase {
+final class TopSitesManagerTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var mockNotificationCenter: MockNotificationCenter!
     override func setUp() async throws {

@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
-class AccessoryViewProviderTests: XCTestCase {
+class AccessoryViewProviderTests: LeakDetectingTestCase {
     var accessoryViewProvider: AccessoryViewProvider!
 
     override func setUp() {

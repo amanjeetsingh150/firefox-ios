@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 import X509
 @testable import Client
 
-final class CertificatesViewModelTests: XCTestCase {
+final class CertificatesViewModelTests: LeakDetectingTestCase {
     private var model: CertificatesModel!
 
     override func setUp() {

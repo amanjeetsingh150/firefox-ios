@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class AppIconSelectionTelemetryTests: XCTestCase {
+final class AppIconSelectionTelemetryTests: LeakDetectingTestCase {
     // For telemetry extras
     let nameIdentifierKey = "name"
 

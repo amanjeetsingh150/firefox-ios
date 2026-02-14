@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Shared
 @testable import Client
 
 @MainActor
-class ContextualHintEligibilityUtilityTests: XCTestCase {
+class ContextualHintEligibilityUtilityTests: LeakDetectingTestCase {
     typealias CFRPrefsKeys = PrefsKeys.ContextualHints
 
     var profile: MockProfile!

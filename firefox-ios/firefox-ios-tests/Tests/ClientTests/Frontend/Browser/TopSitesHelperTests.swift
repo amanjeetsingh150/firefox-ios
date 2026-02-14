@@ -6,11 +6,12 @@ import MozillaAppServices
 import Shared
 import Storage
 import XCTest
+import TestKit
 import SiteImageView
 
 @testable import Client
 
-class TopSitesHelperTests: XCTestCase {
+class TopSitesHelperTests: LeakDetectingTestCase {
     private let faviconResource: SiteResource = .remoteURL(url: URL(string: "https://mozilla.org/favicon.ico")!)
     private var profile: MockProfile!
 

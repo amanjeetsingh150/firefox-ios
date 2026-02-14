@@ -5,10 +5,11 @@
 import Common
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-class ZoomPageManagerTests: XCTestCase {
+class ZoomPageManagerTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var zoomStore: MockZoomStore!
     private let windowUUID: WindowUUID = .XCTestDefaultUUID

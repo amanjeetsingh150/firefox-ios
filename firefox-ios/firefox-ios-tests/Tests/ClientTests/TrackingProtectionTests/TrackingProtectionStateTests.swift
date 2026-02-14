@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Redux
 
 @testable import Client
 
-final class TrackingProtectionStateTests: XCTestCase {
+final class TrackingProtectionStateTests: LeakDetectingTestCase {
     private var mockProfile: MockProfile!
 
     override func setUp() async throws {

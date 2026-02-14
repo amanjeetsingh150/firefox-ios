@@ -5,10 +5,11 @@
 import Common
 import Storage
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class PageZoomSettingsViewModelTests: XCTestCase {
+final class PageZoomSettingsViewModelTests: LeakDetectingTestCase {
     private var zoomManager: ZoomPageManager!
     private var notificationCenter: MockNotificationCenter!
     private var zoomStore: MockZoomStore!

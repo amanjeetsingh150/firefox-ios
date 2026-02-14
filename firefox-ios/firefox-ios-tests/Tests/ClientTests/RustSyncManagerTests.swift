@@ -6,8 +6,9 @@
 import Sync
 import Shared
 import XCTest
+import TestKit
 
-class RustSyncManagerTests: XCTestCase {
+class RustSyncManagerTests: LeakDetectingTestCase {
     struct Keys {
         static let bookmarksStateChangedPrefKey = "sync.engine.bookmarks.enabledStateChanged"
         static let bookmarksEnabledPrefKey = "sync.engine.bookmarks.enabled"

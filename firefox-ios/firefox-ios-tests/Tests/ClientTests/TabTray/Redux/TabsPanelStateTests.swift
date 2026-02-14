@@ -5,10 +5,11 @@
 import Common
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class TabPanelStateTests: XCTestCase {
+final class TabPanelStateTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

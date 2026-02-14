@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ShareExtensionTelemetryTests: XCTestCase {
+final class ShareExtensionTelemetryTests: LeakDetectingTestCase {
     var shareExtensionTelemetry: ShareExtensionTelemetry?
     var gleanWrapper: MockGleanWrapper!
 

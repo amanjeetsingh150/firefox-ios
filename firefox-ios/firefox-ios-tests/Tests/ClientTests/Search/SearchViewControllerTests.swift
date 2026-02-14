@@ -5,11 +5,12 @@
 import Foundation
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class SearchViewControllerTest: XCTestCase {
+class SearchViewControllerTest: LeakDetectingTestCase {
     var profile: MockProfile!
     var searchEnginesManager: SearchEnginesManager!
     var searchViewController: SearchViewController!

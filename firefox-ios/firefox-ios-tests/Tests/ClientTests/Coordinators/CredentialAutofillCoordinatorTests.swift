@@ -7,10 +7,11 @@
 // import Storage
 // import SwiftUI
 // import XCTest
+import TestKit
 //
 // @testable import Client
 
-// final class CredentialAutofillCoordinatorTests: XCTestCase {
+// final class CredentialAutofillCoordinatorTests: LeakDetectingTestCase {
 //    private var profile: MockProfile!
 //    private var router: MockRouter!
 //    private var parentCoordinator: MockBrowserCoordinator!

@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class TermsOfServiceTelemetryTests: XCTestCase {
+final class TermsOfServiceTelemetryTests: LeakDetectingTestCase {
     var mockGleanWrapper: MockGleanWrapper!
 
     override func setUp() {

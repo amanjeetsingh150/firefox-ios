@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class BrowserViewControllerLayoutManagerTests: XCTestCase {
+final class BrowserViewControllerLayoutManagerTests: LeakDetectingTestCase {
     var parentView: UIView!
     var headerView: UIView!
     private var toolbarHelper: MockToolbarHelper!

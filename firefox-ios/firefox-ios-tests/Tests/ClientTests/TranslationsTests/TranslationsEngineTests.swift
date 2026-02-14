@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 @testable import Client
 
 @MainActor
-final class TranslationsEngineTests: XCTestCase {
+final class TranslationsEngineTests: LeakDetectingTestCase {
     func test_bridgeTo_reusesBridgeForSameWebView() {
         let subject = createSubject()
         let pageWebView = WKWebView()

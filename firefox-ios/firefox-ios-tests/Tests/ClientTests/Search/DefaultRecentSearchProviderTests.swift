@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 @testable import Client
 
-final class DefaultRecentSearchProviderTests: XCTestCase {
+final class DefaultRecentSearchProviderTests: LeakDetectingTestCase {
     var mockHistoryStorage: MockHistoryHandler!
 
     override func setUp() {

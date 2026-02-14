@@ -4,9 +4,10 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import Common
 
-class DownloadQueueTests: XCTestCase {
+class DownloadQueueTests: LeakDetectingTestCase {
     let didStartDownload = "downloadQueue(_:didStartDownload:)"
     let didDownloadCombinedBytes = "downloadQueue(_:didDownloadCombinedBytes:combinedTotalBytesExpected:)"
     let didCompleteWithError = "downloadQueue(_:didCompleteWithError:)"

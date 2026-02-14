@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class SearchEngineSelectionCoordinatorTests: XCTestCase {
+final class SearchEngineSelectionCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var mockParentCoordinator: MockParentCoordinator!
 

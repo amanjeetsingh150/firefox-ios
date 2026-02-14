@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class UnifiedAdsUserDataRemoverTests: XCTestCase {
+final class UnifiedAdsUserDataRemoverTests: LeakDetectingTestCase {
     func testDeleteUserData_GivenNoResponse_ThenThrowsError() async {
         let expectedData = "Test data".data(using: .utf8)!
         let subject = createSubject(with: expectedData)

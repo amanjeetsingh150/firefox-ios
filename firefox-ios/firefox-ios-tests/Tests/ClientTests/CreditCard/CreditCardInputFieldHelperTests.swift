@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
-class CreditCardInputFieldHelperTests: XCTestCase {
+class CreditCardInputFieldHelperTests: LeakDetectingTestCase {
     var helper: CreditCardInputFieldHelper!
 
     func configureForTestsWith(_ inputType: CreditCardInputType) {

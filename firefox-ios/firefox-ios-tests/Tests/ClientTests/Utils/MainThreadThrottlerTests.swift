@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-class MainThreadThrottlerTests: XCTestCase {
+class MainThreadThrottlerTests: LeakDetectingTestCase {
     struct Timing {
         static let veryLongDelay: Double = 100_000
         static let defaultTestMaxWaitTime: Double = 2

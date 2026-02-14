@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Storage
 
 @testable import Client
 
 @MainActor
-final class ShortcutsLibraryDiffableDataSourceTests: XCTestCase {
+final class ShortcutsLibraryDiffableDataSourceTests: LeakDetectingTestCase {
     var collectionView: UICollectionView?
     var diffableDataSource: ShortcutsLibraryDiffableDataSource?
 

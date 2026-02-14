@@ -5,6 +5,7 @@
 import Foundation
 import MozillaAppServices
 import XCTest
+import TestKit
 
 @testable import Client
 
@@ -54,7 +55,7 @@ class MockMozAdsClient: MozAdsClientProtocol, @unchecked Sendable {
 }
 
 @MainActor
-class UnifiedAdsProviderTests: XCTestCase {
+class UnifiedAdsProviderTests: LeakDetectingTestCase {
     private var mockAdsClient: MockMozAdsClient!
     private var networking: MockUnifiedTileNetworking!
 

@@ -4,12 +4,13 @@
 
 import Shared
 import XCTest
+import TestKit
 import MozillaAppServices
 import OnboardingKit
 
 @testable import Client
 
-final class IntroScreenManagerTests: XCTestCase {
+final class IntroScreenManagerTests: LeakDetectingTestCase {
     var prefs: MockProfilePrefs!
 
     override func setUp() {

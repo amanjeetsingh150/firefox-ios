@@ -4,10 +4,11 @@
 
 import UIKit
 import XCTest
+import TestKit
 
 @testable import Client
 
-class URLMailTests: XCTestCase {
+class URLMailTests: LeakDetectingTestCase {
     func testMailToMetadata_noMailto() {
         let url = URL(string: "https://test.com")
         XCTAssertNil(url!.mailToMetadata(), "Metadata should be nil")

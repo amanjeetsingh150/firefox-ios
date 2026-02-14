@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class MicrosurveyCoordinatorTests: XCTestCase {
+final class MicrosurveyCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var mockTabManager: MockTabManager!
 

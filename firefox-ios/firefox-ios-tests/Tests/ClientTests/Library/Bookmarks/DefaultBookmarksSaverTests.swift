@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import MozillaAppServices
 @testable import Client
 
-final class DefaultBookmarksSaverTests: XCTestCase {
+final class DefaultBookmarksSaverTests: LeakDetectingTestCase {
     let rootFolderGUID = BookmarkRoots.MobileFolderGUID
     let testBookmark = Bookmark(title: "test", url: "https://www.test.com")
     var testBookmarkGUID: Guid?

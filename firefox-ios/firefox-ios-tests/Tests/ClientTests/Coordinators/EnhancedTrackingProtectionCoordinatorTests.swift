@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
@@ -12,7 +13,7 @@ class MockSSLTrackingProtectionDelegate: ETPCoordinatorSSLStatusDelegate {
 }
 
 @MainActor
-final class EnhancedTrackingProtectionCoordinatorTests: XCTestCase {
+final class EnhancedTrackingProtectionCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
     private var profile: MockProfile!
     private var routeBuilder: RouteBuilder!

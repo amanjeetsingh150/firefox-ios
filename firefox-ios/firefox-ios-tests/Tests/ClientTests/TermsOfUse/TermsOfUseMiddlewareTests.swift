@@ -2,13 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 import XCTest
+import TestKit
 @testable import Client
 import Common
 import Shared
 // TODO: FXIOS-12947 - Add tests for TermsOfUseState and Coordinator
 
 @MainActor
-final class TermsOfUseMiddlewareTests: XCTestCase {
+final class TermsOfUseMiddlewareTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var middleware: TermsOfUseMiddleware!
 

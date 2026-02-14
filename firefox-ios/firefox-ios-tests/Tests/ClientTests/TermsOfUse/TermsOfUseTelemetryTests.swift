@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Glean
 @testable import Client
 import Common
@@ -10,7 +11,7 @@ import Shared
 
 // TODO: FXIOS-13746 - Migrate TermsOfUseTelemetryTests to use mock telemetry or GleanWrapper
 @MainActor
-final class TermsOfUseTelemetryTests: XCTestCase {
+final class TermsOfUseTelemetryTests: LeakDetectingTestCase {
     private var telemetry: TermsOfUseTelemetry!
 
     override func setUp() async throws {

@@ -5,11 +5,12 @@
 import MozillaAppServices
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class RecordVisitObservationManagerTests: XCTestCase {
+final class RecordVisitObservationManagerTests: LeakDetectingTestCase {
     private var historyHandler: MockHistoryHandler!
     private var logger: MockLogger!
     private var profile: MockProfile!

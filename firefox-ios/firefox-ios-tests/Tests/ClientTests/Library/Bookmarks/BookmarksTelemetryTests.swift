@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class BookmarksTelemetryTests: XCTestCase {
+final class BookmarksTelemetryTests: LeakDetectingTestCase {
     var subject: BookmarksTelemetry?
     var gleanWrapper: MockGleanWrapper!
 

@@ -4,9 +4,10 @@
 
 import Foundation
 import XCTest
+import TestKit
 @testable import Client
 
-class CreditCardValidatorTests: XCTestCase {
+class CreditCardValidatorTests: LeakDetectingTestCase {
     private var creditCardValidator: CreditCardValidator!
 
     override func setUp() {

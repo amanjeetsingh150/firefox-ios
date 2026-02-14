@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class TabCellTests: XCTestCase {
+class TabCellTests: LeakDetectingTestCase {
     var cellDelegate: MockTabCellDelegate!
     var profile: MockProfile!
 

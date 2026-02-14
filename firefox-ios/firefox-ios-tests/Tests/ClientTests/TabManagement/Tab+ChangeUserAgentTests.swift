@@ -5,8 +5,9 @@
 @testable import Client
 
 import XCTest
+import TestKit
 
-class ChangeUserAgentTests: XCTestCase {
+class ChangeUserAgentTests: LeakDetectingTestCase {
     struct ChangeUserAgentsMockData {
         let urlString: String
         let isChangedUA: Bool

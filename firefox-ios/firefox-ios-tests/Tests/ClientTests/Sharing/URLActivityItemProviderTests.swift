@@ -4,10 +4,11 @@
 
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class URLActivityItemProviderTests: XCTestCase {
+final class URLActivityItemProviderTests: LeakDetectingTestCase {
     let testFileURL = URL(string: "file://some/file/url")!
     let testWebURL = URL(string: "https://mozilla.org")!
 

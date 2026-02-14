@@ -4,10 +4,11 @@
 @testable import Client
 
 import XCTest
+import TestKit
 import Common
 
 @MainActor
-class SyncContentSettingsViewControllerTests: XCTestCase {
+class SyncContentSettingsViewControllerTests: LeakDetectingTestCase {
     var profile: MockProfile!
     var syncContentSettingsVC: SyncContentSettingsViewController?
     let windowUUID: WindowUUID = .XCTestDefaultUUID

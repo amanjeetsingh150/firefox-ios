@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 import Common
 import Shared
 @testable import Client
 
 @MainActor
-class TabTests: XCTestCase {
+class TabTests: LeakDetectingTestCase {
     var mockProfile: MockProfile!
     private var tabDelegate: MockLegacyTabDelegate!
     let windowUUID: WindowUUID = .XCTestDefaultUUID

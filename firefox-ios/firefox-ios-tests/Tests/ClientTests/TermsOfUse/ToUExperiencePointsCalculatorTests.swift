@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Shared
 @testable import Client
 
-final class ToUExperiencePointsCalculatorTests: XCTestCase {
+final class ToUExperiencePointsCalculatorTests: LeakDetectingTestCase {
     var userDefaults: MockUserDefaults!
 
     override func setUp() {

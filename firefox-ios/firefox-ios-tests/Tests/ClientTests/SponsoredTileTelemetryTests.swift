@@ -6,9 +6,10 @@
 
 import Glean
 import XCTest
+import TestKit
 import Storage
 
-class SponsoredTileGleanTelemetryTests: XCTestCase {
+class SponsoredTileGleanTelemetryTests: LeakDetectingTestCase {
     private var gleanWrapper: MockGleanWrapper!
 
     override func setUp() {

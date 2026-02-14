@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 import WebKit
 
 @MainActor
-final class TranslationsSchemeHandlerTests: XCTestCase {
+final class TranslationsSchemeHandlerTests: LeakDetectingTestCase {
     func test_start_validModelsRequest_sendsResponseAndFinishes() {
         let subject = createSubject()
         let url = URL(string: "translations://app/translator")!

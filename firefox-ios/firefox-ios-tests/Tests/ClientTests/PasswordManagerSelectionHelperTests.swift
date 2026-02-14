@@ -4,9 +4,10 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import MozillaAppServices
 
-class PasswordManagerSelectionHelperTests: XCTestCase {
+class PasswordManagerSelectionHelperTests: LeakDetectingTestCase {
     private var selectionHelper: PasswordManagerSelectionHelper!
     private let loginRecord = Login(
         credentials: URLCredential(

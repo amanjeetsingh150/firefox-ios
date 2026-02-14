@@ -6,10 +6,11 @@ import Foundation
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-class LoginListViewModelTests: XCTestCase {
+class LoginListViewModelTests: LeakDetectingTestCase {
     @MainActor
     func testInitialization() {
         let viewModel = LoginListViewModel(

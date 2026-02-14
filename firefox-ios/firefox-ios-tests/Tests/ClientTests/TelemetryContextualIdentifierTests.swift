@@ -6,8 +6,9 @@
 
 import Glean
 import XCTest
+import TestKit
 
-class TelemetryContextualIdentifierTests: XCTestCase {
+class TelemetryContextualIdentifierTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

@@ -4,11 +4,12 @@
 
 import Redux
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
-final class TabTrayStateTests: XCTestCase {
+final class TabTrayStateTests: LeakDetectingTestCase {
     func testInitialState() {
         let initialState = createSubject()
 

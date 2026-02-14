@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 @testable import Client
 
 @MainActor
-final class BridgeTests: XCTestCase {
+final class BridgeTests: LeakDetectingTestCase {
     func test_bridge_receiveFromA_forwardsToB() {
         let subject = createSubject(aName: "a", bName: "b")
         subject.bridge.receive(handlerName: "a", body: ["foo": "bar"])

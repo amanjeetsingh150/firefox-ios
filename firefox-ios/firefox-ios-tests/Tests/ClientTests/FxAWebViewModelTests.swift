@@ -4,10 +4,11 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import PDFKit
 
 @MainActor
-class FxAWebViewModelTests: XCTestCase {
+class FxAWebViewModelTests: LeakDetectingTestCase {
     var viewModel: FxAWebViewModel!
     var deeplinkParams: FxALaunchParams!
 

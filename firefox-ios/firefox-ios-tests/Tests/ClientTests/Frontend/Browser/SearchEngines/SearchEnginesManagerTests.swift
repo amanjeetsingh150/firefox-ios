@@ -5,11 +5,12 @@
 @testable import Client
 import Foundation
 import XCTest
+import TestKit
 import Common
 import Shared
 
 @MainActor
-class SearchEnginesManagerTests: XCTestCase {
+class SearchEnginesManagerTests: LeakDetectingTestCase {
     private let defaultSearchEngineName = "ATester"
     private let expectedEngineNames = ["ATester", "BTester", "CTester", "DTester", "ETester", "FTester"]
     private var profile: Profile!

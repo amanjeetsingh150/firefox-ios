@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 import Shared
 import Common
 
 @MainActor
-class VersionSettingTests: XCTestCase {
+class VersionSettingTests: LeakDetectingTestCase {
     private var delegate: MockDebugSettingsDelegate!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 

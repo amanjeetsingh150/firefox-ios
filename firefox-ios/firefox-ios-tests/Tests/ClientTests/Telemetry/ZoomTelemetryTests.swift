@@ -4,10 +4,11 @@
 
 import Glean
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ZoomTelemetryTests: XCTestCase {
+final class ZoomTelemetryTests: LeakDetectingTestCase {
     var subject: ZoomTelemetry?
     var gleanWrapper: MockGleanWrapper!
 

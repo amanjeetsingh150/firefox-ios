@@ -4,6 +4,7 @@
 
 import Foundation
 import XCTest
+import TestKit
 import TabDataStore
 import WebKit
 import Shared
@@ -14,7 +15,7 @@ import Common
 // This is unavoidable with the current architecture given a new tab is created as a side effect. For these tabs, if the test
 // isn't run on the main thread, then in its deinit the webView.navigationDelegate is updated not on the main thread, causing
 // failures in Bitrise. This should be improved. [FXIOS-10110]
-class TabManagerTests: XCTestCase {
+class TabManagerTests: LeakDetectingTestCase {
     var tabWindowUUID: WindowUUID!
     var mockTabStore: MockTabDataStore!
     var mockSessionStore: MockTabSessionStore!

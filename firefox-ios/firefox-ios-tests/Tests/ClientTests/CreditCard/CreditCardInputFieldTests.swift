@@ -6,11 +6,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 import SwiftUI
 import Common
 @testable import Client
 
-class CreditCardInputFieldTests: XCTestCase {
+class CreditCardInputFieldTests: LeakDetectingTestCase {
     var profile: MockProfile!
     var viewModel: CreditCardInputViewModel!
 

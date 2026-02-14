@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class CGRectExtensionsTests: XCTestCase {
+final class CGRectExtensionsTests: LeakDetectingTestCase {
     // MARK: - init(width:height:)
 
     func testInitWithWidthHeight_createsRectAtOrigin() {

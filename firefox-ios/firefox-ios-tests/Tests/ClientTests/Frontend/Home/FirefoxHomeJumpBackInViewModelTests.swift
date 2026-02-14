@@ -4,11 +4,12 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 import Storage
 import Shared
 
-class FirefoxHomeJumpBackInViewModelTests: XCTestCase {
+class FirefoxHomeJumpBackInViewModelTests: LeakDetectingTestCase {
     var subject: JumpBackInViewModel!
 
     var mockProfile: MockProfile!

@@ -4,9 +4,10 @@
 
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 @testable import Client
 
-final class TitleSubtitleActivityItemProviderTests: XCTestCase {
+final class TitleSubtitleActivityItemProviderTests: LeakDetectingTestCase {
     let testMessage = "Test message"
     let testSubtitle = "Test subtitle"
     let testFileURL = URL(string: "file://some/file/url")!

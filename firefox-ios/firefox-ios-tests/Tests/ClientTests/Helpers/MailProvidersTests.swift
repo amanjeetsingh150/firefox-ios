@@ -5,8 +5,9 @@
 @testable import Client
 
 import XCTest
+import TestKit
 
-class MailProvidersTests: XCTestCase {
+class MailProvidersTests: LeakDetectingTestCase {
     let toEmail = "name1@test.com"
     let ccEmail = "name2@test.com"
     let bccEmail = "name3@test.com"

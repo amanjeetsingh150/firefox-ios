@@ -7,10 +7,11 @@ import MozillaAppServices
 import Storage
 import WebKit
 import XCTest
+import TestKit
 
 @testable import Client
 
-class SponsoredContentFilterUtilityTests: XCTestCase {
+class SponsoredContentFilterUtilityTests: LeakDetectingTestCase {
     private static let sponsoredStandardURL = "www.test.com/?parameter&mfadid=adm"
     private let normalURL = "www.test.com/?parameter&parameter"
     let windowUUID: WindowUUID = .XCTestDefaultUUID

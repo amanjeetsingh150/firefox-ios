@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class GeneralizedImageFetcherTests: XCTestCase {
+final class GeneralizedImageFetcherTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
 

@@ -6,10 +6,11 @@ import Foundation
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-class CreditCardInputViewModelTests: XCTestCase {
+class CreditCardInputViewModelTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var viewModel: CreditCardInputViewModel!
     private var files: FileAccessor!

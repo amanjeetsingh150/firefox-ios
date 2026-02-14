@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class MicrosurveySurfaceManagerTests: XCTestCase {
+final class MicrosurveySurfaceManagerTests: LeakDetectingTestCase {
     private var messageManager: MockGleanPlumbMessageManagerProtocol!
 
     override func setUp() async throws {

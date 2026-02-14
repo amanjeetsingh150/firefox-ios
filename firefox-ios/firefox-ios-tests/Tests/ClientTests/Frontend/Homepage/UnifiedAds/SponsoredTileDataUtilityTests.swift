@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Storage
 @testable import Client
 
-class SponsoredTileDataUtilityTests: XCTestCase {
+class SponsoredTileDataUtilityTests: LeakDetectingTestCase {
     var subject: SponsoredTileDataUtilityInterface!
 
     // MARK: Stubs

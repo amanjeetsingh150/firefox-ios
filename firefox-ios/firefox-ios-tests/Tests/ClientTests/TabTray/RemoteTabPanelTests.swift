@@ -5,10 +5,11 @@
 import Common
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class RemoteTabPanelTests: XCTestCase {
+final class RemoteTabPanelTests: LeakDetectingTestCase {
     override func setUp() async throws {
         try await super.setUp()
         await DependencyHelperMock().bootstrapDependencies()

@@ -5,10 +5,11 @@
 import Common
 import UIKit
 import XCTest
+import TestKit
 import Shared
 import WebKit
 
-class ClientTests: XCTestCase {
+class ClientTests: LeakDetectingTestCase {
     @MainActor
     func testSyncUA() {
         let ua = UserAgent.syncUserAgent

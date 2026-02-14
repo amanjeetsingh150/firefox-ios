@@ -5,8 +5,9 @@
 import Foundation
 
 import XCTest
+import TestKit
 
-class MockUserDefaultsTests: XCTestCase {
+class MockUserDefaultsTests: LeakDetectingTestCase {
     // MARK: - Properties
     var sut: MockUserDefaults!
 

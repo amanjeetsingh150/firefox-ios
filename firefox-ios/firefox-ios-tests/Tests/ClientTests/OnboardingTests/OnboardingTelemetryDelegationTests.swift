@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Glean
 
 @testable import Client
 
 @MainActor
-class OnboardingTelemetryDelegationTests: XCTestCase {
+class OnboardingTelemetryDelegationTests: LeakDetectingTestCase {
     var nimbusUtility: NimbusOnboardingTestingConfigUtility!
     typealias cards = NimbusOnboardingTestingConfigUtility.CardOrder
 

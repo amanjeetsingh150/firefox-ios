@@ -4,10 +4,11 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
-class WallpaperURLProviderTests: XCTestCase {
+class WallpaperURLProviderTests: LeakDetectingTestCase {
     let testURL = WallpaperURLProvider.testURL
 
     func testMetadataURL() {

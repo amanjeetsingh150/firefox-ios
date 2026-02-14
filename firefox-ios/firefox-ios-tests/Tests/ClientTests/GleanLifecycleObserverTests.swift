@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 final class MockGleanUsageReportingMetricsService: GleanUsageReportingMetricsService {}
@@ -70,7 +71,7 @@ final class MockGleanLifecycleObserver: GleanLifecycleObserver, @unchecked Senda
     }
 }
 
-final class GleanLifecycleObserverTests: XCTestCase {
+final class GleanLifecycleObserverTests: LeakDetectingTestCase {
     var mockGleanUsageReportingApi: MockGleanUsageReportingApi!
     var gleanLifecycleObserver: GleanLifecycleObserver!
     let notificationCenter = NotificationCenter()

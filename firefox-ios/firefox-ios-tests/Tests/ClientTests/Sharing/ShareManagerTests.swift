@@ -4,12 +4,13 @@
 
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 import Shared
 
 @testable import Client
 
 @MainActor
-final class ShareManagerTests: XCTestCase {
+final class ShareManagerTests: LeakDetectingTestCase {
     let testMessage = "Test message"
     let testSubtitle = "Test subtitle"
     let testFileURL = URL(string: "file://some/file/url")!

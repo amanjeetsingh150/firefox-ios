@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import MozillaRustComponents
 import Shared
 
 @testable import Client
 
 @MainActor
-final class EditFolderViewModelTests: XCTestCase {
+final class EditFolderViewModelTests: LeakDetectingTestCase {
     let folder = MockFxBookmarkNode(type: .folder,
                                     guid: "1235",
                                     position: 1,

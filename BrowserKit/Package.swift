@@ -85,6 +85,9 @@ let package = Package(
         .package(
             url: "https://github.com/johnxnguyen/Down.git",
             exact: "0.11.0"),
+        .package(
+            url: "https://github.com/amanjeetsingh150/XCTestLeaks",
+            from: "1.0.0"),
     ],
     targets: [
         .target(
@@ -180,7 +183,10 @@ let package = Package(
             swiftSettings: [
             ]
         ),
-        .target(name: "TestKit"),
+        .target(name: "TestKit",
+                dependencies: [
+                    .product(name: "XCTestLeaksClient", package: "XCTestLeaks"),
+                ]),
         .target(
             name: "ToolbarKit",
             dependencies: ["Common"],

@@ -4,11 +4,12 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 import Storage
 import Common
 
-class JumpBackInViewModelTests: XCTestCase {
+class JumpBackInViewModelTests: LeakDetectingTestCase {
     var mockProfile: MockProfile!
     var mockTabManager: MockTabManager!
 

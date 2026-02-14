@@ -1,0 +1,48 @@
+name: "Firefox XCTestLeaks Detection"
+
+on:
+    workflow_dispatch: {}
+
+env:
+    browser: firefox-ios
+    xcode_version: 16.2
+    ios_version: 18.2
+    ios_simulator_default: iPhone 16
+    xcodebuild_scheme: Fennec
+    xcodebuild_target: Client
+
+jobs:
+    run-leak-detection:
+        name: Run Leak Detection
+        runs-on: macos-15
+        steps:
+            - name: Check out source code
+              uses: actions/checkout@v4.1.7
+
+            - name: Setup Xcode
+              run: |
+                sudo rm -rf /Applications/Xcode.app
+                sudo xcode-select -s /Applications/Xcode_${{ env.xcode_version }}.app/Contents/Developer
+                xcodebuild -version
+                ./bootstrap.sh focus
+                ./bootstrap.sh firefox --force
+
+            - name: Install XCTestLeaks
+              run: brew install amanjeetsingh150/tap/xctestleaks
+
+            - name: Run XCTestLeaks
+              run: |
+                xctestleaks run \
+                  --project ./${{ env.browser }}/Client.xcodeproj \
+                  --scheme ${{ env.xcodebuild_scheme }} \
+                  --destination "platform=iOS Simulator,OS=${{ env.ios_version }},name=${{ env.ios_simulator_default }}" \
+                  --output-dir ./leak_artifacts \
+                  --html-output
+
+            - name: Upload Leak Report
+              if: always()
+              uses: actions/upload-artifact@v4.3.4
+              with:
+                name: xctestleaks-report-${{ github.run_number }}
+                path: ./leak_artifacts/
+                retention-days: 90

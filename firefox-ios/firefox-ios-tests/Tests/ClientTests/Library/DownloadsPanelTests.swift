@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
 @MainActor
-class DownloadsPanelTests: XCTestCase {
+class DownloadsPanelTests: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
     override func setUp() async throws {
         try await super.setUp()

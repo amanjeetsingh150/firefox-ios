@@ -4,8 +4,9 @@
 
 import Foundation
 import XCTest
+import TestKit
 
-class WallpaperNetworkingTests: XCTestCase {
+class WallpaperNetworkingTests: LeakDetectingTestCase {
     var networking: NetworkingMock!
 
     override func setUp() {

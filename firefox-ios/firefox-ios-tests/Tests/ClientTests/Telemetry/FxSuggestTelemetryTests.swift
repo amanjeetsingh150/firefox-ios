@@ -5,10 +5,11 @@
 import Glean
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class FxSuggestTelemetryTests: XCTestCase {
+final class FxSuggestTelemetryTests: LeakDetectingTestCase {
     private var gleanWrapper: MockGleanWrapper!
 
     @MainActor

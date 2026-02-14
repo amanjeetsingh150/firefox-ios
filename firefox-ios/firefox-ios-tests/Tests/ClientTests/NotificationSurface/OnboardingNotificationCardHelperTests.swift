@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
-class OnboardingNotificationCardHelperTests: XCTestCase {
+class OnboardingNotificationCardHelperTests: LeakDetectingTestCase {
     var nimbusUtility: NimbusOnboardingTestingConfigUtility!
     typealias cards = NimbusOnboardingTestingConfigUtility.CardOrder
 

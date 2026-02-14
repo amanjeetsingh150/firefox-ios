@@ -4,11 +4,12 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class IntroViewControllerTests: XCTestCase {
+class IntroViewControllerTests: LeakDetectingTestCase {
     var mockNotificationCenter: MockNotificationCenter!
 
     override func setUp() async throws {

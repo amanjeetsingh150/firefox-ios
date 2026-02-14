@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 import Shared
 
-final class TermsOfUseLinkTypeTests: XCTestCase {
+final class TermsOfUseLinkTypeTests: LeakDetectingTestCase {
     func testAllCases_ContainsAllLinkTypes() {
         let allCases = TermsOfUseLinkType.allCases
         XCTAssertEqual(allCases.count, 4)

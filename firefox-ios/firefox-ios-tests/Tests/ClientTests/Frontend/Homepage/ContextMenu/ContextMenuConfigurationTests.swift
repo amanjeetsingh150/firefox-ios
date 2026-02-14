@@ -5,11 +5,12 @@
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class ContextMenuConfigurationTests: XCTestCase {
+final class ContextMenuConfigurationTests: LeakDetectingTestCase {
     func tests_initialState_forMerinoItem_returnsExpectedState() {
         let merinoItem: HomepageItem = .merino(
             MerinoStoryConfiguration(

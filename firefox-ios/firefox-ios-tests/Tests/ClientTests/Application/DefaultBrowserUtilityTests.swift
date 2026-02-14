@@ -5,10 +5,11 @@
 import Glean
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class DefaultBrowserUtilityTests: XCTestCase {
+final class DefaultBrowserUtilityTests: LeakDetectingTestCase {
     typealias DefaultKeys = DefaultBrowserUtility.UserDefaultsKey
 
     var subject: DefaultBrowserUtility!

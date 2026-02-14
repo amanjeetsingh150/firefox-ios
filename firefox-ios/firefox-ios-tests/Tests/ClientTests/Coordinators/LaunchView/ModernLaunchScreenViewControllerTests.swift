@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 @testable import Client
 
 // MARK: - ModernLaunchScreenViewController Tests
 @MainActor
-final class ModernLaunchScreenViewControllerTests: XCTestCase {
+final class ModernLaunchScreenViewControllerTests: LeakDetectingTestCase {
     // MARK: - Test Properties
     private var viewModel: MockLaunchScreenViewModel!
     private var coordinatorDelegate: MockLaunchFinishedLoadingDelegate!

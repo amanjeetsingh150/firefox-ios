@@ -5,9 +5,10 @@
 @testable import Client
 
 import XCTest
+import TestKit
 import Common
 
-class StartAtHomeHelperTests: XCTestCase {
+class StartAtHomeHelperTests: LeakDetectingTestCase {
     private var helper: StartAtHomeHelper!
     private var profile: MockProfile!
     private var tabManager: MockTabManager!

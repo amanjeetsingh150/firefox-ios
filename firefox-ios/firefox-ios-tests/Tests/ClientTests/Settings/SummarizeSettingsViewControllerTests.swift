@@ -4,11 +4,12 @@
 
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class SummarizeSettingsViewControllerTests: XCTestCase {
+final class SummarizeSettingsViewControllerTests: LeakDetectingTestCase {
     private var profile: Profile!
 
     override func setUp() async throws {

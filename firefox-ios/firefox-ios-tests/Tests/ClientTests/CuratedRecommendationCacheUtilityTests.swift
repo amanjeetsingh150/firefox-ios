@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import MozillaAppServices
 
 @testable import Client
 
 @MainActor
-final class CuratedRecommendationCacheUtilityTests: XCTestCase {
+final class CuratedRecommendationCacheUtilityTests: LeakDetectingTestCase {
     var testFileURL: URL!
 
     override func tearDown() async throws {

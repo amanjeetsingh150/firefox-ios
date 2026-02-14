@@ -4,11 +4,12 @@
 
 import Common
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class TabDisplayDiffableDataSourceTests: XCTestCase {
+final class TabDisplayDiffableDataSourceTests: LeakDetectingTestCase {
     var diffableDataSource: TabDisplayDiffableDataSource?
 
     override func setUp() async throws {

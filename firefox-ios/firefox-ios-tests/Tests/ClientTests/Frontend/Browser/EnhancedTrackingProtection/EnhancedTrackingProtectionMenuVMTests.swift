@@ -4,9 +4,10 @@
 
 import Foundation
 import XCTest
+import TestKit
 @testable import Client
 
-class EnhancedTrackingProtectionMenuVMTests: XCTestCase {
+class EnhancedTrackingProtectionMenuVMTests: LeakDetectingTestCase {
     func test_websiteTitle_whenURLHasBaseDomainDeliversCorrectTitle() {
         let sut = makeSUT(url: URL(string: "https://firefox.com")!)
 

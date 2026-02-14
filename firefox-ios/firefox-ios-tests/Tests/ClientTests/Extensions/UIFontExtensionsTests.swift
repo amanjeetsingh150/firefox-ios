@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class UIFontExtensionsTests: XCTestCase {
+final class UIFontExtensionsTests: LeakDetectingTestCase {
     // MARK: - bolded()
     func testBolded_addsTraitBold() {
         let font = UIFont.systemFont(ofSize: 16)

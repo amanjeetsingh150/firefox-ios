@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import UIKit
 import OnboardingKit
 @testable import Client
 
-class OnboardingKitCardInfoModelTests: XCTestCase {
+class OnboardingKitCardInfoModelTests: LeakDetectingTestCase {
     func testDefaultSelectedButton_EmptyButtonsArray() {
         let model = createModel(multipleChoiceButtons: [])
 

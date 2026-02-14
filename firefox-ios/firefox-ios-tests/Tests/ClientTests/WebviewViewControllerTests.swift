@@ -5,11 +5,12 @@
 import Common
 import Storage
 import XCTest
+import TestKit
 import Glean
 
 @testable import Client
 // TODO: FXIOS-12158 Add back after investigating why video player is broken
-// class WebviewViewControllerTests: XCTestCase {
+// class WebviewViewControllerTests: LeakDetectingTestCase {
 //    var webview: MockWKWebView!
 //
 //    override func setUp() {

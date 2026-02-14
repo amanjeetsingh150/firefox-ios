@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import Redux
 @testable import Client
 
-final class TermsOfUseStateTests: XCTestCase {
+final class TermsOfUseStateTests: LeakDetectingTestCase {
     let windowUUID = WindowUUID.XCTestDefaultUUID
 
     func testInit_WithWindowUUID_CreatesDefaultState() {

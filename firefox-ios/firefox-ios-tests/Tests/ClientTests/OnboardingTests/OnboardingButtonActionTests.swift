@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import OnboardingKit
 
 @testable import Client
 
 @MainActor
-class OnboardingButtonActionTests: XCTestCase {
+class OnboardingButtonActionTests: LeakDetectingTestCase {
     var mockDelegate: MockOnboardingCardDelegateController!
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 

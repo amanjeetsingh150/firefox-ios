@@ -6,10 +6,11 @@ import Foundation
 import Glean
 import MozillaAppServices
 import XCTest
+import TestKit
 
 @testable import Client
 
-class RecordedNimbusContextTests: XCTestCase {
+class RecordedNimbusContextTests: LeakDetectingTestCase {
     override func setUp() {
         Glean.shared.enableTestingMode()
         Glean.shared.resetGlean(clearStores: true)

@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class TabsCoordinatorTests: XCTestCase {
+final class TabsCoordinatorTests: LeakDetectingTestCase {
     private var mockRouter: MockRouter!
 
     override func setUp() async throws {

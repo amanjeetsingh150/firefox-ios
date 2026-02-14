@@ -5,10 +5,11 @@
 import Common
 import WebKit
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class ContentContainerTests: XCTestCase {
+final class ContentContainerTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var overlayModeManager: MockOverlayModeManager!
     private var tabManager: MockTabManager!

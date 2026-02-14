@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import ToolbarKit
 
 @MainActor
-final class LocationTextFieldTests: XCTestCase {
+final class LocationTextFieldTests: LeakDetectingTestCase {
     private var textField: LocationTextField!
     private var themeManager: MockThemeManager!
 

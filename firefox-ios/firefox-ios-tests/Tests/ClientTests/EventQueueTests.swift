@@ -6,6 +6,7 @@
 import Common
 import Foundation
 import XCTest
+import TestKit
 
 enum TestEvent: AppEventType {
     // Standard test events
@@ -23,7 +24,7 @@ enum TestEvent: AppEventType {
     case contextualEvent(Int)
 }
 
-final class EventQueueTests: XCTestCase {
+final class EventQueueTests: LeakDetectingTestCase {
     var queue: EventQueue<TestEvent>!
 
     override func setUp() {

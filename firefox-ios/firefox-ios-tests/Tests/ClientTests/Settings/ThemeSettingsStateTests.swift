@@ -5,10 +5,11 @@
 import Common
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class ThemeSettingsStateTests: XCTestCase {
+final class ThemeSettingsStateTests: LeakDetectingTestCase {
     // MARK: - Initialization Tests
 
     func test_initWithWindowUUID_returnsDefaultState() {

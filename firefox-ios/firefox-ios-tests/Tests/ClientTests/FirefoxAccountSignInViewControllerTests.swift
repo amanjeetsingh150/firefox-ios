@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 
 @testable import Client
 
-final class FirefoxAccountSignInViewControllerTests: XCTestCase {
+final class FirefoxAccountSignInViewControllerTests: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
     private var mockProfile: MockProfile!
     var deeplinkParams: FxALaunchParams!

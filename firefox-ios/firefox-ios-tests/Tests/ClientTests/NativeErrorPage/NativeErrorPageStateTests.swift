@@ -4,10 +4,11 @@
 
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class NativeErrorPageStateTests: XCTestCase {
+final class NativeErrorPageStateTests: LeakDetectingTestCase {
     func testInitialState() {
         let initialState = createSubject()
 

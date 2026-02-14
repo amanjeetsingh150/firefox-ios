@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
-class GleanUsageReportingLifecycleObserverTest: XCTestCase {
+class GleanUsageReportingLifecycleObserverTest: LeakDetectingTestCase {
     private var fakeGleanUsageReportingApi: MockGleanUsageReportingApi!
 
     override func setUp() {

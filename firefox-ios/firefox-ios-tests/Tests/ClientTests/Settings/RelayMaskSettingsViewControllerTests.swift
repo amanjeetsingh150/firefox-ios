@@ -5,11 +5,12 @@
 import Testing
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class RelayMaskSettingsViewControllerTests: XCTestCase {
+final class RelayMaskSettingsViewControllerTests: LeakDetectingTestCase {
     private var profile: Profile!
     private var tabManager: MockTabManager!
 

@@ -4,11 +4,12 @@
 #if canImport(FoundationModels)
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
 @available(iOS 26, *)
-final class AppleIntelligenceUtilTests: XCTestCase {
+final class AppleIntelligenceUtilTests: LeakDetectingTestCase {
     var userDefaults: MockUserDefaults!
     override func setUp() {
         super.setUp()

@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
-class URLScannerTests: XCTestCase {
+class URLScannerTests: LeakDetectingTestCase {
     func testValidURL() {
         let urlString = "https://www.example.com/path/to/resource?key=value"
         let url = URL(string: urlString)!

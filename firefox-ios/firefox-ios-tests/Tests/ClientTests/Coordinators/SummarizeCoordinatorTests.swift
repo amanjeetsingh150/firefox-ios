@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Common
 import SummarizeKit
 import Shared
@@ -36,7 +37,7 @@ class MockSummarizerServiceFactory: SummarizerServiceFactory {
 }
 
 @MainActor
-final class SummarizeCoordinatorTests: XCTestCase {
+final class SummarizeCoordinatorTests: LeakDetectingTestCase {
     private var browserViewController: MockBrowserViewController!
     private var router: MockRouter!
     private var parentCoordinator: MockParentCoordinator!

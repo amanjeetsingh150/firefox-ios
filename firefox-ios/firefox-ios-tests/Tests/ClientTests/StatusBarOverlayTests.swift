@@ -7,9 +7,10 @@
 import Common
 import Shared
 import XCTest
+import TestKit
 
 @MainActor
-final class StatusBarOverlayTests: XCTestCase {
+final class StatusBarOverlayTests: LeakDetectingTestCase {
     private var profile: MockProfile!
     private var wallpaperManager: WallpaperManagerMock!
     private var notificationCenter: MockNotificationCenter!

@@ -6,8 +6,9 @@
 import UIKit
 import Common
 import XCTest
+import TestKit
 
-class CustomSearchEnginesTest: XCTestCase {
+class CustomSearchEnginesTest: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
     override func setUp() async throws {
         try await super.setUp()

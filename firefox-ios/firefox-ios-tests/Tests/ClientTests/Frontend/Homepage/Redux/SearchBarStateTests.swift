@@ -5,10 +5,11 @@
 import Common
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class SearchBarStateTests: XCTestCase {
+final class SearchBarStateTests: LeakDetectingTestCase {
     func tests_initialState_returnsExpectedState() {
         let initialState = createSubject()
 

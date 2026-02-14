@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Shared
 
-final class DateGroupedTableDataTests: XCTestCase {
+final class DateGroupedTableDataTests: LeakDetectingTestCase {
     // Timestamps that fall in the middle of the default time intervals
     let twelveHoursAgo = Calendar.current.date(byAdding: .hour, value: -12, to: Date()) ?? Date()
     let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()

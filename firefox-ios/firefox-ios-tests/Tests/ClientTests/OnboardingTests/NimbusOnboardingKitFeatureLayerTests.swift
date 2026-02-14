@@ -4,11 +4,12 @@
 
 import MozillaAppServices
 import XCTest
+import TestKit
 import OnboardingKit
 
 @testable import Client
 
-class NimbusOnboardingKitFeatureLayerTests: XCTestCase {
+class NimbusOnboardingKitFeatureLayerTests: LeakDetectingTestCase {
     typealias CardElementNames = NimbusOnboardingTestingConfigUtility.CardElementNames
 
     var configUtility: NimbusOnboardingTestingConfigUtility!

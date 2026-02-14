@@ -7,9 +7,10 @@ import Foundation
 import WebKit
 import GCDWebServers
 import XCTest
+import TestKit
 import Common
 
-class TabEventHandlerTests: XCTestCase {
+class TabEventHandlerTests: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID
 
     override func setUp() async throws {

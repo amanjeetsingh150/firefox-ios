@@ -5,10 +5,11 @@
 import UIKit
 import GCDWebServers
 import XCTest
+import TestKit
 
 /// Minimal web server tests. This class can be used as a base class for tests that need a real web server.
 /// Simply add additional handlers your test class' setUp() method.
-class WebServerTests: XCTestCase {
+class WebServerTests: LeakDetectingTestCase {
     var webServer: GCDWebServer!
     var webServerBase: String!
 

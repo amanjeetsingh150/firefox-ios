@@ -7,8 +7,9 @@
 // @testable import Client
 // import MozillaAppServices
 // import XCTest
+import TestKit
 //
-// class NimbusFeatureFlagLayerTests: XCTestCase {
+// class NimbusFeatureFlagLayerTests: LeakDetectingTestCase {
 //
 //    override func setUp() {
 //        super.setUp()

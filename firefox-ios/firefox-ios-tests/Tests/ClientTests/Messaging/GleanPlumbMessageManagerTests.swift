@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Glean
 
 @testable import Client
@@ -28,7 +29,7 @@ import MozillaAppServices
 //    "GleanPlumbMessageManagerTests\/testManagerOnMessagePressed_linkWithEmbeddedParamAndOneActionParam()",
 //    "GleanPlumbMessageManagerTests\/testManagerOnMessagePressed_linkWithOneParam()",
 //    "GleanPlumbMessageManagerTests\/testManagerOnMessagePressed_linkWithScheme()",
-class GleanPlumbMessageManagerTests: XCTestCase {
+class GleanPlumbMessageManagerTests: LeakDetectingTestCase {
     var subject: GleanPlumbMessageManager!
     var messagingStore: MockGleanPlumbMessageStore!
     var applicationHelper: MockApplicationHelper!

@@ -6,11 +6,12 @@ import Foundation
 import MozillaAppServices
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-class TestHistory: XCTestCase {
+class TestHistory: LeakDetectingTestCase {
     var profile: MockProfile!
     let numThreads = 5
 

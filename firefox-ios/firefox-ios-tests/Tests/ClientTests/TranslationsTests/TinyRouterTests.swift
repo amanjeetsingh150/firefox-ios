@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 @testable import Client
 
 @MainActor
-final class TinyRouterTests: XCTestCase {
+final class TinyRouterTests: LeakDetectingTestCase {
     func test_route_exactMatch_returnsReply() async throws {
         let route = MockRoute(replyText: "A")
         let subject = createSubject()

@@ -3,10 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 import Foundation
 import XCTest
+import TestKit
 
 @testable import Client
 
-final class SystemLocaleProviderTests: XCTestCase {
+final class SystemLocaleProviderTests: LeakDetectingTestCase {
     private var logger: MockLogger!
 
     override func setUp() {

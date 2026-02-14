@@ -5,12 +5,13 @@
 import Foundation
 import Glean
 import XCTest
+import TestKit
 import Storage
 
 @testable import Client
 
 @MainActor
-final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
+final class UnifiedAdsCallbackTelemetryTests: LeakDetectingTestCase {
     private var networking: MockUnifiedTileNetworking!
     private var logger: MockLogger!
     private var gleanWrapper: MockGleanWrapper!

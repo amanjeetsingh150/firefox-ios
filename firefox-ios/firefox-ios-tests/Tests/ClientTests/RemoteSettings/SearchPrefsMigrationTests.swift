@@ -4,9 +4,10 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 
-class SearchPrefsMigrationTests: XCTestCase {
+class SearchPrefsMigrationTests: LeakDetectingTestCase {
     private let mockV1Prefs: SearchEnginePrefs = {
         let engines = ["Google", "MyWebsite", "Wikipedia", "DuckDuckGo"]
         let disabled = ["Wikipedia"]

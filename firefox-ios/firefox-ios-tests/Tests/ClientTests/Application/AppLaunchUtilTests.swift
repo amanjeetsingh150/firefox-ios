@@ -4,11 +4,12 @@
 
 import Shared
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class AppLaunchUtilTests: XCTestCase {
+final class AppLaunchUtilTests: LeakDetectingTestCase {
     var profile: MockProfile!
 
     override func setUp() async throws {

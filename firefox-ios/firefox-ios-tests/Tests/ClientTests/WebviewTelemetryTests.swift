@@ -6,8 +6,9 @@
 
 import Glean
 import XCTest
+import TestKit
 
-class WebviewTelemetryTests: XCTestCase {
+class WebviewTelemetryTests: LeakDetectingTestCase {
     var mockGleanWrapper: MockGleanWrapper!
 
     override func setUp() {

@@ -3,11 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import WebKit
 @testable import Client
 
 @MainActor
-final class TranslationsServiceTests: XCTestCase {
+final class TranslationsServiceTests: LeakDetectingTestCase {
     private var mockProfile: MockProfile!
     private var mockWindowManager: MockWindowManager!
     private var mockTabManager: MockTabManager!

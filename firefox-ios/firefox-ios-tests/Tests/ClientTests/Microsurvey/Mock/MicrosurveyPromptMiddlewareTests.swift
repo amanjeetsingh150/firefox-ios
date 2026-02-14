@@ -4,11 +4,12 @@
 
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class MicrosurveyPromptMiddlewareTests: XCTestCase {
+final class MicrosurveyPromptMiddlewareTests: LeakDetectingTestCase {
     private var mockMicrosurveyManager: MockMicrosurveySurfaceManager!
     var mockStore: MockStoreForMiddleware<AppState>!
 

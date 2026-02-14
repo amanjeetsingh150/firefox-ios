@@ -5,11 +5,12 @@
 import Testing
 
 import XCTest
+import TestKit
 
 @testable import Client
 
 @MainActor
-final class BrowsingSettingsViewControllerTests: XCTestCase {
+final class BrowsingSettingsViewControllerTests: LeakDetectingTestCase {
     private var profile: Profile!
     private var delegate: MockSettingsDelegate!
 

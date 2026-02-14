@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 import Storage
 import MozillaAppServices
 
 @testable import Client
 
 @MainActor
-final class HomepageDiffableDataSourceTests: XCTestCase {
+final class HomepageDiffableDataSourceTests: LeakDetectingTestCase {
     var collectionView: UICollectionView?
     var diffableDataSource: HomepageDiffableDataSource?
 
