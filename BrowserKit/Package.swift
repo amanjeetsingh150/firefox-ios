@@ -87,7 +87,7 @@ let package = Package(
             exact: "0.11.0"),
         .package(
             url: "https://github.com/amanjeetsingh150/XCTestLeaks",
-            from: "1.0.0"),
+            from: "0.1.4"),
     ],
     targets: [
         .target(
