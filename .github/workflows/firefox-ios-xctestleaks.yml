@@ -30,7 +30,7 @@ jobs:
                 ./bootstrap.sh firefox --force
 
             - name: Install XCTestLeaks
-              run: brew install amanjeetsingh150/tap/xctestleaks
+              run: brew install amanjeetsingh150/xctestleaks/xctestleaks
 
             - name: Run XCTestLeaks
               run: |
