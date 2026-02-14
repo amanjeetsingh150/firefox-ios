@@ -1,6 +1,9 @@
 name: "Firefox XCTestLeaks Detection"
 
 on:
+    push:
+        branches:
+            - xctestleaks-report
     workflow_dispatch: {}
 
 env:
