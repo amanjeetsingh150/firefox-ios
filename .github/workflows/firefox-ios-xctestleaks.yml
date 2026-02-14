@@ -10,7 +10,7 @@ env:
     browser: firefox-ios
     xcode_version: 26.2
     ios_version: 26.2
-    ios_simulator_default: iPhone 16 Pro
+    ios_simulator_default: iPhone 17
     xcodebuild_scheme: Fennec
     xcodebuild_target: Client
 
