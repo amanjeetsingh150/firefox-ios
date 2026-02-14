@@ -6,6 +6,7 @@ import Foundation
 import Shared
 @testable import Storage
 import XCTest
+import TestKit
 
 class TestSQLiteReadingList: LeakDetectingTestCase {
     let files = MockFiles()

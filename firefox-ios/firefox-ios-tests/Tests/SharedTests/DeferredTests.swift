@@ -4,6 +4,7 @@
 
 @testable import Shared
 import XCTest
+import TestKit
 
 // Trivial test for using Deferred.
 class DeferredTests: LeakDetectingTestCase {

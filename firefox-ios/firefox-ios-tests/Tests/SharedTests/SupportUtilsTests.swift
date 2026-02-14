@@ -6,6 +6,7 @@ import Common
 import Foundation
 import Shared
 import XCTest
+import TestKit
 
 class SupportUtilsTests: LeakDetectingTestCase {
     func testURLForTopic() {

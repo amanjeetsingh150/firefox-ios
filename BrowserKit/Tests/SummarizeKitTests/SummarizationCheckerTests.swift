@@ -4,6 +4,7 @@
 
 @testable import SummarizeKit
 import XCTest
+import TestKit
 
 @MainActor
 final class SummarizationCheckerTests: LeakDetectingTestCase {

@@ -6,6 +6,7 @@ import Shared
 @testable import Storage
 import UIKit
 import XCTest
+import TestKit
 
 @MainActor
 class DiskImageStoreTests: LeakDetectingTestCase {

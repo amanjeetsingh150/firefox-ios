@@ -5,6 +5,7 @@
 import Foundation
 import Shared
 import XCTest
+import TestKit
 
 class DateExtensionsTests: LeakDetectingTestCase {
     struct KnownDate {

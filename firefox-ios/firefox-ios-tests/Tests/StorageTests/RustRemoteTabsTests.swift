@@ -5,6 +5,7 @@
 import MozillaAppServices
 import Shared
 import XCTest
+import TestKit
 
 @testable import Storage
 

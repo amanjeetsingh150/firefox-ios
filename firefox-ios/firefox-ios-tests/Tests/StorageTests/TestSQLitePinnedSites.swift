@@ -7,6 +7,7 @@ import Shared
 @testable import Storage
 
 import XCTest
+import TestKit
 
 class TestSQLitePinnedSites: LeakDetectingTestCase {
     let files = MockFiles()

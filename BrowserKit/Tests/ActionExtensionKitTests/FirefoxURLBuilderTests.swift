@@ -4,6 +4,8 @@
 
 import XCTest
 import UniformTypeIdentifiers
+import TestKit
+
 @testable import ActionExtensionKit
 
 final class FirefoxURLBuilderTests: LeakDetectingTestCase {

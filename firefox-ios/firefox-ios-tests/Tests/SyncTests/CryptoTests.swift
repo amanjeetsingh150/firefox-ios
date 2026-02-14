@@ -7,6 +7,7 @@ import UIKit
 import Shared
 
 import XCTest
+import TestKit
 
 class CryptoTests: LeakDetectingTestCase {
     let hmacB16 = "b1e6c18ac30deb70236bc0d65a46f7a4dce3b8b0e02cf92182b914e3afa5eebc"

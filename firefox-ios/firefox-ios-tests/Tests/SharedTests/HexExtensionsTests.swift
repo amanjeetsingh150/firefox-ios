@@ -4,6 +4,7 @@
 
 import Foundation
 import XCTest
+import TestKit
 
 class HexExtensionsTests: LeakDetectingTestCase {
     func testHexEncodedString() {

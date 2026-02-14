@@ -5,6 +5,7 @@
 import Common
 import UIKit
 import XCTest
+import TestKit
 @testable import Shared
 
 class NSURLExtensionsTests: LeakDetectingTestCase {

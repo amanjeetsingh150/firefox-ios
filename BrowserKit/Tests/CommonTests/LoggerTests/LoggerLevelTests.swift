@@ -4,6 +4,7 @@
 
 import Sentry
 import XCTest
+import TestKit
 @testable import Common
 
 class LoggerLevelTests: LeakDetectingTestCase {

@@ -7,6 +7,7 @@ import Foundation
 import Shared
 @testable import Storage
 import XCTest
+import TestKit
 
 // TODO: rewrite this test to not use BrowserSchema. It used to use HistoryTable…
 class TestSwiftData: LeakDetectingTestCase {

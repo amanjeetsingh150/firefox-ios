@@ -5,6 +5,7 @@
 import Foundation
 import Shared
 import XCTest
+import TestKit
 
 /**
  * Test for our own utils.

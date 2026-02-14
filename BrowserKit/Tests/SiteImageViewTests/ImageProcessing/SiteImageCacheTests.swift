@@ -4,6 +4,7 @@
 
 import Kingfisher
 import XCTest
+import TestKit
 @testable import SiteImageView
 
 final class SiteImageCacheTests: LeakDetectingTestCase {

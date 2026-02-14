@@ -5,6 +5,7 @@
 import Foundation
 import WebKit
 import XCTest
+import TestKit
 import Common
 @testable import WebEngine
 

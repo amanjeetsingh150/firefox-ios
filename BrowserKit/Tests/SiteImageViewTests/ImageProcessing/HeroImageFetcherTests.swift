@@ -4,6 +4,7 @@
 
 import LinkPresentation
 import XCTest
+import TestKit
 @testable import SiteImageView
 
 final class HeroImageFetcherTests: LeakDetectingTestCase {
