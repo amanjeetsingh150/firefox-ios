@@ -17398,6 +17398,7 @@
 				8AB30EC62B6C038600BD9A9B /* XCRemoteSwiftPackageReference "lottie-ios" */,
 				AB2AC6612BCFD0A200022AAB /* XCRemoteSwiftPackageReference "swift-certificates" */,
 				5A984D322C8A31A0007938C9 /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */,
 				1BFB58D52E4D1C7600643A48 /* XCLocalSwiftPackageReference "../MozillaRustComponents" */,
 			);
 			productRefGroup = F84B21BF1A090F8100AAB793 /* Products */;
@@ -31632,6 +31633,14 @@
 				version = 1.2.0;
 			};
 		};
+		C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/amanjeetsingh150/XCTestLeaks";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -31896,6 +31905,7 @@
 		};
 		C26B96D82F29188100D4B140 /* XCTestLeaksClient */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
 			productName = XCTestLeaksClient;
 		};
 		D433852B27ABC8150069DD33 /* MappaMundi */ = {

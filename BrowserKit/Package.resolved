@@ -1,5 +1,5 @@
 {
-  "originHash" : "c2fcd16d59d5f45bc52b2b311a2ac0ced1106d727da8b8081f57eafd6cd4aff7",
+  "originHash" : "2034ab3fc0e6132f945178b70b22f37090381914e9a8f368dddf4d82746589a0",
   "pins" : [
     {
       "identity" : "dip",
@@ -71,15 +71,6 @@
       "state" : {
         "revision" : "1080914828ef1c9ca9cd2bad50667b3d847dabff",
         "version" : "2.0.0"
-      }
-    },
-    {
-      "identity" : "xctestleaks",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/amanjeetsingh150/XCTestLeaks",
-      "state" : {
-        "revision" : "3e36d19da4c7e0538c8b3ae78dfde0ef0973e4a6",
-        "version" : "0.1.4"
       }
     }
   ],

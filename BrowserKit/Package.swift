@@ -85,9 +85,6 @@ let package = Package(
         .package(
             url: "https://github.com/johnxnguyen/Down.git",
             exact: "0.11.0"),
-        .package(
-            url: "https://github.com/amanjeetsingh150/XCTestLeaks",
-            from: "0.1.4"),
     ],
     targets: [
         .target(
