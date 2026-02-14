@@ -8,7 +8,7 @@ import WebKit
 
 @MainActor
 @available(iOS 16.0, *)
-final class WKEngineSessionTests: XCTestCase {
+final class WKEngineSessionTests: LeakDetectingTestCase {
     private var configurationProvider: MockWKEngineConfigurationProvider!
     private var webViewProvider: MockWKWebViewProvider!
     private var contentScriptManager: MockWKContentScriptManager!

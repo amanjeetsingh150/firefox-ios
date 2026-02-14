@@ -5,7 +5,7 @@
 import XCTest
 @testable import WebEngine
 
-final class URLExtensionTests: XCTestCase {
+final class URLExtensionTests: LeakDetectingTestCase {
     private let webserverPort = 6571
 
     // MARK: encodeReaderModeURL tests

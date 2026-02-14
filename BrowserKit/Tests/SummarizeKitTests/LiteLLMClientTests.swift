@@ -7,7 +7,7 @@ import Common
 @testable import SummarizeKit
 
 @MainActor
-final class LiteLLMClientTests: XCTestCase {
+final class LiteLLMClientTests: LeakDetectingTestCase {
     private static let mockAPIEndpoint = "https://test-api-url.com"
     private static let mockAPIKey =  "test-api-key"
     private static let mockMessages = [

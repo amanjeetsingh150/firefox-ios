@@ -5,7 +5,7 @@
 import XCTest
 @testable import WebEngine
 
-final class URLFormatterTests: XCTestCase {
+final class URLFormatterTests: LeakDetectingTestCase {
     // MARK: - Valid cases
 
     func testGetURLGivenInternalURLThenValidURL() {

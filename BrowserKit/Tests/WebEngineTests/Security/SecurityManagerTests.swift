@@ -6,7 +6,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-final class SecurityManagerTests: XCTestCase {
+final class SecurityManagerTests: LeakDetectingTestCase {
     // MARK: - Internal Navigation
 
     func testCanNavigateGivenInternalNotAUrlThenRefused() {

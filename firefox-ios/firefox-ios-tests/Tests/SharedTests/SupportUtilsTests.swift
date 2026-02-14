@@ -7,7 +7,7 @@ import Foundation
 import Shared
 import XCTest
 
-class SupportUtilsTests: XCTestCase {
+class SupportUtilsTests: LeakDetectingTestCase {
     func testURLForTopic() {
         let appVersion = AppInfo.appVersion
         let languageIdentifier = Locale.preferredLanguages.first!

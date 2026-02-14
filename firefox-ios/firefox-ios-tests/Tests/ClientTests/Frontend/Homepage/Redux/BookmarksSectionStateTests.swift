@@ -6,6 +6,7 @@ import Redux
 import Shared
 import Storage
 import XCTest
+import TestKit
 
 @testable import Client
 

@@ -5,7 +5,7 @@
 import Foundation
 import XCTest
 
-class HexExtensionsTests: XCTestCase {
+class HexExtensionsTests: LeakDetectingTestCase {
     func testHexEncodedString() {
         XCTAssertEqual("Hello, world!".data(using: .utf8)!.hexEncodedString, "48656c6c6f2c20776f726c6421")
         XCTAssertEqual("Hello, world!!".data(using: .utf8)!.hexEncodedString, "48656c6c6f2c20776f726c642121")

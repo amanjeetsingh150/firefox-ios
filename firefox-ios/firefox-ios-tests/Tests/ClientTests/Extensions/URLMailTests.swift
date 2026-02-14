@@ -4,6 +4,7 @@
 
 import UIKit
 import XCTest
+import TestKit
 
 @testable import Client
 

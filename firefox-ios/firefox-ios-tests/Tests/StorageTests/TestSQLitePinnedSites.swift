@@ -8,7 +8,7 @@ import Shared
 
 import XCTest
 
-class TestSQLitePinnedSites: XCTestCase {
+class TestSQLitePinnedSites: LeakDetectingTestCase {
     let files = MockFiles()
     @discardableResult
     private func chainSuccess(

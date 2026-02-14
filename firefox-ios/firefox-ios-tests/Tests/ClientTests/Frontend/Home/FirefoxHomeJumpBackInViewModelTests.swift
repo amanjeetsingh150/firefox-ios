@@ -4,6 +4,7 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 import Storage
 import Shared

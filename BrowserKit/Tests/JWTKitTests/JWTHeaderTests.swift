@@ -6,7 +6,7 @@ import XCTest
 @testable import JWTKit
 import Common
 
-final class JWTHeaderTests: XCTestCase {
+final class JWTHeaderTests: LeakDetectingTestCase {
     func test_init_setsAlgAndTypCorrectly() throws {
         let algorithm: JWTAlgorithm = .hs256(secret: "irrelevant")
         let subject = createSubject(algorithm: algorithm)

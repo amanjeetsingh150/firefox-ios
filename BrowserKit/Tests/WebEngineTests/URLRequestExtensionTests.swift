@@ -5,7 +5,7 @@
 import XCTest
 @testable import WebEngine
 
-final class URLRequestExtensionTests: XCTestCase {
+final class URLRequestExtensionTests: LeakDetectingTestCase {
     func testIsPrivilegedWhenNormalURLRequestThenNotPrivileged() {
         let url = URLRequest(url: URL(string: "https://example.com")!)
         XCTAssertFalse(url.isPrivileged, "Should never be privileged")

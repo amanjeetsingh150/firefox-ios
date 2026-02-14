@@ -6,7 +6,7 @@ import XCTest
 import LinkPresentation
 @testable import SiteImageView
 
-final class ImageHandlerTests: XCTestCase {
+final class ImageHandlerTests: LeakDetectingTestCase {
     let siteURL = URL(string: "https://www.mozilla.com")!
     let faviconURL = URL(string: "https://www.mozilla.org/media/img/favicons/mozilla/apple-touch-icon.8cbe9c835c00.png")!
 

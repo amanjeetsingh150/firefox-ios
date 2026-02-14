@@ -6,7 +6,7 @@ import Foundation
 import XCTest
 @testable import TabDataStore
 
-final class TabSessionStoreTests: XCTestCase {
+final class TabSessionStoreTests: LeakDetectingTestCase {
     var mockFileManager: MockTabFileManager!
 
     override func setUp() {

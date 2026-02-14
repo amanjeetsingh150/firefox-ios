@@ -6,7 +6,7 @@ import XCTest
 @testable import Redux
 
 @MainActor
-final class StoreTests: XCTestCase {
+final class StoreTests: LeakDetectingTestCase {
     var mockState = MockState()
 
     override func setUp() async throws {

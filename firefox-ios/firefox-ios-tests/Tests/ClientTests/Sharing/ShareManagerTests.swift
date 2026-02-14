@@ -4,6 +4,7 @@
 
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 import Shared
 
 @testable import Client

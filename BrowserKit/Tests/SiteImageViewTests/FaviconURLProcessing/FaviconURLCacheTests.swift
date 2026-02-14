@@ -7,7 +7,7 @@ import TestKit
 @testable import SiteImageView
 
 @MainActor
-class FaviconURLCacheTests: XCTestCase {
+class FaviconURLCacheTests: LeakDetectingTestCase {
     var mockFileManager: MockURLCacheFileManager!
 
     override func setUp() async throws {

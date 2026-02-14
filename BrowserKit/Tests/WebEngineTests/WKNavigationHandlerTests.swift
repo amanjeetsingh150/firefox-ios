@@ -8,7 +8,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-final class WKNavigationHandlerTests: XCTestCase {
+final class WKNavigationHandlerTests: LeakDetectingTestCase {
     private var webView: MockWKWebView!
     private var sessionHandler: MockSessionHandler!
 

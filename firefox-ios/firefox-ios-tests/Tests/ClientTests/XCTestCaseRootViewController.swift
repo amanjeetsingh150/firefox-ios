@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import XCTest
+import TestKit
 
 @MainActor
-class XCTestCaseRootViewController: XCTestCase {
+class XCTestCaseRootViewController: LeakDetectingTestCase {
     var rootViewController: UIViewController!
     var window: UIWindow!
 

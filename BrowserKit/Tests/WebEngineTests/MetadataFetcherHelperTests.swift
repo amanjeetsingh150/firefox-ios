@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 @available(iOS 16.0, *)
-final class MetadataFetcherHelperTests: XCTestCase {
+final class MetadataFetcherHelperTests: LeakDetectingTestCase {
     var metadataDelegate: MockMetadataFetcherDelegate!
 
     override func setUp() async throws {

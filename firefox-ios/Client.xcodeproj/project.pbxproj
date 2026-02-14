@@ -1499,7 +1499,17 @@
 		C2506C952A6A8D2600F2B76E /* HistoryCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2506C942A6A8D2600F2B76E /* HistoryCoordinatorTests.swift */; };
 		C26B96D72F29188100D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96D62F29188100D4B140 /* TestKit */; };
 		C26B96D92F29188100D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96D82F29188100D4B140 /* XCTestLeaksClient */; };
-		C26B96DA2F29188100D4B140 /* LeakDetectingTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = C26B96DB2F29188100D4B140 /* LeakDetectingTestCase.swift */; };
+		C26B96E02F29200000D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96DF2F29200000D4B140 /* TestKit */; };
+		C26B96E22F29200000D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96E12F29200000D4B140 /* XCTestLeaksClient */; };
+		C26B96E42F29200100D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96E32F29200100D4B140 /* TestKit */; };
+		C26B96E62F29200100D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96E52F29200100D4B140 /* XCTestLeaksClient */; };
+		C26B96E82F29200200D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96E72F29200200D4B140 /* TestKit */; };
+		C26B96EA2F29200200D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96E92F29200200D4B140 /* XCTestLeaksClient */; };
+		C26B96EC2F29200300D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96EB2F29200300D4B140 /* TestKit */; };
+		C26B96EE2F29200300D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96ED2F29200300D4B140 /* XCTestLeaksClient */; };
+		C26B96F02F29200400D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96EF2F29200400D4B140 /* TestKit */; };
+		C26B96F22F29200400D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96F12F29200400D4B140 /* XCTestLeaksClient */; };
+
 		C27EF6132EBA28E100BED719 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6122EBA28DB00BED719 /* LanguageDetector.swift */; };
 		C27EF6152EBA2EE500BED719 /* LanguageDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6142EBA2EDD00BED719 /* LanguageDetectorTests.swift */; };
 		C27EF61A2EBA364E00BED719 /* LanguageSampleSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6192EBA364C00BED719 /* LanguageSampleSource.swift */; };
@@ -9158,7 +9168,7 @@
 		8A967E412D30418A00B1017D /* TelemetryDebugMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryDebugMessage.swift; sourceTree = "<group>"; };
 		8A96C4B828F9DD8700B75884 /* ThemeableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeableTests.swift; sourceTree = "<group>"; };
 		8A96C4BA28F9E7B300B75884 /* XCTestCaseRootViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCTestCaseRootViewController.swift; sourceTree = "<group>"; };
-		C26B96DB2F29188100D4B140 /* LeakDetectingTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeakDetectingTestCase.swift; sourceTree = "<group>"; };
+
 		8A97E6E92C58487900F94793 /* AddressLocaleFeatureValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressLocaleFeatureValidator.swift; sourceTree = "<group>"; };
 		8A97E6ED2C584AC300F94793 /* AddressLocaleFeatureValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressLocaleFeatureValidatorTests.swift; sourceTree = "<group>"; };
 		8A99DB9727C6DD3E007EA6BD /* is */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = is; path = "is.lproj/Default Browser.strings"; sourceTree = "<group>"; };
@@ -11362,6 +11372,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26B96E02F29200000D4B140 /* TestKit in Frameworks */,
+				C26B96E22F29200000D4B140 /* XCTestLeaksClient in Frameworks */,
 				0BCC26A32CFF13E50072CD5A /* Shared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -11385,6 +11397,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26B96E82F29200200D4B140 /* TestKit in Frameworks */,
+				C26B96EA2F29200200D4B140 /* XCTestLeaksClient in Frameworks */,
 				45D5EDCA292D65D600311934 /* RustMozillaAppServices.framework in Frameworks */,
 				28ECD9BF1BA1F19900D829DA /* libz.tbd in Frameworks */,
 				0BCC26A52CFF150C0072CD5A /* Shared in Frameworks */,
@@ -11455,6 +11469,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26B96F02F29200400D4B140 /* TestKit in Frameworks */,
+				C26B96F22F29200400D4B140 /* XCTestLeaksClient in Frameworks */,
 				4590912F2A2E558000061F0C /* RustMozillaAppServices.framework in Frameworks */,
 				0BCC26A72CFF15A20072CD5A /* Shared in Frameworks */,
 			);
@@ -11477,6 +11493,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26B96E42F29200100D4B140 /* TestKit in Frameworks */,
+				C26B96E62F29200100D4B140 /* XCTestLeaksClient in Frameworks */,
 				43F93C2427A8681C009833D9 /* RustMozillaAppServices.framework in Frameworks */,
 				0BCC26AB2CFF15F90072CD5A /* Shared in Frameworks */,
 			);
@@ -11526,6 +11544,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26B96EC2F29200300D4B140 /* TestKit in Frameworks */,
+				C26B96EE2F29200300D4B140 /* XCTestLeaksClient in Frameworks */,
 				5FA2233C27F74071005B3D87 /* Glean in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -16385,7 +16405,7 @@
 				1D74FF4D2B27962200FF01D0 /* WindowManagerTests.swift */,
 				D3BA41671BD82F2200DA5457 /* XCTestCaseExtensions.swift */,
 				8A96C4BA28F9E7B300B75884 /* XCTestCaseRootViewController.swift */,
-				C26B96DB2F29188100D4B140 /* LeakDetectingTestCase.swift */,
+
 				2199A1D12DB80B6C00DC84BD /* ZoomPageManagerTests.swift */,
 			);
 			path = ClientTests;
@@ -16652,6 +16672,8 @@
 			name = SyncTests;
 			packageProductDependencies = (
 				0BCC26A42CFF150C0072CD5A /* Shared */,
+				C26B96E72F29200200D4B140 /* TestKit */,
+				C26B96E92F29200200D4B140 /* XCTestLeaksClient */,
 			);
 			productName = SyncTests;
 			productReference = 282731681ABC9BE700AA1954 /* SyncTests.xctest */;
@@ -16716,6 +16738,10 @@
 				D40B30A921F718CC003C02A7 /* PBXTargetDependency */,
 			);
 			name = AccountTests;
+			packageProductDependencies = (
+				C26B96EF2F29200400D4B140 /* TestKit */,
+				C26B96F12F29200400D4B140 /* XCTestLeaksClient */,
+			);
 			productName = AccountTests;
 			productReference = 2FA436051ABB83B4008031D1 /* AccountTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -16762,6 +16788,8 @@
 			name = StorageTests;
 			packageProductDependencies = (
 				0BCC26AA2CFF15F90072CD5A /* Shared */,
+				C26B96E32F29200100D4B140 /* TestKit */,
+				C26B96E52F29200100D4B140 /* XCTestLeaksClient */,
 			);
 			productName = StorageTests;
 			productReference = 2FCAE2241ABB51F800877008 /* StorageTests.xctest */;
@@ -16954,6 +16982,8 @@
 			name = SyncTelemetryTests;
 			packageProductDependencies = (
 				5FA2233B27F74071005B3D87 /* Glean */,
+				C26B96EB2F29200300D4B140 /* TestKit */,
+				C26B96ED2F29200300D4B140 /* XCTestLeaksClient */,
 			);
 			productName = SyncTelemetryTests;
 			productReference = E69DB07D1E97DEA9008A67E6 /* SyncTelemetryTests.xctest */;
@@ -16975,6 +17005,8 @@
 			name = SharedTests;
 			packageProductDependencies = (
 				0BCC26A22CFF13E50072CD5A /* Shared */,
+				C26B96DF2F29200000D4B140 /* TestKit */,
+				C26B96E12F29200000D4B140 /* XCTestLeaksClient */,
 			);
 			productName = SharedTests;
 			productReference = E6F9650C1B2F1CF20034B023 /* SharedTests.xctest */;
@@ -19518,7 +19550,6 @@
 				21365E3F2F314D1D0000C369 /* ConstraintReferenceTests.swift in Sources */,
 				8A2F21C62DEDC17900C9F4DE /* StartAtHomeMiddlewareTests.swift in Sources */,
 				03CCC9181AF05E7300DBF30D /* RelativeDatesTests.swift in Sources */,
-				C26B96DA2F29188100D4B140 /* LeakDetectingTestCase.swift in Sources */,
 				F84B21DA1A090F8100AAB793 /* ClientTests.swift in Sources */,
 				81DAB2F12C88F02500F4BE98 /* MainMenuViewControllerTests.swift in Sources */,
 				C25018E72ECC88440071506F /* BridgeTests.swift in Sources */,
@@ -31904,6 +31935,51 @@
 			productName = TestKit;
 		};
 		C26B96D82F29188100D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
+			productName = XCTestLeaksClient;
+		};
+		C26B96DF2F29200000D4B140 /* TestKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TestKit;
+		};
+		C26B96E12F29200000D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
+			productName = XCTestLeaksClient;
+		};
+		C26B96E32F29200100D4B140 /* TestKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TestKit;
+		};
+		C26B96E52F29200100D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
+			productName = XCTestLeaksClient;
+		};
+		C26B96E72F29200200D4B140 /* TestKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TestKit;
+		};
+		C26B96E92F29200200D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
+			productName = XCTestLeaksClient;
+		};
+		C26B96EB2F29200300D4B140 /* TestKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TestKit;
+		};
+		C26B96ED2F29200300D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
+			productName = XCTestLeaksClient;
+		};
+		C26B96EF2F29200400D4B140 /* TestKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TestKit;
+		};
+		C26B96F12F29200400D4B140 /* XCTestLeaksClient */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C26B96DC2F29188100D4B140 /* XCRemoteSwiftPackageReference "XCTestLeaks" */;
 			productName = XCTestLeaksClient;

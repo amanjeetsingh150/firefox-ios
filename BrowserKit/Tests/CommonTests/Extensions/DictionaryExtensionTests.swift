@@ -4,7 +4,7 @@
 
 import XCTest
 
-class DictionaryExtensionTests: XCTestCase {
+class DictionaryExtensionTests: LeakDetectingTestCase {
     // MARK: merge:withDictionary
 
     func test_mergeTwoEmptyDict_returnEmptyDict() {

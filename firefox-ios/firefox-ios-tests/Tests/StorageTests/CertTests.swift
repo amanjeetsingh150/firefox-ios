@@ -5,7 +5,7 @@
 import XCTest
 import Storage
 
-class CertTests: XCTestCase {
+class CertTests: LeakDetectingTestCase {
     func testCertStore() {
         let certStore = CertStore()
         let origin1 = "www.mozilla.org:80"

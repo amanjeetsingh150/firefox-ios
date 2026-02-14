@@ -7,7 +7,7 @@ import XCTest
 
 @testable import WebEngine
 
-final class WKWebServerUtilTests: XCTestCase {
+final class WKWebServerUtilTests: LeakDetectingTestCase {
     private var webServer: MockWebServer!
 
     override func setUp() {

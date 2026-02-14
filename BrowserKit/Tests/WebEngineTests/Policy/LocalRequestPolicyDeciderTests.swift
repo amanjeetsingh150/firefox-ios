@@ -6,7 +6,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-final class LocalRequestPolicyDeciderTests: XCTestCase {
+final class LocalRequestPolicyDeciderTests: LeakDetectingTestCase {
     private var mockDecider: MockPolicyDecider!
 
     override func setUp() async throws {

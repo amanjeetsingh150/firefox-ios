@@ -6,7 +6,7 @@ import XCTest
 @testable import SummarizeKit
 
 @MainActor
-final class SSEDataParserTests: XCTestCase {
+final class SSEDataParserTests: LeakDetectingTestCase {
     private struct EventExampleType: Decodable, Equatable {
         let id: Int
         let content: String

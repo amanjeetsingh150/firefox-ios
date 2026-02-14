@@ -5,7 +5,7 @@
 import XCTest
 @testable import Common
 
-final class URLExtensionTests: XCTestCase {
+final class URLExtensionTests: LeakDetectingTestCase {
     private var webServerPort = 1234
 
     func testNormalBaseDomainWithSingleSubdomain() {

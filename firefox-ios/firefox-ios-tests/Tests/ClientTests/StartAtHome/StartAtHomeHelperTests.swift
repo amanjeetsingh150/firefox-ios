@@ -5,6 +5,7 @@
 @testable import Client
 
 import XCTest
+import TestKit
 import Common
 
 class StartAtHomeHelperTests: LeakDetectingTestCase {

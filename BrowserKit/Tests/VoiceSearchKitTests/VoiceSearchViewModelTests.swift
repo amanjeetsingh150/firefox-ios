@@ -6,7 +6,7 @@
 import XCTest
 
 @MainActor
-final class VoiceSearchViewModelTests: XCTestCase {
+final class VoiceSearchViewModelTests: LeakDetectingTestCase {
     private var mockService: MockTestVoiceSearchService!
 
     override func setUp() async throws {

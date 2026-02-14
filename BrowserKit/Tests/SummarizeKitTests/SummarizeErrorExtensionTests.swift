@@ -6,7 +6,7 @@ import XCTest
 import ComponentLibrary
 @testable import SummarizeKit
 
-final class SummarizeErrorExtensionTests: XCTestCase {
+final class SummarizeErrorExtensionTests: LeakDetectingTestCase {
     private let configuration = SummarizeViewConfiguration(
         titleLabelA11yId: "",
         compactTitleLabelA11yId: "",

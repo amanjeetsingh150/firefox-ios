@@ -85,6 +85,9 @@ let package = Package(
         .package(
             url: "https://github.com/johnxnguyen/Down.git",
             exact: "0.11.0"),
+        .package(
+            url: "https://github.com/amanjeetsingh150/XCTestLeaks",
+            from: "0.1.4"),
     ],
     targets: [
         .target(
@@ -102,7 +105,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "ComponentLibraryTests",
-            dependencies: ["ComponentLibrary"],
+            dependencies: ["ComponentLibrary", "TestKit"],
             swiftSettings: [
             ]
         ),
@@ -140,7 +143,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CommonTests",
-            dependencies: ["Common"],
+            dependencies: ["Common", "TestKit"],
             swiftSettings: [
             ]),
         .target(
@@ -163,7 +166,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "ReduxTests",
-            dependencies: ["Redux"],
+            dependencies: ["Redux", "TestKit"],
             swiftSettings: [
             ]
         ),
@@ -180,7 +183,10 @@ let package = Package(
             swiftSettings: [
             ]
         ),
-        .target(name: "TestKit"),
+        .target(name: "TestKit",
+                dependencies: [
+                    .product(name: "XCTestLeaksClient", package: "XCTestLeaks"),
+                ]),
         .target(
             name: "ToolbarKit",
             dependencies: ["Common"],
@@ -200,7 +206,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "MenuKitTests",
-            dependencies: ["MenuKit"],
+            dependencies: ["MenuKit", "TestKit"],
             swiftSettings: [
             ]
         ),
@@ -229,7 +235,7 @@ let package = Package(
         ),
         .testTarget(
             name: "JWTKitTests",
-            dependencies: ["JWTKit"],
+            dependencies: ["JWTKit", "TestKit"],
             swiftSettings: [
             ]
         ),
@@ -248,7 +254,7 @@ let package = Package(
         ),
         .testTarget(
             name: "VoiceSearchKitTests",
-            dependencies: ["VoiceSearchKit"]
+            dependencies: ["VoiceSearchKit", "TestKit"]
         ),
         .target(
             name: "ContentBlockingGenerator",
@@ -257,7 +263,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "ContentBlockingGeneratorTests",
-            dependencies: ["ContentBlockingGenerator"],
+            dependencies: ["ContentBlockingGenerator", "TestKit"],
             swiftSettings: [
             ]),
         .target(
@@ -268,7 +274,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "OnboardingKitTests",
-            dependencies: ["OnboardingKit"],
+            dependencies: ["OnboardingKit", "TestKit"],
             swiftSettings: [
             ]),
         .target(
@@ -278,7 +284,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "ActionExtensionKitTests",
-            dependencies: ["ActionExtensionKit"],
+            dependencies: ["ActionExtensionKit", "TestKit"],
             swiftSettings: [
             ]),
         .executableTarget(

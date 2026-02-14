@@ -9,7 +9,7 @@ import XCTest
 /**
  * Test for our own utils.
  */
-class UtilsTests: XCTestCase {
+class UtilsTests: LeakDetectingTestCase {
     func testMapUtils() {
         let m: [String: Int] = ["foo": 123, "bar": 456]
         let f: (Int) -> Int? = { v in

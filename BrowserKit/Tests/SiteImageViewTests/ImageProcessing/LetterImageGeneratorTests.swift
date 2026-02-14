@@ -5,7 +5,7 @@
 import XCTest
 @testable import SiteImageView
 
-final class LetterImageGeneratorTests: XCTestCase {
+final class LetterImageGeneratorTests: LeakDetectingTestCase {
     func testEmptyDomain_throws() async {
         let subject = DefaultLetterImageGenerator()
         let siteString = ""

@@ -5,6 +5,7 @@
 import Foundation
 import Storage
 import XCTest
+import TestKit
 
 class FileAccessorTests: LeakDetectingTestCase {
     fileprivate var testDir: String!

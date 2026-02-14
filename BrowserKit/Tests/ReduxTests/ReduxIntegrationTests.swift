@@ -11,7 +11,7 @@ import XCTest
 var store: Store<FakeReduxState>!
 
 @MainActor
-final class ReduxIntegrationTests: XCTestCase {
+final class ReduxIntegrationTests: LeakDetectingTestCase {
     let initialCountValue = 8
 
     var fakeReduxViewController: FakeReduxViewController!

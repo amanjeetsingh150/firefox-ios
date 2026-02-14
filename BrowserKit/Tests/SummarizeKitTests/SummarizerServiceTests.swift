@@ -7,7 +7,7 @@ import XCTest
 import Common
 
 @MainActor
-final class SummarizerServiceTests: XCTestCase {
+final class SummarizerServiceTests: LeakDetectingTestCase {
     static let mockResponse = ["Summarized", "content"]
     static let maxWords = 100
     static let maxWordCount = 50

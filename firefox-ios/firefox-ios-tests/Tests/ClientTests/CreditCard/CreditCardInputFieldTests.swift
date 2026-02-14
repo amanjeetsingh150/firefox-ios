@@ -6,6 +6,7 @@
 
 import Foundation
 import XCTest
+import TestKit
 import SwiftUI
 import Common
 @testable import Client

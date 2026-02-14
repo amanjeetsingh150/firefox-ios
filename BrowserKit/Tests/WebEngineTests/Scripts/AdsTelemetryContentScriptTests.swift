@@ -6,7 +6,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-final class AdsTelemetryContentScriptTests: XCTestCase {
+final class AdsTelemetryContentScriptTests: LeakDetectingTestCase {
     private var contentScriptDelegate: MockContentScriptDelegate!
 
     override func setUp() async throws {

@@ -4,6 +4,7 @@
 
 import Shared
 import XCTest
+import TestKit
 import MozillaAppServices
 import OnboardingKit
 

@@ -4,6 +4,7 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import WebKit
 
 class RemoteDataTypeTests: LeakDetectingTestCase {

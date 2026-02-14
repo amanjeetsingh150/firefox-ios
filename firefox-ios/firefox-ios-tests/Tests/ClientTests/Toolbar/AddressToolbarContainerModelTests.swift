@@ -6,6 +6,7 @@
 @testable import ToolbarKit
 import Common
 import XCTest
+import TestKit
 
 final class AddressToolbarContainerModelTests: LeakDetectingTestCase {
     private var mockProfile: MockProfile!

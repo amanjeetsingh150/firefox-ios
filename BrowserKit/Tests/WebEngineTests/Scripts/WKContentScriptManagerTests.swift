@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 @available(iOS 16.0, *)
-final class WKContentScriptManagerTests: XCTestCase {
+final class WKContentScriptManagerTests: LeakDetectingTestCase {
     private var script: MockWKContentScript!
 
     override func setUp() async throws {

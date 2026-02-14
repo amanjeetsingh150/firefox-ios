@@ -6,7 +6,7 @@ import XCTest
 @testable import Common
 import Sentry
 
-final class CrashManagerTests: XCTestCase {
+final class CrashManagerTests: LeakDetectingTestCase {
     private var sentryWrapper: MockSentryWrapper!
 
     override func setUp() {

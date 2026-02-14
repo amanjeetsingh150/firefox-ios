@@ -5,7 +5,7 @@
 import XCTest
 @testable import Common
 
-final class LoggerFileManagerTests: XCTestCase {
+final class LoggerFileManagerTests: LeakDetectingTestCase {
     private var subject: DefaultLoggerFileManager!
     private var fileManager: MockFileManager!
 

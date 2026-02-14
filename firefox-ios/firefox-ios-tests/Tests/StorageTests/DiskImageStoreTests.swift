@@ -8,7 +8,7 @@ import UIKit
 import XCTest
 
 @MainActor
-class DiskImageStoreTests: XCTestCase {
+class DiskImageStoreTests: LeakDetectingTestCase {
     var store: DiskImageStore!
 
     override func setUp() async throws {

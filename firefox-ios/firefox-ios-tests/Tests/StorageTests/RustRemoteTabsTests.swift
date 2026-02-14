@@ -48,7 +48,7 @@ class MockRustRemoteTabs: RustRemoteTabs, @unchecked Sendable {
     }
 }
 
-class RustRemoteTabsTests: XCTestCase {
+class RustRemoteTabsTests: LeakDetectingTestCase {
     var files: FileAccessor!
     var tabs: RustRemoteTabs!
     var mockTabs: MockRustRemoteTabs!

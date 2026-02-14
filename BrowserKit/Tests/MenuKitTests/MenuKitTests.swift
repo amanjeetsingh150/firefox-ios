@@ -5,7 +5,7 @@
 import XCTest
 @testable import MenuKit
 
-final class MenuKitTests: XCTestCase {
+final class MenuKitTests: LeakDetectingTestCase {
     func testMenuElement_initializesCorrectly() {
         let subject = MenuElement(
             title: "test",

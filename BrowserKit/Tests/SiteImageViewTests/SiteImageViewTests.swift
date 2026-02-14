@@ -5,7 +5,7 @@
 import XCTest
 @testable import SiteImageView
 
-final class SiteImageViewTests: XCTestCase {
+final class SiteImageViewTests: LeakDetectingTestCase {
     private var imageFetcher: MockSiteImageHandler!
 
     override func setUp() {

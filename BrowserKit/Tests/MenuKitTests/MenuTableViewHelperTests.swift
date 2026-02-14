@@ -6,7 +6,7 @@ import XCTest
 @testable import MenuKit
 
 @MainActor
-final class MenuTableViewHelperTests: XCTestCase {
+final class MenuTableViewHelperTests: LeakDetectingTestCase {
     var tableView: UITableView!
     var helper: MenuTableViewHelper!
 

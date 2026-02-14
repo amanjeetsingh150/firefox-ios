@@ -5,7 +5,7 @@
 import XCTest
 @testable import Common
 
-final class DynamicFontHelperTests: XCTestCase {
+final class DynamicFontHelperTests: LeakDetectingTestCase {
     func testPreferredFont_returnsExpectedFont() {
         let result = DefaultDynamicFontHelper.preferredFont(withTextStyle: .caption1, size: 11)
 

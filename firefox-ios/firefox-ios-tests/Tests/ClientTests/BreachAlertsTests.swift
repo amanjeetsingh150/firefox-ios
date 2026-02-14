@@ -6,6 +6,7 @@
 import Storage
 import Shared
 import XCTest
+import TestKit
 
 let blockbusterBreach = BreachRecord(
     name: "MockBreach",

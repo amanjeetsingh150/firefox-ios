@@ -6,7 +6,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-final class FocusContentScriptTests: XCTestCase {
+final class FocusContentScriptTests: LeakDetectingTestCase {
     private var contentScriptDelegate: MockContentScriptDelegate!
 
     override func setUp() async throws {

@@ -6,6 +6,7 @@ import Foundation
 import Shared
 
 import XCTest
+import TestKit
 
 class PrefsTests: LeakDetectingTestCase {
     var prefs: NSUserDefaultsPrefs!

@@ -5,7 +5,7 @@
 import XCTest
 @testable import JWTKit
 
-final class JWTNoneAlgorithmTests: XCTestCase {
+final class JWTNoneAlgorithmTests: LeakDetectingTestCase {
     func test_sign_producesEmptySignature() throws {
         let subject = createSubject()
         let signature = try subject.sign(message: "anything at all")

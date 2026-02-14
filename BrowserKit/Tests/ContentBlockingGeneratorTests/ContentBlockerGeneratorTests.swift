@@ -5,7 +5,7 @@
 import XCTest
 @testable import ContentBlockingGenerator
 
-final class ContentBlockerGeneratorTests: XCTestCase {
+final class ContentBlockerGeneratorTests: LeakDetectingTestCase {
     private var fileManager: MockContentBlockerFileManager!
     private var parserData: ParserData!
 

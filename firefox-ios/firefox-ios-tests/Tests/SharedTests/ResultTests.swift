@@ -6,7 +6,7 @@ import Shared
 import XCTest
 
 // Trivial test for using Result.
-class ResultTests: XCTestCase {
+class ResultTests: LeakDetectingTestCase {
     func testResult() {
         let r = Maybe<Int>(success: 5)
         if let i = r.successValue {

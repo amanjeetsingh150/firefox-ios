@@ -7,7 +7,7 @@ import XCTest
 @testable import TabDataStore
 import Common
 
-final class TabFileManagerTests: XCTestCase {
+final class TabFileManagerTests: LeakDetectingTestCase {
     private let defaultTestTabWindowUUID = UUID(uuidString: "E3FF60DA-D1E7-407B-AA3B-130D48B3909D")!
     override func setUp() {
         super.setUp()

@@ -8,7 +8,7 @@ import Shared
 
 import XCTest
 
-class CryptoTests: XCTestCase {
+class CryptoTests: LeakDetectingTestCase {
     let hmacB16 = "b1e6c18ac30deb70236bc0d65a46f7a4dce3b8b0e02cf92182b914e3afa5eebc"
     let ivB64 = "GX8L37AAb2FZJMzIoXlX8w=="
 

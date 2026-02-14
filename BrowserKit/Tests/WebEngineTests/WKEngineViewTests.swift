@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 @available(iOS 16.0, *)
-final class WKEngineViewTests: XCTestCase {
+final class WKEngineViewTests: LeakDetectingTestCase {
     private var engineSession: WKEngineSession!
 
     override func setUp() async throws {

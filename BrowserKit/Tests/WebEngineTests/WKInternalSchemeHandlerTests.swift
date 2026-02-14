@@ -7,7 +7,7 @@ import WebKit
 @testable import WebEngine
 
 @MainActor
-final class WKInternalSchemeHandlerTests: XCTestCase {
+final class WKInternalSchemeHandlerTests: LeakDetectingTestCase {
     func testSchemeStartIsCalledNonPrivilegedURL() throws {
         let subject = createSubject()
         let webview = WKWebView(frame: .zero)

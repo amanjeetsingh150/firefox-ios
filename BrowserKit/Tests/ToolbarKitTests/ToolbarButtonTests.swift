@@ -6,7 +6,7 @@ import XCTest
 @testable import ToolbarKit
 
 @MainActor
-final class ToolbarButtonTests: XCTestCase {
+final class ToolbarButtonTests: LeakDetectingTestCase {
     private var button: ToolbarButton!
 
     override func setUp() async throws {

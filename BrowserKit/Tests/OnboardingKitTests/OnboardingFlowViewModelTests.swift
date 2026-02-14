@@ -6,7 +6,7 @@ import XCTest
 @testable import OnboardingKit
 
 @MainActor
-final class OnboardingFlowViewModelTests: XCTestCase {
+final class OnboardingFlowViewModelTests: LeakDetectingTestCase {
     // MARK: - Properties
     private var testHelper: OnboardingTestHelper!
 

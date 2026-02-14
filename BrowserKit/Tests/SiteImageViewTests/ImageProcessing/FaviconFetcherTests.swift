@@ -7,7 +7,7 @@ import Kingfisher
 import Common
 @testable import SiteImageView
 
-final class FaviconFetcherTests: XCTestCase {
+final class FaviconFetcherTests: LeakDetectingTestCase {
     private var mockImageDownloader: MockSiteImageDownloader!
 
     override func setUp() {

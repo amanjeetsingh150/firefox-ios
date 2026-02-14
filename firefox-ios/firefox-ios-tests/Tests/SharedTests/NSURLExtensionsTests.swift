@@ -7,7 +7,7 @@ import UIKit
 import XCTest
 @testable import Shared
 
-class NSURLExtensionsTests: XCTestCase {
+class NSURLExtensionsTests: LeakDetectingTestCase {
     func testRemovesHTTPFromURL() {
         let url = URL(string: "http://google.com")
         if let actual = url?.absoluteDisplayString {

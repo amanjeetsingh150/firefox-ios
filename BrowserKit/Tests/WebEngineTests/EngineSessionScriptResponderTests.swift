@@ -8,7 +8,7 @@ import TestKit
 
 @MainActor
 @available(iOS 16, *)
-class EngineSessionScriptResponderTests: XCTestCase {
+class EngineSessionScriptResponderTests: LeakDetectingTestCase {
     private var session: MockWKEngineSession!
 
     override func setUp() async throws {

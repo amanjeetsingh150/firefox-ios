@@ -5,7 +5,7 @@
 import XCTest
 @testable import SummarizeKit
 
-final class LiteLLMSummarizerTests: XCTestCase {
+final class LiteLLMSummarizerTests: LeakDetectingTestCase {
     func testSummarizeNonStreamingSucceeds() async throws {
         let subject = createSubject(respondWith: ["hello", "world"])
         let result = try await subject.summarize("t")

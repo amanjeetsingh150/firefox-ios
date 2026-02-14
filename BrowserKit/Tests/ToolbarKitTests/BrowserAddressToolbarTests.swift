@@ -6,7 +6,7 @@ import XCTest
 import TestKit
 @testable import ToolbarKit
 
-final class BrowserAddressToolbarTests: XCTestCase {
+final class BrowserAddressToolbarTests: LeakDetectingTestCase {
     private var toolbarElement: ToolbarElement?
     private var toolbarElement2: ToolbarElement?
     private var tabToolbarElement: ToolbarElement?

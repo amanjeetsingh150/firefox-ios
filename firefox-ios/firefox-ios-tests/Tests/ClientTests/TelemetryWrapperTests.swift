@@ -7,6 +7,7 @@
 import Common
 import Glean
 import XCTest
+import TestKit
 
 class TelemetryWrapperTests: LeakDetectingTestCase {
     typealias ExtraKey = TelemetryWrapper.EventExtraKey

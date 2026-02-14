@@ -7,7 +7,7 @@ import XCTest
 
 @testable import Sync
 
-class RustSyncManagerAPITests: XCTestCase {
+class RustSyncManagerAPITests: LeakDetectingTestCase {
     var rustSyncManagerApi: RustSyncManagerAPI!
 
     func testReportSyncTelemetry() {

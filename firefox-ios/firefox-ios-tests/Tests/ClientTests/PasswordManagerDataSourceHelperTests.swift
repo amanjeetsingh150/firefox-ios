@@ -6,6 +6,7 @@
 import Storage
 import Shared
 import XCTest
+import TestKit
 
 class PasswordManagerDataSourceHelperTests: LeakDetectingTestCase {
     func testSetDomainLookup() {

@@ -5,7 +5,7 @@
 import XCTest
 @testable import SiteImageView
 
-final class BundleDomainBuilderTests: XCTestCase {
+final class BundleDomainBuilderTests: LeakDetectingTestCase {
     func testMobileBundleSite() {
         let subject = BundleDomainBuilder()
         let result = subject.buildDomains(for: URL(string: "https://m.example.com")!)

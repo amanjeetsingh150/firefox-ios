@@ -6,7 +6,7 @@ import XCTest
 @testable import SiteImageView
 
 @MainActor
-final class SiteImageHandlerTests: XCTestCase {
+final class SiteImageHandlerTests: LeakDetectingTestCase {
     private var urlHandler: MockFaviconURLHandler!
     private var imageHandler: MockImageHandler!
 

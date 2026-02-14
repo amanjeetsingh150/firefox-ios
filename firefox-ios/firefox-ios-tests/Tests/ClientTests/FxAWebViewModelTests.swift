@@ -4,6 +4,7 @@
 
 @testable import Client
 import XCTest
+import TestKit
 import PDFKit
 
 @MainActor

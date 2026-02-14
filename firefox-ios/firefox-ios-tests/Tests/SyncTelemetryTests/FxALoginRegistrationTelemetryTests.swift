@@ -14,7 +14,7 @@ struct MockFxAUrls {
     static let mockSignInTockenUrl =  URL(string: "https://accounts.firefox.com/oauth/signin_token_code/")!
 }
 
-class SyncTelemetryTests: XCTestCase {
+class SyncTelemetryTests: LeakDetectingTestCase {
     var fxaWebViewTelemetry: FxAWebViewTelemetry!
     var telemetryWrapper: MockTelemetryWrapper!
 

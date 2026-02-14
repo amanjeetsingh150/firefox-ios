@@ -5,6 +5,7 @@
 import Common
 import Storage
 import XCTest
+import TestKit
 import Glean
 
 @testable import Client

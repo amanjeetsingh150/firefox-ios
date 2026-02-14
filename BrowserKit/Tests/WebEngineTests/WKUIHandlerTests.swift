@@ -9,7 +9,7 @@ import Common
 @testable import WebEngine
 
 @MainActor
-final class WKUIHandlerTests: XCTestCase {
+final class WKUIHandlerTests: LeakDetectingTestCase {
     private var sessionDelegate: MockEngineSessionDelegate!
     private var mockDecider: MockPolicyDecider!
     private var mockApplication: MockApplication!

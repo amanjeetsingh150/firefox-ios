@@ -5,7 +5,7 @@
 import XCTest
 @testable import ToolbarKit
 
-final class ToolbarManagerTests: XCTestCase {
+final class ToolbarManagerTests: LeakDetectingTestCase {
     // Address toolbar border
     func testAddressToolbarBorderPositionWhenTopPlacementAndScrolledThenShouldDisplayBottomBorder() {
         let subject = createSubject()

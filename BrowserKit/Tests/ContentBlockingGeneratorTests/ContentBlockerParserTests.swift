@@ -5,7 +5,7 @@
 import XCTest
 @testable import ContentBlockingGenerator
 
-final class ContentBlockerParserTests: XCTestCase {
+final class ContentBlockerParserTests: LeakDetectingTestCase {
     private var parserData: ParserData!
 
     override func setUp() {

@@ -7,7 +7,7 @@ import XCTest
 
 @testable import Storage
 
-class RustAutofillTests: XCTestCase {
+class RustAutofillTests: LeakDetectingTestCase {
     var files: FileAccessor!
     var autofill: RustAutofill!
     var encryptionKey: String!

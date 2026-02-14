@@ -5,7 +5,7 @@
 import XCTest
 @testable import Common
 
-final class StringExtensionTests: XCTestCase {
+final class StringExtensionTests: LeakDetectingTestCase {
     // MARK: Tests for HtmlEntityEncoding string
     func testHtmlEntityEncodingGivenNoSpecialCharacters() {
         let input = "John Doe"

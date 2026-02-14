@@ -5,7 +5,7 @@
 import XCTest
 @testable import Common
 
-final class LoggerTests: XCTestCase {
+final class LoggerTests: LeakDetectingTestCase {
     private var beaverBuilder: MockSwiftyBeaverBuilder!
     private var crashManager: MockCrashManager!
 

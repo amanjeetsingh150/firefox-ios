@@ -5,7 +5,7 @@
 import XCTest
 @testable import JWTKit
 
-final class JWTHS256AlgorithmTests: XCTestCase {
+final class JWTHS256AlgorithmTests: LeakDetectingTestCase {
     private static let mockSecret = "super-secret"
     private static let mockMessage = "header.payload"
 

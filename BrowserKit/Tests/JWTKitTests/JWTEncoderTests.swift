@@ -7,7 +7,7 @@ import XCTest
 import Common
 import Shared
 
-final class JWTEncoderTests: XCTestCase {
+final class JWTEncoderTests: LeakDetectingTestCase {
     private static let mockSecret = "super-secret"
 
     nonisolated(unsafe) private static let mockPayload: [String: Any] = [

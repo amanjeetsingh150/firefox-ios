@@ -6,7 +6,7 @@ import Sentry
 import XCTest
 @testable import Common
 
-class LoggerLevelTests: XCTestCase {
+class LoggerLevelTests: LeakDetectingTestCase {
     // MARK: - Sentry level
 
     func testSentryLevel_debug() {

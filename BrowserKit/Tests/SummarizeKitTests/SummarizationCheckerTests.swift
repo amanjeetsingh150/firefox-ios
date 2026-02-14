@@ -6,7 +6,7 @@
 import XCTest
 
 @MainActor
-final class SummarizationCheckerTests: XCTestCase {
+final class SummarizationCheckerTests: LeakDetectingTestCase {
     func jsStubBuilder(
         canSummarize: Bool,
         reason: String? = nil,

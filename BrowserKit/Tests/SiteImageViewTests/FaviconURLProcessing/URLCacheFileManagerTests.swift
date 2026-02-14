@@ -6,7 +6,7 @@ import XCTest
 import Common
 @testable import SiteImageView
 
-class URLCacheFileManagerTests: XCTestCase {
+class URLCacheFileManagerTests: LeakDetectingTestCase {
     var subject: DefaultURLCacheFileManager!
     var mockFileManager: MockFileManager!
 

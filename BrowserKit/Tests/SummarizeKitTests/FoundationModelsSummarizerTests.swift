@@ -21,7 +21,7 @@ import TestKit
 import FoundationModels
 import Foundation
 
-final class FoundationModelsSummarizerTests: XCTestCase {
+final class FoundationModelsSummarizerTests: LeakDetectingTestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
 

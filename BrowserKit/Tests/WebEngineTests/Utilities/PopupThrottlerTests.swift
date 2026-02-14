@@ -6,7 +6,7 @@ import XCTest
 @testable import WebEngine
 
 @MainActor
-class PopupThrottlerTests: XCTestCase {
+class PopupThrottlerTests: LeakDetectingTestCase {
     private let popupType: PopupType = .alert
 
     func testThatRapidAlertsUnderLimitDoNotPreventAddtlAlerts() {

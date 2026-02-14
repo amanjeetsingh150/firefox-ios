@@ -5,7 +5,7 @@
 import XCTest
 @testable import WebEngine
 
-final class WKInternalURLTests: XCTestCase {
+final class WKInternalURLTests: LeakDetectingTestCase {
     // MARK: Internal URL creation
     func testInternalURLCreationGivenUnvalidURLThenNotCreated() {
         let url = URL(string: "https://example.com")!

@@ -5,7 +5,7 @@
 import XCTest
 @testable import Shared
 
-final class UserAgentTests: XCTestCase {
+final class UserAgentTests: LeakDetectingTestCase {
     func testGetUserAgentDesktop_withListedDomain_returnProperUserAgent() {
         let domains = CustomUserAgentConstant.customDesktopUAForDomain
         domains.forEach { domain, agent in

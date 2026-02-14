@@ -6,6 +6,7 @@
 import UIKit
 import Common
 import XCTest
+import TestKit
 
 class CustomSearchEnginesTest: LeakDetectingTestCase {
     let windowUUID: WindowUUID = .XCTestDefaultUUID

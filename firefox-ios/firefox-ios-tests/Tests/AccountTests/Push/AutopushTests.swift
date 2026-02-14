@@ -9,7 +9,7 @@ import XCTest
 @testable import Account
 @testable import Client
 
-class AutopushTests: XCTestCase {
+class AutopushTests: LeakDetectingTestCase {
     private var mockPushManager: MockPushManager!
     private var autopushClient: Autopush!
 

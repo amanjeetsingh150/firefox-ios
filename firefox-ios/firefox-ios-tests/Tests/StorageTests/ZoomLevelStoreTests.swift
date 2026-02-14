@@ -5,7 +5,7 @@
 import XCTest
 @testable import Storage
 
-final class ZoomLevelStoreTests: XCTestCase {
+final class ZoomLevelStoreTests: LeakDetectingTestCase {
     var zoomLevelStore: ZoomLevelStore!
 
     let testHost1 = "www.example1.com"

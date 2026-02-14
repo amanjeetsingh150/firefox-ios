@@ -7,6 +7,7 @@ import MozillaAppServices
 import Storage
 import WebKit
 import XCTest
+import TestKit
 
 @testable import Client
 

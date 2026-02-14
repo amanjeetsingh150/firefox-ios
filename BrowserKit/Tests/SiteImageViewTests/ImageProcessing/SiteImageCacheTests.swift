@@ -6,7 +6,7 @@ import Kingfisher
 import XCTest
 @testable import SiteImageView
 
-final class SiteImageCacheTests: XCTestCase {
+final class SiteImageCacheTests: LeakDetectingTestCase {
     private var imageCache: MockDefaultImageCache!
 
     override func setUp() {

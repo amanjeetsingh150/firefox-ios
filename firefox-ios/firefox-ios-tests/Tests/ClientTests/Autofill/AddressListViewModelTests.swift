@@ -5,6 +5,7 @@
 import Combine
 import MozillaAppServices
 import XCTest
+import TestKit
 import Common
 
 @testable import Client

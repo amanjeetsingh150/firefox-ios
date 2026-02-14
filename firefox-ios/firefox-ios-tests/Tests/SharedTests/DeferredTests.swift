@@ -6,7 +6,7 @@
 import XCTest
 
 // Trivial test for using Deferred.
-class DeferredTests: XCTestCase {
+class DeferredTests: LeakDetectingTestCase {
     @MainActor
     func testDeferred() {
         let d = Deferred<Int>()

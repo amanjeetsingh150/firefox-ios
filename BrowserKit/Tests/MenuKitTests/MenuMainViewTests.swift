@@ -6,7 +6,7 @@ import XCTest
 @testable import MenuKit
 
 @MainActor
-final class MenuMainViewTests: XCTestCase {
+final class MenuMainViewTests: LeakDetectingTestCase {
     var menuView: MenuMainView!
 
     override func setUp() async throws {

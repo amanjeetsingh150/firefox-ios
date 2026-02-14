@@ -5,6 +5,7 @@
 import Foundation
 @testable import Client
 import XCTest
+import TestKit
 import Shared
 
 class DefaultBrowserOnboardingTests: LeakDetectingTestCase {

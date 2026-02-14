@@ -7,6 +7,7 @@ import Foundation
 import WebKit
 import GCDWebServers
 import XCTest
+import TestKit
 import Common
 
 class TabEventHandlerTests: LeakDetectingTestCase {

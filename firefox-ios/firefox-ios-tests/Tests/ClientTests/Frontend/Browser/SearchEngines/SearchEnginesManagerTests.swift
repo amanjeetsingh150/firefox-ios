@@ -5,6 +5,7 @@
 @testable import Client
 import Foundation
 import XCTest
+import TestKit
 import Common
 import Shared
 

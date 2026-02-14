@@ -7,7 +7,7 @@ import XCTest
 
 @MainActor
 @available(iOS 16.0, *)
-final class PrintContentScriptTests: XCTestCase {
+final class PrintContentScriptTests: LeakDetectingTestCase {
     private var webView: MockWKEngineWebView!
 
     override func setUp() async throws {

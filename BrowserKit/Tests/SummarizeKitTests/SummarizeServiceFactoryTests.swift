@@ -23,7 +23,7 @@ final class MockSummarizerServiceLifecycle: SummarizerServiceLifecycle, @uncheck
     }
 }
 
-final class SummarizeServiceFactoryTests: XCTestCase {
+final class SummarizeServiceFactoryTests: LeakDetectingTestCase {
     var serviceLifecycle: MockSummarizerServiceLifecycle!
 
     override func setUp() {

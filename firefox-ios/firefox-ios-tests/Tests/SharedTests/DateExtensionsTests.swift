@@ -6,7 +6,7 @@ import Foundation
 import Shared
 import XCTest
 
-class DateExtensionsTests: XCTestCase {
+class DateExtensionsTests: LeakDetectingTestCase {
     struct KnownDate {
         var millisecond: Int64
         var date: Date

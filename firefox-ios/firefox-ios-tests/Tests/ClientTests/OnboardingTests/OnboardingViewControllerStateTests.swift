@@ -5,6 +5,7 @@
 import Common
 import Redux
 import XCTest
+import TestKit
 
 @testable import Client
 

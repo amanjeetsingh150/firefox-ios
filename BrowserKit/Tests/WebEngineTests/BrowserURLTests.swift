@@ -5,7 +5,7 @@
 import XCTest
 @testable import WebEngine
 
-final class BrowserURLTests: XCTestCase {
+final class BrowserURLTests: LeakDetectingTestCase {
     func testLoadURLGivenNotAURLThenDoesntCreate() {
         let url = URL(string: "blablablablabla")!
         let context = BrowsingContext(type: .internalNavigation, url: url)

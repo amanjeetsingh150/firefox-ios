@@ -6,7 +6,7 @@ import XCTest
 @testable import Common
 
 @MainActor
-final class UIViewExtensionTests: XCTestCase {
+final class UIViewExtensionTests: LeakDetectingTestCase {
     final class CustomView: UIView {
         var customProperty: String
 

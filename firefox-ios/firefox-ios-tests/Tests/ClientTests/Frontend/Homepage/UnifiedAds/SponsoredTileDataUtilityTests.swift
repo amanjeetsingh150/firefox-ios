@@ -4,6 +4,7 @@
 
 import Foundation
 import XCTest
+import TestKit
 import Storage
 @testable import Client
 

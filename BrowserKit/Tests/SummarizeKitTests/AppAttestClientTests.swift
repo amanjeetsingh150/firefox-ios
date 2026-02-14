@@ -5,7 +5,7 @@
 import XCTest
 @testable import SummarizeKit
 
-final class AppAttestClientTests: XCTestCase {
+final class AppAttestClientTests: LeakDetectingTestCase {
     private enum TestData {
         static let keyID = "foo-key"
         static let attestationChallenge = "test-challenge"

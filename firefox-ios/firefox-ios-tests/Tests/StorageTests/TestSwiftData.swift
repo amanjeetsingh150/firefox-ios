@@ -9,7 +9,7 @@ import Shared
 import XCTest
 
 // TODO: rewrite this test to not use BrowserSchema. It used to use HistoryTable…
-class TestSwiftData: XCTestCase {
+class TestSwiftData: LeakDetectingTestCase {
     var swiftData: SwiftData?
     var urlCounter = 1
     var testDB: String!

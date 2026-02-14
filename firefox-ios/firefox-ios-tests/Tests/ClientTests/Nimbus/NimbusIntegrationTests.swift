@@ -6,6 +6,7 @@ import Foundation
 @testable import Localizations
 
 import XCTest
+import TestKit
 
 /// Firefox has a complicated localization story, and stores its strings in its own bundle.
 /// This tests allow us to write code in Nimbus with some confidence that it will work here.

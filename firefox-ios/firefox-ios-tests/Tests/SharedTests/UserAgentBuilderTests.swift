@@ -6,7 +6,7 @@ import XCTest
 import Common
 @testable import Shared
 
-final class UserAgentBuilderTests: XCTestCase {
+final class UserAgentBuilderTests: LeakDetectingTestCase {
     func testUserAgent_generateCorrectString() {
         let builder = createSubject(
             product: "FXIOS",

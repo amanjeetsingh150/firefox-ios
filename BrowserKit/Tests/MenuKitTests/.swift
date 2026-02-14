@@ -6,7 +6,7 @@ import XCTest
 import MenuKit
 @testable import Client
 
-final class MenuTableViewTests: XCTestCase {
+final class MenuTableViewTests: LeakDetectingTestCase {
     var menuView: MenuTableView!
 
     override func setUp() {

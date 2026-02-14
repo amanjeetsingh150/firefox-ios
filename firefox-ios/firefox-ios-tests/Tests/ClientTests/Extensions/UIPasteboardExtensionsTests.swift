@@ -6,6 +6,7 @@ import MobileCoreServices
 import UIKit
 import UniformTypeIdentifiers
 import XCTest
+import TestKit
 
 class UIPasteboardExtensionsTests: LeakDetectingTestCase {
     fileprivate var pasteboard: UIPasteboard!

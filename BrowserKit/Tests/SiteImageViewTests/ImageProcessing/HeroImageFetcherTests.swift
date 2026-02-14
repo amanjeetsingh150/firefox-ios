@@ -6,7 +6,7 @@ import LinkPresentation
 import XCTest
 @testable import SiteImageView
 
-final class HeroImageFetcherTests: XCTestCase {
+final class HeroImageFetcherTests: LeakDetectingTestCase {
     private var metadataProvider: MetadataProviderFake!
 
     override func setUp() {

@@ -6,7 +6,7 @@ import XCTest
 import UniformTypeIdentifiers
 @testable import ActionExtensionKit
 
-final class FirefoxURLBuilderTests: XCTestCase {
+final class FirefoxURLBuilderTests: LeakDetectingTestCase {
     private var subject: FirefoxURLBuilder!
 
     override func setUp() {
