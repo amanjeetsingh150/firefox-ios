@@ -4,7 +4,6 @@
 
 @testable import Client
 import XCTest
-import TestKit
 import MozillaAppServices
 
 class PasswordManagerSelectionHelperTests: LeakDetectingTestCase {

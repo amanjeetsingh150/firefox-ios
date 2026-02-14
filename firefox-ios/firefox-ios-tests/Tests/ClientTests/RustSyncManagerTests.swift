@@ -6,7 +6,6 @@
 import Sync
 import Shared
 import XCTest
-import TestKit
 
 class RustSyncManagerTests: LeakDetectingTestCase {
     struct Keys {

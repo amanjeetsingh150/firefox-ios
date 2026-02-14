@@ -6,7 +6,6 @@
 import Foundation
 
 import XCTest
-import TestKit
 
 class FxAPushMessageTest: LeakDetectingTestCase {
     func createHandler(_ profile: Profile = MockProfile()) -> FxAPushMessageHandler {

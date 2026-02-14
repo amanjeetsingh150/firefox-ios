@@ -5,13 +5,13 @@
 import XCTest
 import XCTestLeaksClient
 
-open class LeakDetectingTestCase: XCTestCase, LeakCheckable {
-    override open class func setUp() {
+class LeakDetectingTestCase: XCTestCase, LeakCheckable {
+    override class func setUp() {
         super.setUp()
         XCTestLeaksObserver.register()
     }
 
-    open func leakCheckDidComplete(with result: LeaksResult) {
+    func leakCheckDidComplete(with result: LeaksResult) {
         for leak in result.leaks {
             print("Leak: \(leak.rootTypeName ?? "Unknown") (\(leak.leakType))")
         }

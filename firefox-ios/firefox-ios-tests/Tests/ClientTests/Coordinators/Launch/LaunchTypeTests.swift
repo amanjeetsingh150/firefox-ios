@@ -4,7 +4,6 @@
 
 import Common
 import XCTest
-import TestKit
 @testable import Client
 
 final class LaunchTypeTests: LeakDetectingTestCase {

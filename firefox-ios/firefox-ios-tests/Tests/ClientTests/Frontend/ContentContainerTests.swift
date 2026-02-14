@@ -5,7 +5,6 @@
 import Common
 import WebKit
 import XCTest
-import TestKit
 @testable import Client
 
 @MainActor

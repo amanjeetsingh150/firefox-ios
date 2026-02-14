@@ -5,7 +5,6 @@
 import Common
 import UIKit
 import XCTest
-import TestKit
 import Shared
 import WebKit
 

@@ -5,7 +5,6 @@
 import Foundation
 import Glean
 import XCTest
-import TestKit
 import Storage
 
 @testable import Client

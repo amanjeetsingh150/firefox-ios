@@ -6,7 +6,6 @@
 
 import Glean
 import XCTest
-import TestKit
 
 class WebviewTelemetryTests: LeakDetectingTestCase {
     var mockGleanWrapper: MockGleanWrapper!

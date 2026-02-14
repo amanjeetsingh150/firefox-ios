@@ -5,7 +5,6 @@
 import Shared
 import Storage
 import XCTest
-import TestKit
 import Common
 
 @testable import Client

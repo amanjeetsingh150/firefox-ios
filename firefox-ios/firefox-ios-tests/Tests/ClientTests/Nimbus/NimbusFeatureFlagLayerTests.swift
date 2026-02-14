@@ -7,7 +7,6 @@
 // @testable import Client
 // import MozillaAppServices
 // import XCTest
-import TestKit
 //
 // class NimbusFeatureFlagLayerTests: LeakDetectingTestCase {
 //

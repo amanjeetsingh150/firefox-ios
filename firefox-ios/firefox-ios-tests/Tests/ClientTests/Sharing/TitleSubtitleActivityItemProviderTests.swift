@@ -4,7 +4,6 @@
 
 import UniformTypeIdentifiers
 import XCTest
-import TestKit
 @testable import Client
 
 final class TitleSubtitleActivityItemProviderTests: LeakDetectingTestCase {

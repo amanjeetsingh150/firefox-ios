@@ -4,7 +4,6 @@
 
 import MozillaAppServices
 import XCTest
-import TestKit
 import OnboardingKit
 
 @testable import Client

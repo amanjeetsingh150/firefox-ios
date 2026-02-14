@@ -6,7 +6,6 @@
 
 import Glean
 import XCTest
-import TestKit
 import Common
 
 // TODO: FXIOS-13742 - Migrate TabsTelemetryTests to use mock telemetry or GleanWrapper

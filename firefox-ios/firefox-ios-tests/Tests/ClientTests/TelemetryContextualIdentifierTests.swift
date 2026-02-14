@@ -6,7 +6,6 @@
 
 import Glean
 import XCTest
-import TestKit
 
 class TelemetryContextualIdentifierTests: LeakDetectingTestCase {
     override func setUp() async throws {

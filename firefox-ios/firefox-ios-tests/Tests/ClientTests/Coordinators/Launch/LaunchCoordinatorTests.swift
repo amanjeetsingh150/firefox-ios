@@ -6,7 +6,6 @@ import SwiftUI
 import Common
 import OnboardingKit
 import XCTest
-import TestKit
 @testable import Client
 
 @MainActor

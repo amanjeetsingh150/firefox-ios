@@ -6,7 +6,6 @@
 import Common
 import Foundation
 import XCTest
-import TestKit
 
 enum TestEvent: AppEventType {
     // Standard test events

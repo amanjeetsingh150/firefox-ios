@@ -4,7 +4,6 @@
 
 import Foundation
 import XCTest
-import TestKit
 
 class WallpaperNetworkingTests: LeakDetectingTestCase {
     var networking: NetworkingMock!

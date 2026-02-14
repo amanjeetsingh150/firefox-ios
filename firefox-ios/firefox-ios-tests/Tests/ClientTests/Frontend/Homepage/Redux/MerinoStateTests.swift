@@ -5,7 +5,6 @@
 import Redux
 import MozillaAppServices
 import XCTest
-import TestKit
 
 @testable import Client
 

@@ -183,10 +183,7 @@ let package = Package(
             swiftSettings: [
             ]
         ),
-        .target(name: "TestKit",
-                dependencies: [
-                    .product(name: "XCTestLeaksClient", package: "XCTestLeaks"),
-                ]),
+        .target(name: "TestKit"),
         .target(
             name: "ToolbarKit",
             dependencies: ["Common"],

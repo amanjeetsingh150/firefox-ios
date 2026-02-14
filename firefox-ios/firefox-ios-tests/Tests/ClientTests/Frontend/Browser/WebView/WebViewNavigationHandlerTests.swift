@@ -6,7 +6,6 @@
 
 import WebKit
 import XCTest
-import TestKit
 
 class WebViewNavigationHandlerTests: LeakDetectingTestCase {
     // MARK: - Data scheme

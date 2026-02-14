@@ -6,7 +6,6 @@
 
 import Glean
 import XCTest
-import TestKit
 import Storage
 
 class SponsoredTileGleanTelemetryTests: LeakDetectingTestCase {

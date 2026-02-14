@@ -7,7 +7,6 @@
 import Common
 import Shared
 import XCTest
-import TestKit
 
 @MainActor
 final class StatusBarOverlayTests: LeakDetectingTestCase {

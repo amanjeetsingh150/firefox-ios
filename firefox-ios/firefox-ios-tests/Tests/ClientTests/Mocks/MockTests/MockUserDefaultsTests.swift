@@ -5,7 +5,6 @@
 import Foundation
 
 import XCTest
-import TestKit
 
 class MockUserDefaultsTests: LeakDetectingTestCase {
     // MARK: - Properties

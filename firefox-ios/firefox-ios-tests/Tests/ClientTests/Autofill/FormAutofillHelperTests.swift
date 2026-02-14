@@ -5,7 +5,6 @@
 @testable import Client
 import Foundation
 import XCTest
-import TestKit
 import WebKit
 import Common
 import Storage

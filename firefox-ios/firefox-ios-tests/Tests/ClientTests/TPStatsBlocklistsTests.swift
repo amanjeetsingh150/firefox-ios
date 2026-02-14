@@ -5,7 +5,6 @@
 @testable import Client
 
 import XCTest
-import TestKit
 
 class TPStatsBlocklistsTests: LeakDetectingTestCase {
     var blocklists: TPStatsBlocklists!

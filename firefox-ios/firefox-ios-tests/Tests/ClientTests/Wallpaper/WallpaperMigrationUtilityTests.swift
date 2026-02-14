@@ -4,7 +4,6 @@
 
 import Foundation
 import XCTest
-import TestKit
 
 class WallpaperMigrationUtilityTests: LeakDetectingTestCase {
     override func setUp() {

@@ -4,7 +4,6 @@
 
 import Redux
 import XCTest
-import TestKit
 import SummarizeKit
 
 @testable import Client

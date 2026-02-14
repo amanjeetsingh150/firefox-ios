@@ -7,7 +7,6 @@
 import Common
 import Shared
 import XCTest
-import TestKit
 
 class SearchBarLocationSaverTests: LeakDetectingTestCase {
     private var profile: MockProfile!

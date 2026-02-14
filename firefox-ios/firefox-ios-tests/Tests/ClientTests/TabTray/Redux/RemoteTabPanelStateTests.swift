@@ -6,7 +6,6 @@ import Common
 import Redux
 import Storage
 import XCTest
-import TestKit
 
 import struct MozillaAppServices.Device
 

@@ -7,7 +7,6 @@ import Foundation
 @testable import Client
 
 import XCTest
-import TestKit
 
 @available(iOS 13.4, *)
 @MainActor

@@ -6,7 +6,6 @@ import Foundation
 
 @testable import Client
 import XCTest
-import TestKit
 import WebKit
 
 class RemoteSettingsFetchConfigTests: LeakDetectingTestCase {
