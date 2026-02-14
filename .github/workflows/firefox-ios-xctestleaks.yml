@@ -8,7 +8,7 @@ on:
 
 env:
     browser: firefox-ios
-    xcode_version: 26.0
+    xcode_version: 26.2
     ios_version: 26.0
     ios_simulator_default: iPhone 16
     xcodebuild_scheme: Fennec
@@ -24,7 +24,6 @@ jobs:
 
             - name: Setup Xcode
               run: |
-                sudo rm -rf /Applications/Xcode.app
                 sudo xcode-select -s /Applications/Xcode_${{ env.xcode_version }}.app/Contents/Developer
                 xcodebuild -version
                 ./bootstrap.sh focus
