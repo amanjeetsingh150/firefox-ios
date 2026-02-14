@@ -244,7 +244,14 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
 
     @MainActor
     func testWebViewDecidePolicyForNavigationAction_allowMarketPlaceScheme_whenUserAction() {
-        let subject = createSubject()
+        let subject = MockBrowserViewController(
+            profile: profile,
+            tabManager: tabManager,
+            userInitiatedQueue: MockDispatchQueue()
+        )
+        subject.mockIsMainFrameNavigation = true
+        trackForMemoryLeaks(subject)
+
         let url = URL(string: "marketplace-kit://install?exampleApp.com")!
         let tab = createTab()
         tabManager.tabs = [tab]
@@ -258,11 +265,18 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
 
     @MainActor
     func testWebViewDecidePolicyForNavigationAction_cancelMarketPlaceScheme_whenNotMainFrame() {
-        let subject = createSubject()
+        let subject = MockBrowserViewController(
+            profile: profile,
+            tabManager: tabManager,
+            userInitiatedQueue: MockDispatchQueue()
+        )
+        subject.mockIsMainFrameNavigation = false
+        trackForMemoryLeaks(subject)
+
         let url = URL(string: "marketplace-kit://install?exampleApp.com")!
         let tab = createTab()
         tabManager.tabs = [tab]
-        let navigationAction = MockNavigationAction(url: url, type: .linkActivated, isMainFrame: false)
+        let navigationAction = MockNavigationAction(url: url, type: .linkActivated)
 
         subject.webView(tab.webView!,
                         decidePolicyFor: navigationAction) { policy in
@@ -272,7 +286,14 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
 
     @MainActor
     func testWebViewDecidePolicyForNavigationAction_cancelMarketPlaceScheme_whenReloadAction() {
-        let subject = createSubject()
+        let subject = MockBrowserViewController(
+            profile: profile,
+            tabManager: tabManager,
+            userInitiatedQueue: MockDispatchQueue()
+        )
+        subject.mockIsMainFrameNavigation = true
+        trackForMemoryLeaks(subject)
+
         let url = URL(string: "marketplace-kit://install?exampleApp.com")!
         let tab = createTab()
         tabManager.tabs = [tab]
@@ -287,55 +308,59 @@ class BrowserViewControllerWebViewDelegateTests: XCTestCase {
     // MARK: - Authentication
 
     @MainActor
-    func testWebViewDidReceiveChallenge_MethodServerTrust() {
+    func testWebViewDidReceiveChallenge_MethodServerTrust() async {
         let subject = createSubject()
 
-        subject.webView(
+        // Get the (disposition, credential) result tuple
+        let result = await subject.webView(
             anyWebView(),
-            didReceive: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodServerTrust")
-        ) { disposition, credential in
-            XCTAssertEqual(disposition, .performDefaultHandling)
-            XCTAssertNil(credential)
-        }
+            respondTo: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodServerTrust")
+        )
+
+        XCTAssertEqual(result.0, .performDefaultHandling)
+        XCTAssertNil(result.1)
     }
 
     @MainActor
-    func testWebViewDidReceiveChallenge_MethodHTTPDigest() {
+    func testWebViewDidReceiveChallenge_MethodHTTPDigest() async {
         let subject = createSubject()
 
-        subject.webView(
+        // Get the (disposition, credential) result tuple
+        let result = await subject.webView(
             anyWebView(),
-            didReceive: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodHTTPDigest")
-        ) { disposition, credential in
-            XCTAssertEqual(disposition, .performDefaultHandling)
-            XCTAssertNil(credential)
-        }
+            respondTo: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodHTTPDigest")
+        )
+
+        XCTAssertEqual(result.0, .performDefaultHandling)
+        XCTAssertNil(result.1)
     }
 
     @MainActor
-    func testWebViewDidReceiveChallenge_MethodHTTPNTLM() {
+    func testWebViewDidReceiveChallenge_MethodHTTPNTLM() async {
         let subject = createSubject()
 
-        subject.webView(
+        // Get the (disposition, credential) result tuple
+        let result = await subject.webView(
             anyWebView(),
-            didReceive: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodNTLM")
-        ) { disposition, credential in
-            XCTAssertEqual(disposition, .performDefaultHandling)
-            XCTAssertNil(credential)
-        }
+            respondTo: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodNTLM")
+        )
+
+        XCTAssertEqual(result.0, .performDefaultHandling)
+        XCTAssertNil(result.1)
     }
 
     @MainActor
-    func testWebViewDidReceiveChallenge_MethodHTTPBasic() {
+    func testWebViewDidReceiveChallenge_MethodHTTPBasic() async {
         let subject = createSubject()
 
-        subject.webView(
+        // Get the (disposition, credential) result tuple
+        let result = await subject.webView(
             anyWebView(),
-            didReceive: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodHTTPBasic")
-        ) { disposition, credential in
-            XCTAssertEqual(disposition, .performDefaultHandling)
-            XCTAssertNil(credential)
-        }
+            respondTo: anyAuthenticationChallenge(for: "NSURLAuthenticationMethodHTTPBasic")
+        )
+
+        XCTAssertEqual(result.0, .performDefaultHandling)
+        XCTAssertNil(result.1)
     }
 
     @MainActor

@@ -109,6 +109,7 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
                              toastContainer: UIView())
 
         let secondHomepage = HomepageViewController(windowUUID: windowUUID,
+                                                    tabManager: MockTabManager(),
                                                     overlayManager: overlayModeManager,
                                                     toastContainer: UIView())
         XCTAssertFalse(subject.browserViewController.contentContainer.canAdd(content: secondHomepage))
@@ -131,58 +132,6 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
                              toastContainer: UIView())
         let secondHomepage = subject.homepageViewController
         XCTAssertEqual(firstHomepage, secondHomepage)
-    }
-
-    func testHomepageScreenshotTool_returnsHomepage_forNormalTab() throws {
-        let subject = createSubject()
-        subject.browserViewController = browserViewController
-        subject.showHomepage(
-            overlayManager: overlayModeManager,
-            isZeroSearch: false,
-            statusBarScrollDelegate: scrollDelegate,
-            toastContainer: UIView()
-        )
-
-        let screenshotTool = try XCTUnwrap(subject.homepageScreenshotTool())
-        XCTAssertTrue(screenshotTool is HomepageViewController)
-    }
-
-    func testHomepageScreenshotTool_returnsNil_forNewBlankNewTab() throws {
-        let subject = createSubject()
-        subject.browserViewController = browserViewController
-        browserViewController.overrideNewTabSettings = .blankPage
-        subject.showHomepage(
-            overlayManager: overlayModeManager,
-            isZeroSearch: false,
-            statusBarScrollDelegate: scrollDelegate,
-            toastContainer: UIView()
-        )
-        XCTAssertNil(subject.homepageScreenshotTool())
-    }
-
-    func testHomepageScreenshotTool_returnsNil_forNewCustomURLNewTab() throws {
-        let subject = createSubject()
-        subject.browserViewController = browserViewController
-        browserViewController.overrideNewTabSettings = .homePage
-        subject.showHomepage(
-            overlayManager: overlayModeManager,
-            isZeroSearch: false,
-            statusBarScrollDelegate: scrollDelegate,
-            toastContainer: UIView()
-        )
-
-        XCTAssertNil(subject.homepageScreenshotTool())
-    }
-
-    func testHomepageScreenshotTool_returnsPrivateHomepage_forPrivateTab() throws {
-        let subject = createSubject()
-        browserViewController.overrideNewTabSettings = .topSites
-        let tab = tabManager.addTab(nil, afterTab: nil, zombie: false, isPrivate: true)
-        tabManager.selectTab(tab)
-        subject.showPrivateHomepage(overlayManager: overlayModeManager)
-
-        let screenshotTool = try XCTUnwrap(subject.homepageScreenshotTool())
-        XCTAssertTrue(screenshotTool is PrivateHomepageViewController)
     }
 
     // MARK: - Show new homepage
@@ -537,11 +486,12 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
     func testShowPasswordGenerator_presentsPasswordGeneratorBottomSheet() {
         let subject = createSubject()
         let mockTab = Tab(profile: profile, windowUUID: windowUUID)
-        let URL = URL(string: "https://foo.com")!
-        let webView = WKWebViewMock(URL)
-        let frame = WKFrameInfoMock(webView: webView, frameURL: URL, isMainFrame: true)
-
-        subject.showPasswordGenerator(tab: mockTab, frame: frame)
+        let mockEvaluator = MockPasswordGeneratorScriptEvaluator()
+        let frameContext = PasswordGeneratorFrameContext(origin: "https://foo.com",
+                                                         host: "foo.com",
+                                                         scriptEvaluator: mockEvaluator,
+                                                         frameInfo: nil)
+        subject.showPasswordGenerator(tab: mockTab, frameContext: frameContext)
 
         XCTAssertEqual(mockRouter.presentCalled, 1)
         XCTAssertTrue(mockRouter.presentedViewController is BottomSheetViewController)
@@ -1089,20 +1039,6 @@ final class BrowserCoordinatorTests: XCTestCase, FeatureFlaggable {
     }
 
     // MARK: - App action route
-
-    func testHandleHandleQRCode_returnsTrue() {
-        // Given
-        let subject = createSubject()
-        subject.browserViewController = browserViewController
-        subject.browserHasLoaded()
-
-        // When
-        let result = testCanHandleAndHandle(subject, route: .action(action: .showQRCode))
-
-        // Then
-        XCTAssertTrue(result)
-        XCTAssertEqual(browserViewController.qrCodeCount, 1)
-    }
 
     func testHandleClosePrivateTabs_returnsTrue() {
         // Given

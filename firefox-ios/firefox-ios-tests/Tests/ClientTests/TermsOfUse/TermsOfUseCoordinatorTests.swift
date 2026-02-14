@@ -59,11 +59,17 @@ final class TermsOfUseCoordinatorTests: XCTestCase {
     }
 
     func testShouldShowTermsOfUse_ReturnsFalse_WhenTermsOfServiceAccepted() {
+        // Test that legacy TermsOfServiceAccepted is migrated and recognized
         profile.prefs.setInt(1, forKey: PrefsKeys.TermsOfServiceAccepted)
+
+        // Trigger migration explicitly (as it would happen in AppLaunchUtil)
+        TermsOfUseMigration(prefs: profile.prefs).migrateTermsOfService()
 
         let result = coordinator.shouldShowTermsOfUse(context: .appLaunch)
 
         XCTAssertFalse(result)
+        // Verify migration happened - TermsOfUseAccepted should be set
+        XCTAssertTrue(profile.prefs.boolForKey(PrefsKeys.TermsOfUseAccepted) ?? false)
     }
 
     func testShouldShowTermsOfUse_ReturnsFalse_WhenTimeoutPeriodNotElapsed() {
@@ -123,9 +129,16 @@ final class TermsOfUseCoordinatorTests: XCTestCase {
         XCTAssertEqual(router.dismissCalled, 1)
     }
 
-    private func setupNimbusTouFeatureForTesting(isEnabled: Bool, maxRemindersCount: Int32 = 5) {
+    private func setupNimbusTouFeatureForTesting(
+        isEnabled: Bool,
+        maxRemindersCount: Int32 = 5,
+        enableDragToDismiss: Bool = true,
+        contentOption: TermsOfUsePromptContentOption = .value0
+    ) {
         FxNimbus.shared.features.touFeature.with { _, _ in
             return TouFeature(
+                contentOption: contentOption,
+                enableDragToDismiss: enableDragToDismiss,
                 maxRemindersCount: Int(maxRemindersCount),
                 status: isEnabled
             )

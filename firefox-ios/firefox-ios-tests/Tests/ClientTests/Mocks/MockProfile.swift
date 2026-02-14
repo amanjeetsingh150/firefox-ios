@@ -90,7 +90,7 @@ final class MockTabQueue: TabQueue, @unchecked Sendable {
         return succeed()
     }
 
-    func getQueuedTabs(completion: @MainActor @Sendable @escaping ([ShareItem]) -> Void) {
+    func getQueuedTabs(completion: @MainActor @escaping ([ShareItem]) -> Void) {
         Task { @MainActor in
             completion(queuedTabs)
             getQueuedTabsCalled += 1
@@ -140,7 +140,7 @@ final class MockProfile: Client.Profile, @unchecked Sendable {
     init(
         databasePrefix: String = "mock",
         firefoxSuggest: RustFirefoxSuggestProtocol? = nil,
-        remoteSettingsService: RemoteSettingsService = RemoteSettingsService(noPointer: .init()),
+        remoteSettingsService: RemoteSettingsService = RemoteSettingsService(unsafeFromHandle: 0),
         injectedPinnedSites: MockablePinnedSites? = nil
     ) {
         files = MockFiles()

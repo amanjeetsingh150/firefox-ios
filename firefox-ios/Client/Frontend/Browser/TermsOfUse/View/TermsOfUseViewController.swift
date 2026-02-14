@@ -5,6 +5,7 @@
 import Common
 import Shared
 import Redux
+import ComponentLibrary
 
 final class TermsOfUseViewController: UIViewController,
                                       Themeable,
@@ -18,7 +19,6 @@ final class TermsOfUseViewController: UIViewController,
         static let logoSize: CGFloat = 40
         static let acceptButtonHeight: CGFloat = 44
         static let remindMeLaterButtonHeight: CGFloat = 44
-        static let buttonCornerRadius: CGFloat = 12
         static let grabberWidth: CGFloat = 36
         static let grabberHeight: CGFloat = 5
         static let grabberTopPadding: CGFloat = 8
@@ -40,7 +40,7 @@ final class TermsOfUseViewController: UIViewController,
     var notificationCenter: NotificationProtocol
     var themeManager: ThemeManager
     var themeListenerCancellable: Any?
-    private let strings = TermsOfUseStrings()
+    private let strings: TermsOfUseStrings
     private let windowUUID: WindowUUID
     var currentWindowUUID: UUID? { windowUUID }
 
@@ -72,7 +72,6 @@ final class TermsOfUseViewController: UIViewController,
     }
 
     private lazy var titleLabel: UILabel = .build { label in
-        label.text = TermsOfUseStrings.titleText
         label.font = UX.titleFont
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -94,22 +93,22 @@ final class TermsOfUseViewController: UIViewController,
         textView.delegate = self
     }
 
-    private lazy var acceptButton: UIButton = .build { button in
-        button.setTitle(TermsOfUseStrings.acceptButtonTitle, for: .normal)
-        button.titleLabel?.font = UX.buttonFont
-        button.titleLabel?.adjustsFontForContentSizeCategory = true
-        button.layer.cornerRadius = UX.buttonCornerRadius
-        button.accessibilityIdentifier = AccessibilityIdentifiers.TermsOfUse.acceptButton
+    private lazy var acceptButton: PrimaryRoundedButton = .build { [self] button in
+        let viewModel = PrimaryRoundedButtonViewModel(
+            title: TermsOfUseStrings.acceptButtonTitle,
+            a11yIdentifier: AccessibilityIdentifiers.TermsOfUse.acceptButton
+        )
+        button.configure(viewModel: viewModel)
         button.heightAnchor.constraint(greaterThanOrEqualToConstant: UX.acceptButtonHeight).isActive = true
         button.addTarget(self, action: #selector(self.acceptTapped), for: .touchUpInside)
     }
 
-    private lazy var remindMeLaterButton: UIButton = .build { button in
-        button.setTitle(TermsOfUseStrings.remindMeLaterButtonTitle, for: .normal)
-        button.titleLabel?.font = UX.buttonFont
-        button.titleLabel?.adjustsFontForContentSizeCategory = true
-        button.layer.cornerRadius = UX.buttonCornerRadius
-        button.accessibilityIdentifier = AccessibilityIdentifiers.TermsOfUse.remindMeLaterButton
+    private lazy var remindMeLaterButton: SecondaryRoundedButton = .build { [self] button in
+        let viewModel = SecondaryRoundedButtonViewModel(
+            title: TermsOfUseStrings.remindMeLaterButtonTitle,
+            a11yIdentifier: AccessibilityIdentifiers.TermsOfUse.remindMeLaterButton
+        )
+        button.configure(viewModel: viewModel)
         button.heightAnchor.constraint(greaterThanOrEqualToConstant: UX.remindMeLaterButtonHeight).isActive = true
         button.addTarget(self, action: #selector(self.remindMeLaterTapped), for: .touchUpInside)
     }
@@ -117,11 +116,13 @@ final class TermsOfUseViewController: UIViewController,
     init(themeManager: ThemeManager = AppContainer.shared.resolve(),
          windowUUID: UUID,
          notificationCenter: NotificationProtocol = NotificationCenter.default,
-         enableDragToDismiss: Bool = true) {
+         enableDragToDismiss: Bool = true,
+         contentOption: TermsOfUseContentOption = .value0) {
         self.themeManager = themeManager
         self.notificationCenter = notificationCenter
         self.windowUUID = windowUUID
         self.isDragToDismissEnabled = enableDragToDismiss
+        self.strings = TermsOfUseStrings(option: contentOption)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -133,6 +134,7 @@ final class TermsOfUseViewController: UIViewController,
         super.viewDidLoad()
         UIAccessibility.post(notification: .announcement, argument:
                             TermsOfUseStrings.termsOfUseHasOpenedNotification)
+        titleLabel.text = strings.titleText
         setupUI()
 
         listenForThemeChanges(withNotificationCenter: notificationCenter)
@@ -263,7 +265,7 @@ final class TermsOfUseViewController: UIViewController,
         paragraphStyle.alignment = .left
 
         let attributed = NSMutableAttributedString(
-            string: TermsOfUseStrings.termsOfUseInfoText,
+            string: strings.termsOfUseInfoText,
             attributes: [
                 // UITextView.attributedText overrides adjustsFontForContentSizeCategory behavior
                 // Unlike UILabel, we must explicitly set scaledFont() in the attributed string
@@ -273,8 +275,8 @@ final class TermsOfUseViewController: UIViewController,
             ]
         )
 
-        for term in TermsOfUseStrings.linkTerms {
-            if let url = TermsOfUseStrings.linkURL(for: term),
+        for term in strings.linkTerms {
+            if let url = strings.linkURL(for: term),
                let range = attributed.string.range(of: term) {
                 let nsRange = NSRange(range, in: attributed.string)
                 attributed.addAttribute(.link, value: url, range: nsRange)
@@ -344,10 +346,8 @@ final class TermsOfUseViewController: UIViewController,
         grabberView.isHidden = !isDragToDismissEnabled
         grabberView.alpha = isDragToDismissEnabled ? 1.0 : 0.0
         titleLabel.textColor = currentTheme().colors.textPrimary
-        acceptButton.tintColor = currentTheme().colors.textOnDark
-        acceptButton.backgroundColor = currentTheme().colors.actionPrimary
-        remindMeLaterButton.backgroundColor = currentTheme().colors.actionSecondary
-        remindMeLaterButton.setTitleColor(currentTheme().colors.textPrimary, for: .normal)
+        acceptButton.applyTheme(theme: currentTheme())
+        remindMeLaterButton.applyTheme(theme: currentTheme())
         descriptionTextView.linkTextAttributes = [
             .foregroundColor: currentTheme().colors.textAccent,
             .underlineStyle: NSUnderlineStyle.single.rawValue

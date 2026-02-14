@@ -11,13 +11,13 @@ import Storage
 
 @MainActor
 final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
-    private var networking: MockContileNetworking!
+    private var networking: MockUnifiedTileNetworking!
     private var logger: MockLogger!
     private var gleanWrapper: MockGleanWrapper!
 
     override func setUp() async throws {
         try await super.setUp()
-        networking = MockContileNetworking()
+        networking = MockUnifiedTileNetworking()
         logger = MockLogger()
         gleanWrapper = MockGleanWrapper()
     }
@@ -30,7 +30,7 @@ final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
     }
 
     func testImpressionTelemetry_givenErrorResponse_thenFailsWithLogMessage() {
-        networking.error = UnifiedAdsProvider.Error.noDataAvailable
+        networking.error = UnifiedTileNetworkingError.dataUnavailable
         let subject = createSubject()
 
         guard case SiteType.sponsoredSite(let siteInfo) = tileSite.type else {
@@ -43,7 +43,7 @@ final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
     }
 
     func testClickTelemetry_givenErrorResponse_thenFailsWithLogMessage() {
-        networking.error = UnifiedAdsProvider.Error.noDataAvailable
+        networking.error = UnifiedTileNetworkingError.dataUnavailable
         let subject = createSubject()
 
         guard case SiteType.sponsoredSite(let siteInfo) = tileSite.type else {
@@ -55,7 +55,7 @@ final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
         XCTAssertEqual(logger.savedMessage, "The unified ads telemetry call failed: \(siteInfo.clickURL)")
     }
 
-    func testLegacyImpressionTelemetry() throws {
+    func testGleanImpressionTelemetry() throws {
         let subject = createSubject()
         subject.sendImpressionTelemetry(tileSite: tileSite, position: 1)
 
@@ -89,7 +89,7 @@ final class UnifiedAdsCallbackTelemetryTests: XCTestCase {
         XCTAssert(secondResultMetricType == expectedSecondMetricType, secondDebugMessage.text)
     }
 
-    func testLegacyClickTelemetry() throws {
+    func testGleanClickTelemetry() throws {
         let subject = createSubject()
         subject.sendClickTelemetry(tileSite: tileSite, position: 1)
 

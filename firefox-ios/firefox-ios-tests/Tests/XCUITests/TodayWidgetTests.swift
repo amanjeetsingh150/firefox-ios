@@ -60,7 +60,11 @@ private func widgetExist() -> Bool {
 @MainActor
 private func goToTodayWidgetPage() {
     // Swipe right until the "Screen Time" icon appears
-    if #unavailable(iOS 16) {
+
+    if #available(iOS 26, *) {
+        springboard.swipeRight()
+        springboard.swipeRight()
+    } else if #unavailable(iOS 16) {
         while !springboard.textFields["SpotlightSearchField"].exists {
             springboard.swipeRight()
         }
@@ -119,6 +123,14 @@ private func checkFirefoxShortcutsOptions() {
         NSPredicate(format: "label CONTAINS[c] %@", "Copied Link")).element.exists,
                   "Go to copied link option doesn't exist"
     )
+}
+
+@MainActor
+private func skipOnboardingIfNeeded(app: XCUIApplication) {
+    if app.buttons["Continue"].waitForExistence(timeout: TIMEOUT) {
+        app.buttons["Continue"].waitAndTap()
+        app.buttons["CloseButton"].waitAndTap()
+    }
 }
 
 // swiftlint:disable:next type_body_length
@@ -335,7 +347,7 @@ class TodayWidgetTests: BaseTestCase {
         if #unavailable(iOS 16) {
             throw XCTSkip("iOS 16 is required")
         }
-        XCUIDevice.shared.press(.home)
+        app.terminate()
         // Go to Today Widget Page
         goToTodayWidgetPage()
         // Remove Firefox Widget if present
@@ -382,7 +394,7 @@ class TodayWidgetTests: BaseTestCase {
             throw XCTSkip("iOS 16 is required")
         }
         // Return to the Home screen
-        XCUIDevice.shared.press(.home)
+        app.terminate()
         // Navigate to the Today Widget Page
         goToTodayWidgetPage()
         // Remove Firefox Widget if it exists
@@ -428,6 +440,7 @@ class TodayWidgetTests: BaseTestCase {
         mozWaitForElementToExist(newPrivateSearch)
         coordinate.tap()
         tapOnWidget(widgetType: "Private Tab")
+        skipOnboardingIfNeeded(app: app)
         // Verify the presence of Private Mode message
         mozWaitForElementToExist(app.staticTexts["Leave no traces on this device"])
     }
@@ -439,7 +452,7 @@ class TodayWidgetTests: BaseTestCase {
         }
         let copiedString = "mozilla.org"
         // Press Home and navigate to Today Widget Page
-        XCUIDevice.shared.press(.home)
+        app.terminate()
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
         if checkPresenceFirefoxWidget() {
@@ -490,6 +503,8 @@ class TodayWidgetTests: BaseTestCase {
             springboard.alerts.buttons["Allow Paste"].waitAndTap()
         }
 
+        skipOnboardingIfNeeded(app: app)
+
         // Verify the copied string is in the URL field
         mozWaitForElementToExist(urlBarAddress, timeout: TIMEOUT)
         mozWaitForValueContains(urlBarAddress, value: copiedString, timeout: TIMEOUT)
@@ -506,7 +521,7 @@ class TodayWidgetTests: BaseTestCase {
         if #unavailable(iOS 16) {
             throw XCTSkip("iOS 16 is required")
         }
-        XCUIDevice.shared.press(.home)
+        app.terminate()
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
         if checkPresenceFirefoxWidget() {
@@ -533,7 +548,7 @@ class TodayWidgetTests: BaseTestCase {
         if #unavailable(iOS 16) {
             throw XCTSkip("iOS 16 is required")
         }
-        XCUIDevice.shared.press(.home)
+        app.terminate()
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
         if checkPresenceFirefoxWidget() {
@@ -558,7 +573,7 @@ class TodayWidgetTests: BaseTestCase {
         springboard.buttons.matching(NSPredicate(
             format: "label CONTAINS[c] %@", "Private Tab")
         ).element.firstMatch.waitAndTap()
-
+        skipOnboardingIfNeeded(app: app)
         // Verify the presence of Private Mode message
         mozWaitForElementToExist(app.staticTexts["Leave no traces on this device"])
     }
@@ -570,7 +585,9 @@ class TodayWidgetTests: BaseTestCase {
         }
         let copiedString = "mozilla.org"
         UIPasteboard.general.string = copiedString
-        XCUIDevice.shared.press(.home)
+        app.terminate()
+
+        sleep(3)
 
         goToTodayWidgetPage()
         // Remove Firefox Widget if it already exists
@@ -579,7 +596,7 @@ class TodayWidgetTests: BaseTestCase {
         }
         // Add Firefox Widget
         if iPad() {
-            coordinate.press(forDuration: 3)
+            coordinate.press(forDuration: 5)
         }
         addWidget(widgetName: "Fennec")
         checkFirefoxAvailablesWidgets()
@@ -596,8 +613,11 @@ class TodayWidgetTests: BaseTestCase {
         springboard.buttons.matching(NSPredicate(
             format: "label CONTAINS[c] %@", "Copied Link")
         ).element.waitAndTap()
+
+        sleep(2)
         mozWaitElementHittable(element: springboard.alerts.buttons["Allow Paste"], timeout: TIMEOUT)
         springboard.alerts.buttons["Allow Paste"].waitAndTap()
+        skipOnboardingIfNeeded(app: app)
         // Verify the copied string is in the URL field
         mozWaitForElementToExist(urlBarAddress, timeout: TIMEOUT)
         mozWaitForValueContains(urlBarAddress, value: copiedString, timeout: TIMEOUT)

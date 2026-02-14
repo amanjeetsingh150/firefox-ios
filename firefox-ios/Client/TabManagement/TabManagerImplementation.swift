@@ -26,18 +26,12 @@ class TabManagerImplementation: NSObject,
                                 FeatureFlaggable,
                                 SessionCreator {
     let windowUUID: WindowUUID
-    let delaySelectingNewPopupTab: TimeInterval = 0.1
 
     var tabEventWindowResponseType: TabEventHandlerWindowResponseType { return .singleWindow(windowUUID) }
     var isRestoringTabs = false
     var backupCloseTab: BackupCloseTab?
     var notificationCenter: NotificationProtocol
     private(set) var tabs: [Tab]
-
-    private var isTabTrayUIExperimentsEnabled: Bool {
-        return featureFlags.isFeatureEnabled(.tabTrayUIExperiments, checking: .buildOnly)
-        && UIDevice.current.userInterfaceIdiom != .pad
-    }
 
     var isDeeplinkOptimizationRefactorEnabled: Bool {
         return featureFlags.isFeatureEnabled(.deeplinkOptimizationRefactor, checking: .buildOnly)
@@ -436,7 +430,7 @@ class TabManagerImplementation: NSObject,
 
     // MARK: - Restore tabs
 
-    func restoreTabs(_ forced: Bool = false) {
+    func restoreTabs() {
         assert(Thread.isMainThread)
         if isDeeplinkOptimizationRefactorEnabled {
             // Deeplinks happens before tab restoration, so we should have a tab already present in the tabs list
@@ -444,16 +438,14 @@ class TabManagerImplementation: NSObject,
             deeplinkTab = tabs.popLast()
         }
 
-        guard !isRestoringTabs,
-              forced || tabs.isEmpty
-        else {
+        guard !isRestoringTabs, tabs.isEmpty else {
             logger.log("No restore tabs running",
                        level: .debug,
                        category: .tabs)
             return
         }
 
-        logger.log("Tabs restore started being force; \(forced), with empty tabs; \(tabs.isEmpty), crashed at last launch is \(logger.crashedLastLaunch)",
+        logger.log("Tabs restore started with empty tabs; \(tabs.isEmpty), crashed at last launch is \(logger.crashedLastLaunch)",
                    level: .debug,
                    category: .tabs)
 
@@ -470,7 +462,7 @@ class TabManagerImplementation: NSObject,
         isRestoringTabs = true
         AppEventQueue.started(.tabRestoration(windowUUID))
 
-        restoreTabs()
+        startRestoreTabsTask()
     }
 
     private func updateSelectedTabAfterRemovalOf(_ removedTab: Tab, deletedIndex: Int) {
@@ -516,8 +508,7 @@ class TabManagerImplementation: NSObject,
         }
     }
 
-    private func restoreTabs() {
-        tabs = [Tab]()
+    private func startRestoreTabsTask() {
         Task { @MainActor in
             // Only attempt a tab data store fetch if we know we should have tabs on disk (ignore new windows)
             let windowData: WindowData? = windowIsNew ? nil : await tabDataStore.fetchWindowData(uuid: windowUUID)
@@ -578,16 +569,6 @@ class TabManagerImplementation: NSObject,
             return
         }
 
-        guard tabs.isEmpty else {
-            // Always make sure there is a single normal tab
-            // Note: this is where the first tab in a newly-created browser window will be added
-            generateEmptyTab()
-            logger.log("Not restoring tabs because there are in memory tabs already.",
-                       level: .warning,
-                       category: .tabs)
-
-            return
-        }
         generateTabs(from: windowData)
         cleanUpUnusedScreenshots()
         cleanUpTabSessionData()
@@ -604,6 +585,8 @@ class TabManagerImplementation: NSObject,
 
     /// Creates the webview so needs to live on the main thread
     private func generateTabs(from windowData: WindowData) {
+        // Clear in memory tabs for tab restore
+        tabs = [Tab]()
         let filteredTabs = filterPrivateTabs(from: windowData,
                                              clearPrivateTabs: shouldClearPrivateTabs())
         var tabToSelect: Tab?
@@ -936,9 +919,8 @@ class TabManagerImplementation: NSObject,
 
     private func selectTabWithSession(tab: Tab, sessionData: Data?) {
         MainActor.assertIsolated("Expected to be called only on main actor.")
-        let configuration: WKWebViewConfiguration = tabConfigurationProvider.configuration(
-            isPrivate: tab.isPrivate
-        ).webViewConfiguration
+        // TODO: FXIOS-14784 - Investigate configuration since we override pop-up configuration here
+        let configuration = tabConfigurationProvider.configuration(isPrivate: tab.isPrivate).webViewConfiguration
         selectedTab?.createWebview(with: sessionData, configuration: configuration)
         selectedTab?.lastExecutedTime = Date.now()
     }
@@ -1073,13 +1055,6 @@ class TabManagerImplementation: NSObject,
                      zombie: false,
                      isPopup: true,
                      requiredConfiguration: configuration)
-
-        // Wait momentarily before selecting the new tab, otherwise the parent tab
-        // may be unable to set `window.location` on the popup immediately after
-        // calling `window.open("")`.
-        DispatchQueue.main.asyncAfter(deadline: .now() + delaySelectingNewPopupTab) {
-            self.selectTab(popup)
-        }
 
         return popup
     }
@@ -1219,6 +1194,7 @@ class TabManagerImplementation: NSObject,
     }
 
     // MARK: - SessionCreator
+
     func createPopupSession(configuration: WKWebViewConfiguration, parent: WKWebView) -> WKWebView? {
         guard let parentTab = self[parent] else { return nil }
         return addPopupForParentTab(profile: profile, parentTab: parentTab, configuration: configuration).webView

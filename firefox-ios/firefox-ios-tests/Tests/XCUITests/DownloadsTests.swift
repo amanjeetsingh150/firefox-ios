@@ -42,7 +42,7 @@ class DownloadsTests: BaseTestCase {
 
     private func deleteItem(itemName: String) {
         app.tables.cells.staticTexts[itemName].swipeLeft(velocity: 200)
-        app.tables.cells.buttons["Delete"].waitAndTap()
+        app.buttons["Delete"].waitAndTap()
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2306896
@@ -82,24 +82,6 @@ class DownloadsTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306898
     // Smoketest
     func testDownloadFile() {
-        downloadFile(fileName: testFileName, numberOfDownloads: 1)
-        navigator.goto(BrowserTabMenu)
-        navigator.goto(LibraryPanel_Downloads)
-
-        mozWaitForElementToExist(app.tables["DownloadsTable"])
-        // There should be one item downloaded. It's name and size should be shown
-        checkTheNumberOfDownloadedItems(items: 1)
-        waitForElementsToExist(
-            [
-                app.tables.cells.staticTexts[testFileNameDownloadPanel],
-                app.tables.cells.staticTexts[testFileSize]
-            ]
-        )
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2306898
-    // Smoketest TAE
-    func testDownloadFile_TAE() {
         downloadsScreen = DownloadsScreen(app: app)
         downloadFile(fileName: testFileName, numberOfDownloads: 1)
         navigator.goto(BrowserTabMenu)
@@ -156,7 +138,14 @@ class DownloadsTests: BaseTestCase {
                 app.tables["DownloadsTable"].staticTexts[testFileNameDownloadPanel]
             ]
         )
-        if #available(iOS 17, *) {
+        if #available(iOS 26, *) {
+            waitForElementsToExist(
+                [
+                    app.collectionViews.cells["Copy"],
+                    app.collectionViews.cells["Save to Files"]
+                ]
+            )
+        } else if #available(iOS 17, *) {
             waitForElementsToExist(
                 [
                     app.collectionViews.cells["Copy"],
@@ -169,7 +158,9 @@ class DownloadsTests: BaseTestCase {
         } else {
             mozWaitForElementToExist(app.collectionViews.buttons["Copy"])
         }
-        if !iPad() {
+        if #available(iOS 26, *) {
+            app.buttons["Done"].waitAndTap()
+        } else if !iPad() {
             app.navigationBars["UIActivityContentView"].buttons["Close"].waitAndTap()
         } else {
             // Workaround to close the context menu.
@@ -193,7 +184,14 @@ class DownloadsTests: BaseTestCase {
                 app.tables["DownloadsTable"].staticTexts[testFileNameDownloadPanel]
             ]
         )
-        if #available(iOS 17, *) {
+        if #available(iOS 26, *) {
+            waitForElementsToExist(
+                [
+                    app.collectionViews.cells["Copy"],
+                    app.collectionViews.cells["Save to Files"]
+                ]
+            )
+        } else if #available(iOS 17, *) {
             waitForElementsToExist(
                 [
                     app.collectionViews.cells["Copy"],
@@ -206,7 +204,9 @@ class DownloadsTests: BaseTestCase {
         } else {
             mozWaitForElementToExist(app.collectionViews.buttons["Copy"])
         }
-        if !iPad() {
+        if #available(iOS 26, *) {
+            app.buttons["Done"].waitAndTap()
+        } else if !iPad() {
             app.navigationBars["UIActivityContentView"].buttons["Close"].waitAndTap()
         } else {
             // Workaround to close the context menu.
@@ -289,15 +289,6 @@ class DownloadsTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306895
     // Smoketest
     func testToastButtonToGoToDownloads() {
-        downloadFile(fileName: testFileName, numberOfDownloads: 1)
-        app.buttons["Downloads"].waitAndTap()
-        mozWaitForElementToExist(app.tables["DownloadsTable"])
-        checkTheNumberOfDownloadedItems(items: 1)
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2306895
-    // Smoketest TAE
-    func testToastButtonToGoToDownloads_TAE() {
         browserScreen = BrowserScreen(app: app)
         downloadsScreen = DownloadsScreen(app: app)
         downloadFile(fileName: testFileName, numberOfDownloads: 1)

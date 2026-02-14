@@ -138,39 +138,26 @@ class BrowserCoordinator: BaseCoordinator,
     ) {
         let homepageController = self.homepageViewController ?? HomepageViewController(
             windowUUID: windowUUID,
+            tabManager: tabManager,
             overlayManager: overlayManager,
             statusBarScrollDelegate: statusBarScrollDelegate,
             toastContainer: toastContainer
         )
+        browserViewController.dispatchAvailableContentHeightChangedAction()
         homepageController.termsOfUseDelegate = self
         homepageController.view.accessibilityElementsHidden = false
         dispatchActionForEmbeddingHomepage(with: isZeroSearch)
-        guard browserViewController.embedContent(homepageController) else {
+        let didEmbed = browserViewController.embedContent(homepageController)
+        if !didEmbed {
             logger.log("Unable to embed new homepage", level: .debug, category: .coordinator)
-            return
         }
         self.homepageViewController = homepageController
-        homepageController.scrollToTop()
-        // [FXIOS-13651] Fix for WKWebView memory leak. (See comments on related PR.)
-        webviewController?.update(webView: nil)
-    }
+        homepageController.restoreVerticalScrollOffset()
 
-    func homepageScreenshotTool() -> (any Screenshotable)? {
-        let newTabSettings = browserViewController.newTabSettings
-        switch newTabSettings {
-        case .blankPage, .homePage:
-            return nil
-        case .topSites:
-            if tabManager.selectedTab?.isPrivate == true {
-                return privateHomepageViewController
-            }
-            return homepageViewController
+        if didEmbed {
+            // [FXIOS-13651] Fix for WKWebView memory leak. (See comments on related PR.)
+            webviewController?.update(webView: nil)
         }
-    }
-
-    func setHomepageVisibility(isVisible: Bool) {
-        guard let homepage = homepageViewController else { return }
-        homepage.view.isHidden = !isVisible
     }
 
     private func dispatchActionForEmbeddingHomepage(with isZeroSearch: Bool) {
@@ -353,8 +340,6 @@ class BrowserCoordinator: BaseCoordinator,
             switch routeAction {
             case .closePrivateTabs:
                 handleClosePrivateTabsWidgetAction()
-            case .showQRCode:
-                handleQRCode()
             case .showIntroOnboarding:
                 showIntroOnboarding()
             }
@@ -375,10 +360,6 @@ class BrowserCoordinator: BaseCoordinator,
         let introManager = IntroScreenManager(prefs: profile.prefs)
         let launchType = LaunchType.intro(manager: introManager)
         startLaunch(with: launchType)
-    }
-
-    private func handleQRCode() {
-        browserViewController.handleQRCode()
     }
 
     private func handleClosePrivateTabsWidgetAction() {
@@ -1212,12 +1193,23 @@ class BrowserCoordinator: BaseCoordinator,
 
     // MARK: - Password Generator
     func showPasswordGenerator(tab: Tab, frame: WKFrameInfo) {
-        let passwordGenVC = PasswordGeneratorViewController(windowUUID: windowUUID, currentTab: tab, currentFrame: frame)
+        let scriptEvaluator = WebKitPasswordGeneratorScriptEvaluator(webView: frame.webView)
+        let frameContext = PasswordGeneratorFrameContext(origin: frame.webView?.url?.origin,
+                                                         host: frame.securityOrigin.host,
+                                                         scriptEvaluator: scriptEvaluator,
+                                                         frameInfo: frame)
+        showPasswordGenerator(tab: tab, frameContext: frameContext)
+    }
+
+    func showPasswordGenerator(tab: Tab, frameContext: PasswordGeneratorFrameContext) {
+        let passwordGenVC = PasswordGeneratorViewController(windowUUID: windowUUID,
+                                                            currentTab: tab,
+                                                            frameContext: frameContext)
 
         let action = PasswordGeneratorAction(
             windowUUID: windowUUID,
             actionType: PasswordGeneratorActionType.showPasswordGenerator,
-            currentFrame: frame
+            frameContext: frameContext
         )
         store.dispatch(action)
 

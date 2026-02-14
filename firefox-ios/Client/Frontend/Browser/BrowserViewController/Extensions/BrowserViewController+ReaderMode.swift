@@ -43,8 +43,8 @@ extension BrowserViewController: ReaderModeStyleViewModelDelegate {
         profile.prefs.setObject(encodedStyle, forKey: PrefsKeys.ReaderModeProfileKeyStyle)
 
         // Change the reader mode style on all tabs that have reader mode active
-        for tabIndex in 0..<tabManager.count {
-            guard let tab = tabManager[tabIndex],
+        for tabIndex in 0..<tabManager.tabs.count {
+            guard let tab = tabManager.tabs[safe: tabIndex],
                   let readerMode = tab.getContentScript(name: "ReaderMode") as? ReaderMode,
                   readerMode.state == ReaderModeState.active
             else { continue }
@@ -73,6 +73,8 @@ extension BrowserViewController {
     }
 
     func showReaderModeBar(animated: Bool) {
+        var needsConstraintsUpdate = false
+
         if self.readerModeBar == nil {
             let readerModeBar = ReaderModeBarView(frame: CGRect.zero)
             readerModeBar.delegate = self
@@ -83,10 +85,16 @@ extension BrowserViewController {
             }
 
             self.readerModeBar = readerModeBar
+            needsConstraintsUpdate = true
         }
 
         updateReaderModeBar()
-        updateViewConstraints()
+
+        if !isSnapKitRemovalEnabled {
+            updateViewConstraints()
+        } else if needsConstraintsUpdate, let readerModeBar {
+            browserLayoutManager.addReaderModeBarHeight(readerModeBar)
+        }
     }
 
     func hideReaderModeBar(animated: Bool) {
@@ -98,7 +106,10 @@ extension BrowserViewController {
             header.removeArrangedView(readerModeBar)
         }
         self.readerModeBar = nil
-        updateViewConstraints()
+
+        if !isSnapKitRemovalEnabled {
+            updateViewConstraints()
+        }
     }
 
     /// There are two ways we can enable reader mode. In the simplest case we open a URL to our internal reader mode

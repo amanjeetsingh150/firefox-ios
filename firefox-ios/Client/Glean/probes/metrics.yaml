@@ -808,56 +808,10 @@ top_sites:
     metadata:
       tags:
         - TopSites
-  contile_tile_id:
-    type: quantity
-    description: |
-      A unique identifier provided by the AdM for the sponsored TopSites tile
-    lifetime: ping
-    send_in_pings:
-      - topsites-impression
-    bugs:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/10696
-    data_reviews:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/10696
-      - https://github.com/mozilla-mobile/firefox-ios/pull/12334
-      - https://github.com/mozilla-mobile/firefox-ios/pull/14102
-    data_sensitivity:
-      - technical
-      - interaction
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
-    unit: integer
-    metadata:
-      tags:
-        - TopSites
   contile_advertiser:
     type: string
     description: |
       Advertiser brand for the sponsored TopSites tile
-    lifetime: ping
-    send_in_pings:
-      - topsites-impression
-    bugs:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/10696
-    data_reviews:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/10696
-      - https://github.com/mozilla-mobile/firefox-ios/pull/12334
-      - https://github.com/mozilla-mobile/firefox-ios/pull/14102
-    data_sensitivity:
-      - technical
-      - interaction
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
-    metadata:
-      tags:
-        - TopSites
-  contile_reporting_url:
-    type: url
-    description: |
-      The AdM reporting endpoint (impression_url for “impression” event,
-      click_url for “click” event).
     lifetime: ping
     send_in_pings:
       - topsites-impression
@@ -1306,35 +1260,6 @@ firefox_home_page:
       - fx-ios-data-stewards@mozilla.com
     expires: never
 
-  customize_homepage_button:
-    type: counter
-    description: |
-      Counts the number of times a user taps to open the
-      settings menu to customize the Firefox Homepage
-    bugs:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9272
-    data_reviews:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9272
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9673
-      - https://github.com/mozilla-mobile/firefox-ios/pull/12334
-      - https://github.com/mozilla-mobile/firefox-ios/pull/14102
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
-  firefox_homepage_view:
-    type: counter
-    description: |
-      The number of times a user sees the Firefox Homepage
-    bugs:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9405
-    data_reviews:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9405
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9673
-      - https://github.com/mozilla-mobile/firefox-ios/pull/12334
-      - https://github.com/mozilla-mobile/firefox-ios/pull/14102
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
   pocket_stories_visible:
     type: boolean
     description: |
@@ -1399,7 +1324,6 @@ homepage:
       - jump_back_in
       - bookmarks
       - stories
-      - customize_homepage
     bugs:
       - https://github.com/mozilla-mobile/firefox-ios/issues/26216
     data_reviews:
@@ -1526,23 +1450,6 @@ private_browsing:
       - https://github.com/mozilla-mobile/firefox-ios/issues/18078
     data_reviews:
       - https://github.com/mozilla-mobile/firefox-ios/pull/18080
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
-
-# QR Code metrics
-qr_code:
-  scanned:
-    type: counter
-    description: |
-      Counts the number of times a QR code is scanned.
-    bugs:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1644846
-    data_reviews:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1644846
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9673
-      - https://github.com/mozilla-mobile/firefox-ios/pull/12334
-      - https://github.com/mozilla-mobile/firefox-ios/pull/14102
     notification_emails:
       - fx-ios-data-stewards@mozilla.com
     expires: never

@@ -14,12 +14,12 @@ protocol UnifiedAdsCallbackTelemetry {
 }
 
 final class DefaultUnifiedAdsCallbackTelemetry: UnifiedAdsCallbackTelemetry {
-    private let networking: ContileNetworking
+    private let networking: UnifiedTileNetworking
     private let logger: Logger
     private let sponsoredTileGleanTelemetry: SponsoredTileGleanTelemetry
 
     init(
-        networking: ContileNetworking = DefaultContileNetwork(with: NetworkUtils.defaultURLSession()),
+        networking: UnifiedTileNetworking = DefaultUnifiedTileNetwork(with: NetworkUtils.defaultURLSession()),
         logger: Logger = DefaultLogger.shared,
         sponsoredTileGleanTelemetry: SponsoredTileGleanTelemetry = DefaultSponsoredTileGleanTelemetry()
     ) {
@@ -89,16 +89,14 @@ final class DefaultUnifiedAdsCallbackTelemetry: UnifiedAdsCallbackTelemetry {
     private func sendGleanImpressionTelemetry(tileSite: Site, position: Int) {
         sponsoredTileGleanTelemetry.sendImpressionTelemetry(
             tileSite: tileSite,
-            position: position,
-            isUnifiedAdsEnabled: true
+            position: position
         )
     }
 
     private func sendGleanClickTelemetry(tileSite: Site, position: Int) {
         sponsoredTileGleanTelemetry.sendClickTelemetry(
             tileSite: tileSite,
-            position: position,
-            isUnifiedAdsEnabled: true
+            position: position
         )
     }
 }

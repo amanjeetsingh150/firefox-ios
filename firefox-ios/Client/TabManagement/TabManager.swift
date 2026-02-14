@@ -20,9 +20,7 @@ protocol TabManager: AnyObject {
     nonisolated var windowUUID: WindowUUID { get }
     var isRestoringTabs: Bool { get }
     var tabRestoreHasFinished: Bool { get }
-    var delaySelectingNewPopupTab: TimeInterval { get }
     var recentlyAccessedNormalTabs: [Tab] { get }
-    var count: Int { get }
 
     var selectedTab: Tab? { get }
     var backupCloseTab: BackupCloseTab? { get set }
@@ -31,7 +29,6 @@ protocol TabManager: AnyObject {
     var normalTabs: [Tab] { get }
     var privateTabs: [Tab] { get }
 
-    subscript(index: Int) -> Tab? { get }
     subscript(webView: WKWebView) -> Tab? { get }
 
     // MARK: - Add/Remove Delegate
@@ -85,7 +82,7 @@ protocol TabManager: AnyObject {
 
     func notifyCurrentTabDidFinishLoading()
 
-    func restoreTabs(_ forced: Bool)
+    func restoreTabs()
 
     func expireLoginAlerts()
     @discardableResult
@@ -97,12 +94,8 @@ protocol TabManager: AnyObject {
 }
 
 extension TabManager {
-    func selectTab(_ tab: Tab?) {
-        selectTab(tab, previous: nil)
-    }
-
-    func restoreTabs(_ forced: Bool = false) {
-        restoreTabs(forced)
+    func selectTab(_ tab: Tab?, previous: Tab? = nil) {
+        selectTab(tab, previous: previous)
     }
 
     @discardableResult

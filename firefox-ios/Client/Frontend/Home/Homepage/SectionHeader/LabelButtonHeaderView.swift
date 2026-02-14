@@ -13,7 +13,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
                              Notifiable {
     struct UX {
         static let inBetweenSpace: CGFloat = 12
-        static let topSpacing: CGFloat = 32
+        static let topSpacing: CGFloat = 0
         static let bottomSpace: CGFloat = 16
         static let bottomButtonSpace: CGFloat = 6
         static let leadingInset: CGFloat = 0
@@ -94,7 +94,7 @@ class LabelButtonHeaderView: UICollectionReusableView,
 
     func configure(
         state: SectionHeaderConfiguration,
-        moreButtonAction: (@Sendable @MainActor (UIButton) -> Void)? = nil,
+        moreButtonAction: (@MainActor (UIButton) -> Void)? = nil,
         textColor: UIColor?,
         theme: Theme
     ) {

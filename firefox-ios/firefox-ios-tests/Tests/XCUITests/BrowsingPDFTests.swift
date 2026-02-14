@@ -100,19 +100,27 @@ class BrowsingPDFTests: BaseTestCase {
         // Long press on a link on the pdf and check the options shown
         longPressOnPdfLink()
 
-        waitForElementsToExist(
-            [
-                app.staticTexts[PDF_website["longUrlValue"]!],
-                app.buttons["Open"],
-                app.buttons["Add to Reading List"]
-            ]
-        )
-        if #available(iOS 16, *) {
+        if #unavailable(iOS 26) {
+            waitForElementsToExist(
+                [
+                    app.staticTexts[PDF_website["longUrlValue"]!],
+                    app.buttons["Open"],
+                    app.buttons["Add to Reading List"]
+                ]
+            )
+        }
+        if #available(iOS 26, *) {
+            mozWaitForElementToExist(app.menuItems["Copy"])
+        } else if #available(iOS 16, *) {
             mozWaitForElementToExist(app.buttons["Copy Link"])
         } else {
             mozWaitForElementToExist(app.buttons["Copy"])
         }
-        mozWaitForElementToExist(app.buttons["Share…"])
+        if #available(iOS 26, *) {
+            mozWaitForElementToExist(app.menuItems["Share…"])
+        } else {
+            mozWaitForElementToExist(app.buttons["Share…"])
+        }
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307119
@@ -122,59 +130,21 @@ class BrowsingPDFTests: BaseTestCase {
         // Long press on a link on the pdf and check the options shown
         longPressOnPdfLink()
 
-        mozWaitForElementToExist(app.staticTexts[PDF_website["longUrlValue"]!])
-        app.buttons["Add to Reading List"].waitAndTap()
-        navigator.nowAt(BrowserTab)
+        if #unavailable(iOS 26) {
+            mozWaitForElementToExist(app.staticTexts[PDF_website["longUrlValue"]!])
+            app.buttons["Add to Reading List"].waitAndTap()
+            navigator.nowAt(BrowserTab)
 
-        // Go to reading list and check that the item is there
-        navigator.goto(LibraryPanel_ReadingList)
-        let savedToReadingList = app.tables["ReadingTable"].cells.staticTexts[PDF_website["longUrlValue"]!]
-        mozWaitForElementToExist(savedToReadingList)
+            // Go to reading list and check that the item is there
+            navigator.goto(LibraryPanel_ReadingList)
+            let savedToReadingList = app.tables["ReadingTable"].cells.staticTexts[PDF_website["longUrlValue"]!]
+            mozWaitForElementToExist(savedToReadingList)
+        }
     }
 
     // https://mozilla.testrail.io/index.php?/cases/view/2307120
     // Smoketest
     func testPinPDFtoTopSites() {
-        navigator.openURL(PDF_website["url"]!)
-        waitUntilPageLoad()
-        navigator.nowAt(BrowserTab)
-        navigator.goto(BrowserTabMenuMore)
-        navigator.performAction(Action.PinToTopSitesPAM)
-        navigator.performAction(Action.OpenNewTabFromTabTray)
-        let pinnedItem = app
-            .links[AccessibilityIdentifiers.FirefoxHomepage.TopSites.itemCell]
-            .staticTexts[PDF_website["bookmarkLabel"]!]
-        mozWaitForElementToExist(pinnedItem)
-
-        // Open pdf from pinned site
-        let pdfTopSite = app
-            .collectionViews[AccessibilityIdentifiers.FirefoxHomepage.collectionView]
-            .links["Pinned: \(PDF_website["bookmarkLabel"]!)"]
-            .children(matching: .other)
-            .element
-            .children(matching: .other)
-            .element(boundBy: 0)
-        if iPad() {
-            app.buttons["Cancel"].waitAndTap()
-        }
-        pdfTopSite.waitAndTap()
-        waitUntilPageLoad()
-        mozWaitForValueContains(url, value: PDF_website["pdfValue"]!)
-
-        // Remove pdf pinned site
-        navigator.performAction(Action.OpenNewTabFromTabTray)
-        if iPad() {
-            app.buttons["Cancel"].waitAndTap()
-        }
-        mozWaitForElementToExist(pinnedItem)
-        pdfTopSite.press(forDuration: 1)
-        app.tables.cells.buttons[StandardImageIdentifiers.Large.pinSlash].waitAndTap()
-        mozWaitForElementToNotExist(pinnedItem)
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2307120
-    // Smoketest TAE
-    func testPinPDFtoTopSites_TAE() {
         // 1. Open a PDF and pin it to Top Sites.
         navigator.openURL(PDF_website["url"]!)
         waitUntilPageLoad()
@@ -215,24 +185,6 @@ class BrowsingPDFTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2307121
     // Smoketest
     func testBookmarkPDF() {
-        navigator.openURL(PDF_website["url"]!)
-        waitUntilPageLoad()
-        navigator.nowAt(BrowserTab)
-        navigator.goto(BrowserTabMenu)
-        navigator.performAction(Action.Bookmark)
-        navigator.goto(BrowserTabMenu)
-        navigator.goto(LibraryPanel_Bookmarks)
-        waitForElementsToExist(
-            [
-                app.tables["Bookmarks List"],
-                app.tables["Bookmarks List"].staticTexts[PDF_website["bookmarkLabel"]!]
-            ]
-        )
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2307121
-    // Smoketest TAE
-    func testBookmarkPDF_TAE() {
         library = LibraryScreen(app: app)
         // Open the PDF URL and wait for the page to load
         navigator.openURL(PDF_website["url"]!)

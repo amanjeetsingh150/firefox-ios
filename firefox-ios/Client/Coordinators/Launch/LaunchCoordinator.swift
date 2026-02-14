@@ -47,7 +47,7 @@ final class LaunchCoordinator: BaseCoordinator,
         switch launchType {
         case .termsOfService(let manager):
             if manager.isModernOnboardingEnabled {
-                presentModernTermsOfService(with: manager, isFullScreen: isFullScreen)
+                presentModernTermsOfUse(with: manager, isFullScreen: isFullScreen)
             } else {
                 presentTermsOfService(with: manager, isFullScreen: isFullScreen)
             }
@@ -66,70 +66,21 @@ final class LaunchCoordinator: BaseCoordinator,
         }
     }
 
-    // MARK: - Terms of Service
-    private func presentModernTermsOfService(
+    // MARK: - Terms of Use
+    private func presentModernTermsOfUse(
         with manager: TermsOfServiceManager,
         isFullScreen: Bool
     ) {
         TermsOfServiceTelemetry().termsOfServiceScreenDisplayed()
 
-        let termsOfServiceLink = String(format: .Onboarding.Modern.TermsOfService.TermsOfUseLink, AppName.shortName.rawValue)
-        let termsOfServiceAgreement = String(
-            format: .Onboarding.Modern.TermsOfService.TermsOfServiceAgreement,
-            termsOfServiceLink
-        )
+        // Get the onboarding variant from IntroScreenManager since ToS is shown before intro
+        let introManager = IntroScreenManager(prefs: profile.prefs)
+        let onboardingKitVariant = introManager.onboardingKitVariant
 
-        let privacyNoticeLink = String.Onboarding.TermsOfService.PrivacyNoticeLink
-        let privacyAgreement = String(
-            format: .Onboarding.Modern.TermsOfService.PrivacyNoticeAgreement,
-            AppName.shortName.rawValue,
-            privacyNoticeLink
-        )
-
-        let manageLink = String.Onboarding.TermsOfService.ManageLink
-        let manageAgreement = String(
-            format: String.Onboarding.Modern.TermsOfService.ManagePreferenceAgreement,
-            AppName.shortName.rawValue,
-            MozillaName.shortName.rawValue,
-            manageLink
-        )
-
-        let viewModel = TosFlowViewModel(
-            configuration: OnboardingKitCardInfoModel(
-                cardType: .basic,
-                name: "tos",
-                order: 20,
-                title: .Onboarding.Modern.TermsOfService.Title,
-                body: .Onboarding.Modern.TermsOfService.Subtitle,
-                buttons: OnboardingButtons(
-                    primary: OnboardingButtonInfoModel(
-                        title: .Onboarding.Modern.TermsOfService.AgreementButtonTitleV3,
-                        action: OnboardingActions.syncSignIn
-                    )
-                ),
-                multipleChoiceButtons: [],
-                onboardingType: .freshInstall,
-                a11yIdRoot: AccessibilityIdentifiers.TermsOfService.root,
-                imageID: ImageIdentifiers.homeHeaderLogoBall,
-                embededLinkText: [
-                    EmbeddedLink(
-                        fullText: termsOfServiceAgreement,
-                        linkText: termsOfServiceLink,
-                        action: .openTermsOfService
-                    ),
-                    EmbeddedLink(
-                        fullText: privacyAgreement,
-                        linkText: privacyNoticeLink,
-                        action: .openPrivacyNotice
-                    ),
-                    EmbeddedLink(
-                        fullText: manageAgreement,
-                        linkText: manageLink,
-                        action: .openManageSettings
-                    )
-                ]
-            ),
-            onTermsOfServiceTap: { [weak self] in
+        let viewModel = TermsOfUseFlowViewModel(
+            configuration: TermsOfServiceManager.brandRefreshTermsOfUseConfiguration,
+            variant: onboardingKitVariant,
+            onTermsOfUseTap: { [weak self] in
                 guard let self = self else { return }
                 TermsOfServiceTelemetry().termsOfServiceLinkTapped()
                 presentLink(with: URL(string: Links.termsOfService))
@@ -170,7 +121,7 @@ final class LaunchCoordinator: BaseCoordinator,
             }
         )
 
-        let view = TermsOfServiceView(
+        let view = TermsOfUseView(
             viewModel: viewModel,
             windowUUID: windowUUID,
             themeManager: themeManager
@@ -265,9 +216,12 @@ final class LaunchCoordinator: BaseCoordinator,
         )
         self.onboardingService?.telemetryUtility = telemetryUtility
 
+        let onboardingKitVariant = manager.onboardingKitVariant
+
         let flowViewModel = OnboardingFlowViewModel<OnboardingKitCardInfoModel>(
             onboardingCards: onboardingModel.cards,
             skipText: .Onboarding.LaterAction,
+            variant: onboardingKitVariant,
             onActionTap: { [weak self] action, cardName, completion in
                 guard let onboardingService = self?.onboardingService else { return }
                 onboardingService.handleAction(

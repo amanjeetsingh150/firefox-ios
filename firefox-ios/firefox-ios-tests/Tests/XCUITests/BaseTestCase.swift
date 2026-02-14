@@ -57,6 +57,13 @@ class BaseTestCase: XCTestCase {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         mozWaitForElementToExist(springboard.icons["XCUITests-Runner"])
         app.activate()
+        // Wait until the app is fully opened (running in foreground) before continuing
+        let predicate = NSPredicate(format: "state == %d", XCUIApplication.State.runningForeground.rawValue)
+        let exp = XCTNSPredicateExpectation(predicate: predicate, object: app)
+        let waitResult = XCTWaiter.wait(for: [exp], timeout: 30)
+        if waitResult != .completed {
+            XCTFail("App did not reach runningForeground state after restart")
+        }
     }
 
     func closeFromAppSwitcherAndRelaunch() {
@@ -261,6 +268,26 @@ class BaseTestCase: XCTestCase {
         navigator.performAction(Action.Bookmark)
     }
 
+    func enableBookmarksInSettings() {
+        navigator.goto(HomeSettings)
+        let homepageSettings = HomepageSettingsScreen(app: app)
+        homepageSettings.assertBookmarkToggleExists()
+        homepageSettings.enableBookmarkToggle()
+        navigator.nowAt(HomeSettings)
+        navigator.performAction(Action.OpenNewTabFromTabTray)
+        navigator.nowAt(BrowserTab)
+    }
+
+    func enableJumpBackInInSettings() {
+        navigator.goto(HomeSettings)
+        let homepageSettings = HomepageSettingsScreen(app: app)
+        homepageSettings.assertJumpBackInToggleExists()
+        homepageSettings.enableJumpBackInToggle()
+        navigator.nowAt(HomeSettings)
+        navigator.performAction(Action.OpenNewTabFromTabTray)
+        navigator.nowAt(BrowserTab)
+    }
+
     func unbookmark(url: String) {
         navigator.nowAt(BrowserTab)
         navigator.goto(LibraryPanel_Bookmarks)
@@ -312,6 +339,18 @@ class BaseTestCase: XCTestCase {
         userState = navigator.userState
     }
 
+    func enterReaderMode() {
+        if isFirefoxBeta {
+            // For Firefox Beta, use long press on summarize button to access reader mode
+            let summarizeButton = app.buttons["TabLocationView.summarizeButton"].firstMatch
+            summarizeButton.press(forDuration: 1.2)
+        } else {
+            // For non-Beta, use direct buttons
+            app.buttons["Reader View"].waitAndTap()
+            waitUntilPageLoad()
+        }
+    }
+
     func addContentToReaderView(isHomePageOn: Bool = true) {
         updateScreenGraph()
         userState.url = path(forTestPage: "test-mozilla-book.html")
@@ -321,9 +360,20 @@ class BaseTestCase: XCTestCase {
         }
         navigator.openURL(path(forTestPage: "test-mozilla-book.html"))
         waitUntilPageLoad()
-        app.buttons["Reader View"].waitAndTap()
-        waitUntilPageLoad()
-        app.buttons["Add to Reading List"].waitAndTap()
+
+        if isFirefoxBeta {
+            // For Firefox Beta, use long press on summarize button to access reader mode and add to list
+            let summarizeButton = app.buttons["TabLocationView.summarizeButton"].firstMatch
+            summarizeButton.press(forDuration: 1.2)
+            app.buttons["TabLocationView.readerModeButton"].firstMatch.tap()
+            summarizeButton.press(forDuration: 1.0)
+            app.buttons["ReaderModeBarView.listStatusButton"].firstMatch.tap()
+        } else {
+            // For non-Beta, use direct buttons
+            app.buttons["Reader View"].waitAndTap()
+            waitUntilPageLoad()
+            app.buttons["Add to Reading List"].waitAndTap()
+        }
     }
 
     func removeContentFromReaderView() {
@@ -720,4 +770,39 @@ extension XCUIElementQuery {
     func elementContainingText(_ text: String) -> XCUIElement {
         return containingText(text).element(boundBy: 0)
     }
+}
+
+// MARK: - Scheme Detection
+extension BaseTestCase {
+    /// Detects which scheme/bundle the app is running under by checking the app's bundle identifier
+    var currentScheme: AppScheme {
+        // Check the test target's bundle ID which includes the app's bundle ID as prefix
+        let testBundleID = Bundle(for: type(of: self)).bundleIdentifier ?? ""
+
+        if testBundleID.contains("FirefoxBeta") {
+            return .firefoxBeta
+        } else if testBundleID.contains("Firefox") && !testBundleID.contains("Beta") {
+            return .firefox
+        } else {
+            return .fennec
+        }
+    }
+
+    var isFirefoxBeta: Bool {
+        return currentScheme == .firefoxBeta
+    }
+
+    var isFirefox: Bool {
+        return currentScheme == .firefox
+    }
+
+    var isFennec: Bool {
+        return currentScheme == .fennec
+    }
+}
+
+enum AppScheme {
+    case fennec
+    case firefox
+    case firefoxBeta
 }

@@ -62,8 +62,8 @@ struct HomepageLayoutMeasurementCache {
             let cellWidth: Double
             let containerWidth: Double
             let shouldShowSection: Bool
-            let isStoriesRedesignEnabled: Bool
             let contentSizeCategory: UIContentSizeCategory
+            let scrollDirection: ScrollDirection
         }
 
         struct Result: Equatable {

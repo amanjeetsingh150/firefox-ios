@@ -42,6 +42,11 @@ final class TermsOfUseCoordinator: BaseCoordinator, TermsOfUseCoordinatorDelegat
         return nimbus.features.touFeature.value().enableDragToDismiss
     }
 
+    private var contentOption: TermsOfUseContentOption {
+        let nimbusValue = nimbus.features.touFeature.value().contentOption
+        return TermsOfUseContentOption(rawValue: nimbusValue.rawValue) ?? .value0
+    }
+
     init(windowUUID: WindowUUID,
          router: Router,
          themeManager: ThemeManager = AppContainer.shared.resolve(),
@@ -66,7 +71,8 @@ final class TermsOfUseCoordinator: BaseCoordinator, TermsOfUseCoordinatorDelegat
             themeManager: themeManager,
             windowUUID: windowUUID,
             notificationCenter: notificationCenter,
-            enableDragToDismiss: enableDragToDismiss
+            enableDragToDismiss: enableDragToDismiss,
+            contentOption: contentOption
         )
         vc.coordinator = self
         vc.modalPresentationStyle = .overFullScreen
@@ -99,10 +105,9 @@ final class TermsOfUseCoordinator: BaseCoordinator, TermsOfUseCoordinatorDelegat
         // 1. Feature must be enabled
         guard featureFlags.isFeatureEnabled(.touFeature, checking: .buildOnly) else { return false }
 
-        // 2. If user has already accepted (onboarding or bottom sheet), never show again
+        // 2. If user has already accepted, never show again
         let hasAcceptedTermsOfUse = prefs.boolForKey(PrefsKeys.TermsOfUseAccepted) ?? false
-        let hasAcceptedTermsOfService = prefs.intForKey(PrefsKeys.TermsOfServiceAccepted) == 1
-        guard !hasAcceptedTermsOfUse && !hasAcceptedTermsOfService else { return false }
+        guard !hasAcceptedTermsOfUse else { return false }
 
         // 3. Check if this is the first time it is shown
         // Always show first time - it is not a reminder

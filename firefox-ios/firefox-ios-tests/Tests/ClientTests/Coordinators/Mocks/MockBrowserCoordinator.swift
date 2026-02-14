@@ -39,7 +39,6 @@ class MockBrowserCoordinator: BrowserNavigationHandler,
     var removeDocumentLoadingCalled = 0
     var showHomepageCalled = 0
     var browserHasLoadedCalled = 0
-    var homepageScreenshotToolCalled = 0
     var showNativeErrorPageCalled = 0
     var showPrivateHomepageCalled = 0
     var showWebViewCalled = 0
@@ -138,6 +137,10 @@ class MockBrowserCoordinator: BrowserNavigationHandler,
         showPasswordGeneratorCalled += 1
     }
 
+    func showPasswordGenerator(tab: Tab, frameContext: PasswordGeneratorFrameContext) {
+        showPasswordGeneratorCalled += 1
+    }
+
     func showEditBookmark(parentFolder: FxBookmarkNode, bookmark: FxBookmarkNode) {
         showEditBookmarkCalled += 1
     }
@@ -175,11 +178,6 @@ class MockBrowserCoordinator: BrowserNavigationHandler,
         toastContainer: UIView
     ) {
         showHomepageCalled += 1
-    }
-
-    func homepageScreenshotTool() -> (any Client.Screenshotable)? {
-        homepageScreenshotToolCalled += 1
-        return nil
     }
 
     func setHomepageVisibility(isVisible: Bool) {

@@ -153,6 +153,8 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
     var hasHomeScreenshot = false
     var shouldScrollToTop = false
     var isFindInPageMode = false
+    // Stores the vertical homepage offset for this tab when reusing the shared HomepageViewController.
+    var homepageScrollOffset: CGFloat?
 
     // To check if current URL is the starting page i.e. either blank page or internal page like topsites
     var isURLStartingPage: Bool {
@@ -433,7 +435,7 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
 
     /// Any time a tab tries to make requests to display a Javascript Alert and we are not the active
     /// tab instance, queue it for later until we become foregrounded.
-    private var alertQueue = [WKJavaScriptAlertInfo]()
+    private var alertQueue = [JavaScriptAlertInfo]()
 
     var onWebViewLoadingStateChanged: (@MainActor () -> Void)?
     private var webViewLoadingObserver: NSKeyValueObservation?
@@ -792,11 +794,11 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
 
     /// Queues a JS Alert for later display
     /// Do not call completionHandler until the alert is displayed and dismissed
-    func queueJavascriptAlertPrompt(_ alert: WKJavaScriptAlertInfo) {
+    func queueJavascriptAlertPrompt(_ alert: JavaScriptAlertInfo) {
         alertQueue.append(alert)
     }
 
-    func dequeueJavascriptAlertPrompt() -> WKJavaScriptAlertInfo? {
+    func dequeueJavascriptAlertPrompt() -> JavaScriptAlertInfo? {
         guard !alertQueue.isEmpty else { return nil }
         return alertQueue.removeFirst()
     }
@@ -855,7 +857,7 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
     // MARK: - Temporary Document handling - PDF Refactor
 
     /// Retrieves the session cookies attached to the current `WKWebView` managed by the `Tab`
-    func getSessionCookies(_ completion: @Sendable @MainActor @escaping ([HTTPCookie]) -> Void) {
+    func getSessionCookies(_ completion: @MainActor @escaping ([HTTPCookie]) -> Void) {
         webView?.configuration.websiteDataStore.httpCookieStore.getAllCookies(completion)
     }
 
@@ -914,8 +916,10 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
 
     func enqueueDocument(_ document: TemporaryDocument) {
         temporaryDocument = document
+        let sourceURL = document.sourceURL
+        let isSourceFileURL = sourceURL?.isFileURL == true
 
-        temporaryDocument?.download { url in
+        temporaryDocument?.download { [weak self] url in
             ensureMainThread { [weak self] in
                 guard let url else { return }
 
@@ -927,7 +931,7 @@ class Tab: NSObject, ThemeApplicable, FeatureFlaggable, ShareTab {
                 }
 
                 // Don't add a source URL if it is a local one. Thats happen when reloading the PDF content
-                guard let sourceURL = document.sourceURL, document.sourceURL?.isFileURL == false else { return }
+                guard let sourceURL, !isSourceFileURL else { return }
                 self?.temporaryDocumentsSession[url] = sourceURL
                 self?.documentLogger.registerDownloadFinish(url: sourceURL)
             }
@@ -1006,13 +1010,8 @@ extension Tab: TabWebViewDelegate {
     }
 
     func tabWebViewShouldShowAccessoryView(_ tabWebView: TabWebView) -> Bool {
-        // Hide the default WKWebView accessory view panel for PDF documents and
-        // there is no accessory view to display (but only for iPad cases)
-        let isPDF = mimeType == MIMEType.PDF
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            return !isPDF && tabWebView.accessoryView.hasAccessoryView
-        }
-        return !isPDF
+        // Hide the default WKWebView accessory view panel for PDF documents.
+        return mimeType != MIMEType.PDF
     }
 }
 
@@ -1119,7 +1118,9 @@ protocol TabWebViewDelegate: AnyObject {
 }
 
 class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable, FeatureFlaggable {
-    lazy var accessoryView = AccessoryViewProvider(windowUUID: windowUUID)
+    lazy var accessoryView: AccessoryViewProvider = .build(nil, {
+        AccessoryViewProvider(windowUUID: self.windowUUID)
+    })
     private var logger: Logger = DefaultLogger.shared
     private weak var delegate: TabWebViewDelegate?
     let windowUUID: WindowUUID
@@ -1137,8 +1138,6 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable, Featur
 
     override var inputAccessoryView: UIView? {
         guard delegate?.tabWebViewShouldShowAccessoryView(self) ?? true else { return nil }
-
-        translatesAutoresizingMaskIntoConstraints = false
 
         return accessoryView
     }
@@ -1208,7 +1207,7 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable, Featur
     override func evaluateJavaScript(
         _ javaScriptString: String,
         completionHandler: (
-            @MainActor @Sendable (Any?, (any Error)?) -> Void
+            @MainActor (Any?, (any Error)?) -> Void
         )? = nil
     ) {
         super.evaluateJavaScript(javaScriptString, completionHandler: completionHandler)
@@ -1228,7 +1227,7 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable, Featur
     // MARK: - PullRefresh
 
     func addPullRefresh(onReload: @escaping () -> Void) {
-        guard !scrollView.isZooming, scrollView.frame != .zero else { return }
+        guard !scrollView.isZooming else { return }
         guard pullRefresh == nil else {
             pullRefresh?.startObservingContentScroll()
             return
@@ -1243,8 +1242,10 @@ class TabWebView: WKWebView, MenuHelperWebViewInterface, ThemeApplicable, Featur
             refresh.leadingAnchor.constraint(equalTo: leadingAnchor),
             refresh.trailingAnchor.constraint(equalTo: trailingAnchor),
             refresh.bottomAnchor.constraint(equalTo: scrollView.topAnchor),
-            refresh.heightAnchor.constraint(equalToConstant: scrollView.frame.height)
+            refresh.heightAnchor.constraint(equalTo: scrollView.heightAnchor),
+            refresh.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
+
         refresh.startObservingContentScroll()
         pullRefresh = refresh
         guard let theme else { return }

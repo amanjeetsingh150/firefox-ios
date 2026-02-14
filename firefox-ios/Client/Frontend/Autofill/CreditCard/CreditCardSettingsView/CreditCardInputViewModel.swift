@@ -256,7 +256,7 @@ final class CreditCardInputViewModel: ObservableObject, @unchecked Sendable {
     }
 
     func removeCreditCard(creditCard: CreditCard?,
-                          completion: @escaping @MainActor @Sendable (CreditCardModifiedStatus, Bool) -> Void) {
+                          completion: @escaping @MainActor (CreditCardModifiedStatus, Bool) -> Void) {
         guard let currentCreditCard = creditCard,
               !currentCreditCard.guid.isEmpty else {
             ensureMainThread {
@@ -313,7 +313,12 @@ final class CreditCardInputViewModel: ObservableObject, @unchecked Sendable {
     }
 
     func updateRightButtonState() {
-        isRightBarButtonEnabled = areFieldValuesValid()
+        switch state {
+        case .add, .edit:
+            isRightBarButtonEnabled = areFieldValuesValid()
+        case .view:
+            isRightBarButtonEnabled = true
+        }
     }
 
     func getDisplayedCCValues() -> UnencryptedCreditCardFields? {

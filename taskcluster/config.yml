@@ -31,12 +31,12 @@ workers:
             provisioner: 'mobile-{level}'
             implementation: docker-worker
             os: linux
-            worker-type: 'images-gcp'
+            worker-type: 'images'
         misc:
             provisioner: 'mobile-{level}'
             implementation: docker-worker
             os: linux
-            worker-type: 'b-linux-gcp'
+            worker-type: 'b-linux'
         ship-it:
             provisioner: scriptworker-k8s
             implementation: scriptworker-shipit
@@ -59,6 +59,8 @@ release-promotion:
             target-tasks-method: push
         ship:
             target-tasks-method: ship
+        merge_automation:
+            target-tasks-method: merge_automation
         promote_focus:
             target-tasks-method: promote_focus
         push_focus:

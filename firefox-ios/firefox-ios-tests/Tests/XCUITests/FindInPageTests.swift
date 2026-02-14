@@ -61,57 +61,6 @@ class FindInPageTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2306851
     // Smoketest
     func testFindFromMenu() {
-        userState.url = path(forTestPage: "test-mozilla-book.html")
-        openFindInPageFromMenu(openSite: userState.url!)
-
-        // Enter some text to start finding
-        if #available(iOS 16, *) {
-            app.searchFields["find.searchField"].typeText("Book")
-        } else {
-            app.textFields["FindInPage.searchField"].typeText("Book")
-        }
-
-        // Once there are matches, test previous/next buttons
-        if #available(iOS 16, *) {
-            mozWaitForElementToExist(app.staticTexts["1 of 6"])
-            XCTAssertTrue(app.staticTexts["1 of 6"].exists)
-        }
-
-        let nextInPageResultButton = app.buttons[AccessibilityIdentifiers.FindInPage.findNextButton]
-        nextInPageResultButton.waitAndTap()
-        if #available(iOS 16, *) {
-            mozWaitForElementToExist(app.staticTexts["2 of 6"])
-            XCTAssertTrue(app.staticTexts["2 of 6"].exists)
-        }
-
-        nextInPageResultButton.waitAndTap()
-        if #available(iOS 16, *) {
-            mozWaitForElementToExist(app.staticTexts["3 of 6"])
-            XCTAssertTrue(app.staticTexts["3 of 6"].exists)
-        }
-
-        let previousInPageResultButton = app.buttons[AccessibilityIdentifiers.FindInPage.findPreviousButton]
-        previousInPageResultButton.waitAndTap()
-
-        if #available(iOS 16, *) {
-            mozWaitForElementToExist(app.staticTexts["2 of 6"])
-            XCTAssertTrue(app.staticTexts["2 of 6"].exists)
-        }
-
-        previousInPageResultButton.waitAndTap()
-        if #available(iOS 16, *) {
-            mozWaitForElementToExist(app.staticTexts["1 of 6"])
-            XCTAssertTrue(app.staticTexts["1 of 6"].exists)
-        }
-
-        // Tapping on close dismisses the search bar
-        navigator.goto(BrowserTab)
-        mozWaitForElementToNotExist(app.textFields["Book"])
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2306851
-    // Smoketest TAE
-    func testFindFromMenu_TAE() {
         browserScreen = BrowserScreen(app: app)
         findInPageScreen = FindInPageScreen(app: app)
         let searchTerm = "Book"
@@ -255,20 +204,28 @@ class FindInPageTests: BaseTestCase {
         mozWaitForElementToExist(app.menuItems["Copy"])
         // Find in page is correctly launched, bar with text pre-filled and
         // the buttons to find next and previous
-        while !app.menuItems["Find in Page"].exists {
-            if #available(iOS 16, *) {
+        if #available(iOS 26, *) {
+            while !app.buttons["Find in Page"].exists {
                 app.buttons["Forward"].firstMatch.waitAndTap()
-            } else {
-                app.menuItems["show.next.items.menu.button"].waitAndTap()
+                mozWaitForElementToExist(app.collectionViews.firstMatch)
             }
-            mozWaitForElementToExist(app.menuItems.firstMatch)
-            if #available(iOS 16, *) {
-                mozWaitForElementToExist(app.buttons["Forward"])
-            } else {
-                mozWaitForElementToExist(app.menuItems["show.next.items.menu.button"])
+            app.buttons["Find in Page"].waitAndTap()
+        } else {
+            while !app.menuItems["Find in Page"].exists {
+                if #available(iOS 16, *) {
+                    app.buttons["Forward"].firstMatch.waitAndTap()
+                } else {
+                    app.menuItems["show.next.items.menu.button"].waitAndTap()
+                }
+                mozWaitForElementToExist(app.menuItems.firstMatch)
+                if #available(iOS 16, *) {
+                    mozWaitForElementToExist(app.buttons["Forward"])
+                } else {
+                    mozWaitForElementToExist(app.menuItems["show.next.items.menu.button"])
+                }
             }
+            app.menuItems["Find in Page"].waitAndTap()
         }
-        app.menuItems["Find in Page"].waitAndTap()
         if #available(iOS 16, *) {
             mozWaitForElementToExist(app.searchFields[textToFind])
         } else {

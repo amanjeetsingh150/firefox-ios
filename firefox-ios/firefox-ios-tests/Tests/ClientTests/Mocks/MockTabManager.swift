@@ -26,7 +26,6 @@ class MockTabManager: TabManager {
     var lastSelectedTabs = [Tab]()
     var lastSelectedPreviousTabs = [Tab]()
 
-    var delaySelectingNewPopupTab: TimeInterval = 0
     var count = 0
     var normalTabs = [Tab]()
     var privateTabs = [Tab]()
@@ -111,7 +110,7 @@ class MockTabManager: TabManager {
 
     func preserveTabs() {}
 
-    func restoreTabs(_ forced: Bool) {}
+    func restoreTabs() {}
 
     func getTabForUUID(uuid: String) -> Tab? {
         return nil

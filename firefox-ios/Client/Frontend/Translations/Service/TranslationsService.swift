@@ -42,7 +42,7 @@ final class TranslationsService: TranslationsServiceProtocol {
         // Only offer translation if we have a model pair (direct or via pivot).
         // NOTE: `fetchModels` inspects Remote Settings metadata and returns JSON data
         // describing the pipeline, it does not fetch large model attachments.
-        guard modelsFetcher.fetchModels(from: pageLanguage, to: deviceLanguage) != nil else { return false }
+        guard await modelsFetcher.fetchModels(from: pageLanguage, to: deviceLanguage) != nil else { return false }
         return true
     }
 
@@ -60,7 +60,7 @@ final class TranslationsService: TranslationsServiceProtocol {
         onLanguageIdentified?(pageLanguage, deviceLanguage)
         let webView = try currentWebView(for: windowUUID)
         // Prewarm resources prior to calling the JS translation API.
-        modelsFetcher.prewarmResources(for: pageLanguage, to: deviceLanguage)
+        await modelsFetcher.prewarmResources(for: pageLanguage, to: deviceLanguage)
         // Create a bridge to the translations engine.
         _ = translationsEngine.bridge(to: webView)
         try await startTranslationsJS(on: webView, from: pageLanguage, to: deviceLanguage)

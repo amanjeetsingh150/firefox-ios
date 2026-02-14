@@ -68,31 +68,6 @@ class DataManagementTests: BaseTestCase {
     // https://mozilla.testrail.io/index.php?/cases/view/2307017
     // Smoketest
     func testWebSiteDataEnterFirstTime() {
-        cleanAllData()
-        navigator.nowAt(NewTabScreen)
-        navigator.openURL("example.com")
-        waitUntilPageLoad()
-        navigator.goto(WebsiteDataSettings)
-        mozWaitForElementToExist(app.tables.otherElements["Website Data"])
-        if #available(iOS 17, *) {
-            mozWaitForElementToExist(app.tables.buttons.images["circle"].firstMatch)
-        } else {
-            mozWaitForElementToExist(app.tables.buttons.firstMatch)
-        }
-        if app.cells["ShowMoreWebsiteData"].exists {
-            app.cells["ShowMoreWebsiteData"].waitAndTap()
-        }
-        mozWaitForElementToExist(app.staticTexts["example.com"])
-        if #available(iOS 17, *) {
-            XCTAssertTrue(app.cells.images.element(matching: .any, identifier: "circle").exists)
-        } else {
-            XCTAssertTrue(app.cells.staticTexts.elementContainingText("example.com").exists)
-        }
-    }
-
-    // https://mozilla.testrail.io/index.php?/cases/view/2307017
-    // Smoketest TAE
-    func testWebSiteDataEnterFirstTime_TAE() {
         webSitesDataScreen = WebsiteDataScreen(app: app)
         navigator.goto(WebsiteDataSettings)
         webSitesDataScreen.clearAllWebsiteData()
@@ -131,7 +106,15 @@ class DataManagementTests: BaseTestCase {
         // I cannot test for visibility at the moment.
         // let expectedSearchResults = app.tables["Search results"].cells.count
         // XCTAssertEqual(expectedSearchResults, 1)
-        app.buttons["Cancel"].waitAndTap()
+        if #available(iOS 26, *) {
+            if iPad() {
+                app.buttons["Clear text"].waitAndTap()
+            } else {
+                app.buttons["close"].waitAndTap()
+            }
+        } else {
+            app.buttons["Cancel"].waitAndTap()
+        }
         mozWaitForElementToExist(app.tables.otherElements["Website Data"])
         if #available(iOS 17, *) {
             XCTAssertGreaterThan(app.cells.images.count, 1)
