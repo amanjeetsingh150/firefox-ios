@@ -1498,6 +1498,7 @@
 		C2506C932A6A863600F2B76E /* HistoryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2506C922A6A863600F2B76E /* HistoryCoordinator.swift */; };
 		C2506C952A6A8D2600F2B76E /* HistoryCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2506C942A6A8D2600F2B76E /* HistoryCoordinatorTests.swift */; };
 		C26B96D72F29188100D4B140 /* TestKit in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96D62F29188100D4B140 /* TestKit */; };
+		C26B96D92F29188100D4B140 /* XCTestLeaksClient in Frameworks */ = {isa = PBXBuildFile; productRef = C26B96D82F29188100D4B140 /* XCTestLeaksClient */; };
 		C27EF6132EBA28E100BED719 /* LanguageDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6122EBA28DB00BED719 /* LanguageDetector.swift */; };
 		C27EF6152EBA2EE500BED719 /* LanguageDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6142EBA2EDD00BED719 /* LanguageDetectorTests.swift */; };
 		C27EF61A2EBA364E00BED719 /* LanguageSampleSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27EF6192EBA364C00BED719 /* LanguageSampleSource.swift */; };
@@ -11578,6 +11579,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C26B96D72F29188100D4B140 /* TestKit in Frameworks */,
+				C26B96D92F29188100D4B140 /* XCTestLeaksClient in Frameworks */,
 				EDF567A02C8B51DC00FDB09D /* SiteImageView in Frameworks */,
 				43F93C2827A8683E009833D9 /* RustMozillaAppServices.framework in Frameworks */,
 				E5C2BA922EA9054E001E3DEF /* Shared in Frameworks */,
@@ -17083,6 +17085,7 @@
 				EDF567A12C8B51E100FDB09D /* Kingfisher */,
 				0BCC26AC2CFF16220072CD5A /* Shared */,
 				C26B96D62F29188100D4B140 /* TestKit */,
+				C26B96D82F29188100D4B140 /* XCTestLeaksClient */,
 			);
 			productName = ClientTests;
 			productReference = F84B21D31A090F8100AAB793 /* ClientTests.xctest */;
@@ -31886,6 +31889,10 @@
 		C26B96D62F29188100D4B140 /* TestKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TestKit;
+		};
+		C26B96D82F29188100D4B140 /* XCTestLeaksClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = XCTestLeaksClient;
 		};
 		D433852B27ABC8150069DD33 /* MappaMundi */ = {
 			isa = XCSwiftPackageProductDependency;
