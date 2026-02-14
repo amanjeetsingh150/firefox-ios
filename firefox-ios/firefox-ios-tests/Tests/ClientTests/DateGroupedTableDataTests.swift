@@ -5,7 +5,7 @@
 import XCTest
 @testable import Shared
 
-final class DateGroupedTableDataTests: LeakDetectingTestCase {
+final class DateGroupedTableDataTests: XCTestCase {
     // Timestamps that fall in the middle of the default time intervals
     let twelveHoursAgo = Calendar.current.date(byAdding: .hour, value: -12, to: Date()) ?? Date()
     let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()

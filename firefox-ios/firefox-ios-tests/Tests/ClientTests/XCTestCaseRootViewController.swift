@@ -5,7 +5,7 @@
 import XCTest
 
 @MainActor
-class XCTestCaseRootViewController: LeakDetectingTestCase {
+class XCTestCaseRootViewController: XCTestCase {
     var rootViewController: UIViewController!
     var window: UIWindow!
 
