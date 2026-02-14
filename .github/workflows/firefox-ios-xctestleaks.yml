@@ -8,8 +8,8 @@ on:
 
 env:
     browser: firefox-ios
-    xcode_version: 16.3
-    ios_version: 18.4
+    xcode_version: 16.4
+    ios_version: 18.5
     ios_simulator_default: iPhone 16
     xcodebuild_scheme: Fennec
     xcodebuild_target: Client
