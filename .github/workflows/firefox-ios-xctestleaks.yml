@@ -42,8 +42,9 @@ jobs:
                   --scheme ${{ env.xcodebuild_scheme }} \
                   --destination "platform=iOS Simulator,OS=${{ env.ios_version }},name=${{ env.ios_simulator_default }}" \
                   --output-dir ./leak_artifacts \
-                  --html-output
-                  --timeout=7200
+                  --html-output \
+                  --timeout=7200 \
+                  --xcodebuild-args="-only-testing:ClientTests"
 
             - name: Upload Leak Report
               if: always()
