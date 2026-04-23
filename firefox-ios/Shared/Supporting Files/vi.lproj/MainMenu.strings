@@ -218,13 +218,13 @@
 "MainMenu.Submenus.Tools.AccessibilityLabels.Print.Title.v132" = "In";
 
 /* On the main menu, the accessibility label for the action that will turn the reader view on for the current website. */
-"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.Off.Title.v132" = "Tắt chế độ đọc sách";
+"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.Off.Title.v132" = "Tắt chế độ đọc";
 
 /* On the main menu, the accessibility label for the action that will turn the reader view on for the current website. */
-"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.On.Title.v132" = "Bật chế độ đọc sách";
+"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.On.Title.v132" = "Bật chế độ đọc";
 
 /* On the main menu, a string below the Tool submenu accessibility label, indicating what kind of tools are available in that menu. This string is for the Reader View tool. */
-"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.Subtitle.v132" = "Chế độ đọc sách";
+"MainMenu.Submenus.Tools.AccessibilityLabels.ReaderView.Subtitle.v132" = "Chế độ đọc";
 
 /* On the main menu, a string below the Tool submenu accessibility label, indicating what kind of tools are available in that menu. This string is for the Report Broken Site tool and is indicating that under the Tools submenu, a Report (Report Broken Site) action is available. */
 "MainMenu.Submenus.Tools.AccessibilityLabels.ReportBrokenSite.Subtitle.v132" = "Báo cáo";
@@ -266,13 +266,13 @@
 "MainMenu.Submenus.Tools.Print.Title.v131" = "In";
 
 /* On the main menu, the title for the action that will turn the reader view on for the current website. */
-"MainMenu.Submenus.Tools.ReaderView.Off.Title.v131" = "Tắt chế độ đọc sách";
+"MainMenu.Submenus.Tools.ReaderView.Off.Title.v131" = "Tắt chế độ đọc";
 
 /* On the main menu, the title for the action that will turn the reader view on for the current website. */
-"MainMenu.Submenus.Tools.ReaderView.On.Title.v131" = "Bật chế độ đọc sách";
+"MainMenu.Submenus.Tools.ReaderView.On.Title.v131" = "Bật chế độ đọc";
 
 /* On the main menu, a string below the Tool submenu tiitle, indicating what kind of tools are available in that menu. This string is for the Reader View tool. */
-"MainMenu.Submenus.Tools.ReaderView.Subtitle.v131" = "Chế độ đọc sách";
+"MainMenu.Submenus.Tools.ReaderView.Subtitle.v131" = "Chế độ đọc";
 
 /* On the main menu, a string below the Tool submenu tiitle, indicating what kind of tools are available in that menu. This string is for the Report Broken Site tool. */
 "MainMenu.Submenus.Tools.ReportBrokenSite.Subtitle.v131" = "Báo cáo";

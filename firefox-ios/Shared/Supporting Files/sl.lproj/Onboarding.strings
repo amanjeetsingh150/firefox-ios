@@ -181,6 +181,12 @@
 /* Title for the welcome card in the v148 brand refresh onboarding flow. */
 "Onboarding.Modern.BrandRefresh.Welcome.Title.v148" = "Poslovite se od vsiljivih sledilcev";
 
+/* Title for the welcome card in the v148 brand refresh onboarding flow. */
+"Onboarding.Modern.BrandRefresh.Welcome.Title.v148.v2" = "Odpirajte povezave z vgrajeno zasebnostjo";
+
+/* Title for the welcome card in the v149 brand refresh onboarding flow. */
+"Onboarding.Modern.BrandRefresh.Welcome.TitleV3.v149" = "Odpirajte povezave z vgrajeno zasebnostjo";
+
 /* Option for the automatic theme. */
 "Onboarding.Modern.Customization.Theme.Automatic.v145" = "Samodejno";
 
@@ -228,6 +234,9 @@
 
 /* String used to describe Firefox on the Sync onboarding page for the current version of our onboarding screens. */
 "Onboarding.Modern.Sync.Description.v140" = "Imejte zaznamke, zgodovino in gesla pri roki na vsaki napravi.";
+
+/* Description for the Sync card in the v2 onboarding flow. */
+"Onboarding.Modern.Sync.Description.v145" = "Vaši zaznamki, gesla in drugi podatki se sinhronizirajo s katerokoli drugo napravo. Vse je zaščiteno s šifriranjem, tako da imate dostop do njih samo vi.";
 
 /* String used to describes the option to skip the Sync sign in during onboarding for the current version in Firefox Onboarding screens. */
 "Onboarding.Modern.Sync.SignIn.Action.v140" = "Začnite sinhronizirati";
